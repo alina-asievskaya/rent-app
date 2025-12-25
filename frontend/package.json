@@ -1,6 +1,7 @@
 {
   "name": "rent-app",
   "private": true,
+  "proxy": "http://localhost:5213",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

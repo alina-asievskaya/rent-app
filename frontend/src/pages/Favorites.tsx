@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faHeart as faHeartSolid,
@@ -17,7 +16,6 @@ import {
   faSearch,
   faFilter,
   faEye,
-  faFire,
   faSortAmountDown,
   faSortAmountUp,
   faChevronDown,
@@ -39,8 +37,6 @@ interface Property {
   area: number;
   year: number;
   rating: number;
-  isPremium: boolean;
-  isHot: boolean;
   description: string;
   features: string[];
   dateAdded?: string;
@@ -67,8 +63,6 @@ const Favorites: React.FC = () => {
       area: 65,
       year: 2022,
       rating: 4.8,
-      isPremium: true,
-      isHot: true,
       description: "Светлая квартира с современным ремонтом, мебелью и техникой. Рядом метро и парк.",
       features: ["Меблированная", "С техникой", "Балкон"],
       dateAdded: "2024-01-15",
@@ -86,8 +80,6 @@ const Favorites: React.FC = () => {
       area: 45,
       year: 2021,
       rating: 4.5,
-      isPremium: false,
-      isHot: true,
       description: "Уютная квартира в новом доме. Идеально для одного человека или пары.",
       features: ["Меблированная", "С ремонтом"],
       dateAdded: "2024-01-10",
@@ -105,8 +97,6 @@ const Favorites: React.FC = () => {
       area: 85,
       year: 2023,
       rating: 4.9,
-      isPremium: true,
-      isHot: false,
       description: "Элитная квартира в историческом центре с панорамным видом на город.",
       features: ["Меблированная", "С техникой", "Балкон", "Консьерж", "Парковка"],
       dateAdded: "2024-01-05",
@@ -244,7 +234,6 @@ const Favorites: React.FC = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </>
     );
   }
@@ -369,16 +358,7 @@ const Favorites: React.FC = () => {
                 <div className="property-item-image-favorit">
                   <img src={property.imageUrl} alt={property.address} />
                   <div className="property-item-badges-favorit">
-                    {property.isPremium && (
-                      <span className="badge-favorit premium-favorit">
-                        <FontAwesomeIcon icon={faStar} /> Премиум
-                      </span>
-                    )}
-                    {property.isHot && (
-                      <span className="badge-favorit hot-favorit">
-                        <FontAwesomeIcon icon={faFire} /> Горячее
-                      </span>
-                    )}
+
                     <button 
                       className="favorite-btn-favorit active-favorit"
                       onClick={() => removeFromFavoritesFavorit(property.id)}
@@ -454,7 +434,6 @@ const Favorites: React.FC = () => {
         </div>
       </div>
       
-      <Footer />
     </>
   );
 };

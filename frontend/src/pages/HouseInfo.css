@@ -1,0 +1,680 @@
+/* Основные стили */
+.house-info-page {
+  margin-top: 80px;
+  background: #f8fafc;
+  min-height: calc(100vh - 80px);
+}
+
+.container-house {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Кнопка назад */
+.back-button-house {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid #e3f2fd;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 2rem 0;
+  color: #37474f;
+}
+
+.back-button-house:hover {
+  background: #f8fbff;
+  border-color: #2962ff;
+  color: #2962ff;
+}
+
+/* Галерея */
+.gallery-section-house {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(41, 98, 255, 0.08);
+  margin-bottom: 2rem;
+}
+
+.gallery-house {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 1.5rem;
+  max-height: 600px;
+}
+
+@media (max-width: 1024px) {
+  .gallery-house {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+}
+
+.main-image-house {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fbff;
+  height: 500px;
+}
+
+.main-image-house img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.main-image-house:hover img {
+  transform: scale(1.02);
+}
+
+.image-badges-house {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.property-badge-house {
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.property-badge-house.available-house {
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+}
+
+.property-badge-house.premium-house {
+  background: rgba(245, 158, 11, 0.9);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.property-badge-house.hot-house {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.thumbnails-house {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .thumbnails-house {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+}
+
+.thumbnail-house {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  height: 80px;
+}
+
+.thumbnail-house.active-house {
+  border-color: #2962ff;
+}
+
+.thumbnail-house:hover {
+  transform: scale(1.05);
+}
+
+.thumbnail-house img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.more-photos-house {
+  background: rgba(41, 98, 255, 0.1);
+  border: 1px solid rgba(41, 98, 255, 0.2);
+  color: #2962ff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.more-photos-house:hover {
+  background: #2962ff;
+  color: white;
+}
+
+/* Основная информация */
+.property-info-section-house {
+  padding: 2rem 0 4rem;
+}
+
+.property-layout-house {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 3rem;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .property-layout-house {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Основной контент */
+.main-content-house {
+  background: white;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 4px 20px rgba(41, 98, 255, 0.08);
+}
+
+.property-header-house {
+  border-bottom: 1px solid #e3f2fd;
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+}
+
+.property-header-house h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #1a237e;
+  line-height: 1.3;
+}
+
+.property-address-house {
+  color: #546e7a;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.property-address-house svg {
+  color: #2962ff;
+}
+
+.price-section-house h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2962ff;
+  margin: 0;
+}
+
+/* Основные характеристики */
+.key-features-house {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  margin: 2.5rem 0;
+  padding: 2rem;
+  background: #f8fbff;
+  border-radius: 16px;
+  border: 1px solid #e3f2fd;
+}
+
+.feature-item-house {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.feature-item-house svg {
+  font-size: 1.75rem;
+  color: #2962ff;
+  width: 40px;
+  text-align: center;
+}
+
+.feature-value-house {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a237e;
+  line-height: 1.2;
+}
+
+.feature-label-house {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+/* Описание */
+.description-section-house {
+  margin-bottom: 3rem;
+}
+
+.description-section-house h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #1a237e;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+.description-section-house p {
+  line-height: 1.7;
+  color: #37474f;
+  margin-bottom: 1.25rem;
+  font-size: 1.05rem;
+}
+
+/* Особенности */
+.features-section-house {
+  margin-bottom: 3rem;
+}
+
+.features-section-house h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #1a237e;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+.features-grid-house {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.feature-item-check-house {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f8fbff;
+  border-radius: 10px;
+  border: 1px solid #e3f2fd;
+  transition: all 0.3s ease;
+}
+
+.feature-item-check-house:hover {
+  background: white;
+  border-color: #2962ff;
+  transform: translateX(5px);
+}
+
+.feature-item-check-house svg {
+  color: #10b981;
+  font-size: 1rem;
+}
+
+.feature-item-check-house span {
+  color: #37474f;
+  font-weight: 500;
+}
+
+/* Расположение */
+.location-section-house {
+  margin-bottom: 3rem;
+}
+
+.location-section-house h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #1a237e;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+.location-info-house {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+@media (max-width: 992px) {
+  .location-info-house {
+    grid-template-columns: 1fr;
+  }
+}
+
+.location-features-house {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.location-item-house {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #f8fbff;
+  border-radius: 12px;
+  border: 1px solid #e3f2fd;
+}
+
+.location-item-house svg {
+  color: #2962ff;
+  font-size: 1.25rem;
+  margin-top: 0.25rem;
+}
+
+.location-item-house strong {
+  display: block;
+  color: #1a237e;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.location-item-house span {
+  color: #546e7a;
+  font-size: 0.95rem;
+}
+
+.map-placeholder-house {
+  text-align: center;
+}
+
+.map-image-house {
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-overlay-house {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2rem;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.map-overlay-house p {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.btn-secondary-house {
+  background: white;
+  color: #37474f;
+  border: 1px solid #e3f2fd;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.btn-secondary-house:hover {
+  border-color: #2962ff;
+  color: #2962ff;
+  background: rgba(41, 98, 255, 0.02);
+}
+
+/* Боковая панель */
+.sidebar-house {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 100px;
+}
+
+@media (max-width: 1200px) {
+  .sidebar-house {
+    position: static;
+  }
+}
+
+/* Карточка владельца */
+.contact-card-house {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(41, 98, 255, 0.08);
+}
+
+.owner-info-house {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #e3f2fd;
+}
+
+.owner-info-house img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e3f2fd;
+}
+
+.owner-details-house h4 {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #1a237e;
+  font-size: 1.25rem;
+}
+
+.owner-details-house p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
+.owner-rating-house {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.star-icon {
+  color: #f59e0b;
+  font-size: 0.9rem;
+}
+
+.owner-rating-house span {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-left: 0.5rem;
+}
+
+.verified-badge-house {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  padding: 0.375rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.contact-actions-house {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.btn-primary-house {
+  background: linear-gradient(135deg, #2962ff, #448aff);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 12px rgba(41, 98, 255, 0.2);
+}
+
+.btn-primary-house:hover {
+  background: linear-gradient(135deg, #1a56db, #2962ff);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(41, 98, 255, 0.3);
+}
+
+.btn-outline-house {
+  background: transparent;
+  color: #37474f;
+  border: 1px solid #e3f2fd;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.btn-outline-house:hover {
+  border-color: #2962ff;
+  color: #2962ff;
+  background: rgba(41, 98, 255, 0.02);
+}
+
+.full-width-house {
+  width: 100%;
+}
+
+/* Кнопка избранного с активным состоянием */
+.btn-outline-house.active-favorite {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-outline-house.active-favorite:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Мета информация */
+.contact-meta-house {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e3f2fd;
+}
+
+.meta-item-house {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.meta-item-house svg {
+  color: #2962ff;
+  width: 16px;
+}
+
+/* Кнопки действий */
+.action-buttons-house {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(41, 98, 255, 0.08);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .container-house {
+    padding: 0 1rem;
+  }
+  
+  .gallery-section-house,
+  .main-content-house,
+  .contact-card-house,
+  .action-buttons-house {
+    padding: 1.5rem;
+  }
+  
+  .key-features-house {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 1.5rem;
+  }
+  
+  .features-grid-house {
+    grid-template-columns: 1fr;
+  }
+  
+  .property-header-house h1 {
+    font-size: 1.5rem;
+  }
+  
+  .price-section-house h2 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .key-features-house {
+    grid-template-columns: 1fr;
+  }
+  
+  .feature-item-house {
+    justify-content: flex-start;
+  }
+  
+  .thumbnails-house {
+    gap: 0.5rem;
+  }
+  
+  .thumbnail-house {
+    height: 60px;
+  }
+}

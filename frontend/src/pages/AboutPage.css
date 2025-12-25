@@ -1,5 +1,5 @@
 /* About Page Styles */
-.about-hero {
+.about-hero-aboutpage {
   padding: 8rem 0 6rem;
   background: linear-gradient(135deg, 
       rgba(var(--primary-50), 0.9) 0%,
@@ -11,7 +11,7 @@
   overflow: hidden;
 }
 
-.hero-content {
+.hero-content-aboutpage {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
@@ -20,11 +20,11 @@
   z-index: 1;
 }
 
-.hero-text {
+.hero-text-aboutpage {
   max-width: 600px;
 }
 
-.hero-badge {
+.hero-badge-aboutpage {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
@@ -38,11 +38,11 @@
   border: 1px solid rgba(var(--primary-500), 0.2);
 }
 
-.hero-badge svg {
+.hero-badge-aboutpage svg {
   color: rgb(var(--primary-600));
 }
 
-.hero-text h1 {
+.hero-text-aboutpage h1 {
   font-size: 3.5rem;
   font-weight: 800;
   line-height: 1.1;
@@ -50,25 +50,25 @@
   color: rgb(var(--neutral-900));
 }
 
-.text-primary {
+.text-primary-aboutpage {
   color: rgb(var(--primary-600));
 }
 
-.hero-description {
+.hero-description-aboutpage {
   font-size: 1.25rem;
   line-height: 1.6;
   color: rgb(var(--neutral-700));
   margin-bottom: 3rem;
 }
 
-.hero-stats {
+.hero-stats-aboutpage {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   margin-top: 3rem;
 }
 
-.stat-card {
+.stat-card-aboutpage {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -80,12 +80,12 @@
   border: 1px solid rgb(var(--neutral-200));
 }
 
-.stat-card:hover {
+.stat-card-aboutpage:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow-lg);
 }
 
-.stat-icon {
+.stat-icon-aboutpage {
   width: 60px;
   height: 60px;
   background: rgb(var(--primary-50));
@@ -95,41 +95,41 @@
   justify-content: center;
 }
 
-.stat-icon svg {
+.stat-icon-aboutpage svg {
   font-size: 1.5rem;
   color: rgb(var(--primary-600));
 }
 
-.stat-content h3 {
+.stat-content-aboutpage h3 {
   font-size: 2rem;
   font-weight: 800;
   color: rgb(var(--neutral-900));
   margin-bottom: 0.25rem;
 }
 
-.stat-content p {
+.stat-content-aboutpage p {
   color: rgb(var(--neutral-600));
   font-weight: 500;
 }
 
-.hero-image {
+.hero-image-aboutpage {
   position: relative;
 }
 
-.image-container {
+.image-container-aboutpage {
   position: relative;
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-xl);
 }
 
-.image-container img {
+.image-container-aboutpage img {
   width: 100%;
   height: 500px;
   object-fit: cover;
 }
 
-.image-badge {
+.image-badge-aboutpage {
   position: absolute;
   bottom: 2rem;
   left: 2rem;
@@ -143,7 +143,7 @@
   backdrop-filter: blur(4px);
 }
 
-.hero-wave {
+.hero-wave-aboutpage {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -152,7 +152,7 @@
   line-height: 0;
 }
 
-.hero-wave svg {
+.hero-wave-aboutpage svg {
   position: relative;
   display: block;
   width: calc(100% + 1.3px);
@@ -160,24 +160,24 @@
   transform: rotate(180deg);
 }
 
-.hero-wave path {
+.hero-wave-aboutpage path {
   fill: white;
 }
 
 /* Обновленные стили для Hero секции */
-.hero-badge {
+.hero-badge-aboutpage {
   background: rgba(var(--primary-600), 0.1);
   color: rgb(var(--primary-700));
 }
 
-.hero-cta-buttons {
+.hero-cta-buttons-aboutpage {
   display: flex;
   gap: 1rem;
   margin-top: 3rem;
   flex-wrap: wrap;
 }
 
-.hero-cta-buttons .btn-lg {
+.hero-cta-buttons-aboutpage .btn-lg {
   padding: 1rem 2rem;
   font-size: 1.125rem;
   display: flex;
@@ -185,42 +185,42 @@
   gap: 0.75rem;
 }
 
-.image-badge {
+.image-badge-aboutpage {
   background: rgba(var(--accent-green), 0.9);
 }
 
 /* Values Section */
-.about-values {
+.about-values-aboutpage {
   padding: 6rem 0;
   background: white;
 }
 
-.section-header.center {
+.section-header-aboutpage.center {
   text-align: center;
   max-width: 800px;
   margin: 0 auto 4rem;
 }
 
-.section-header h2 {
+.section-header-aboutpage h2 {
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
   color: rgb(var(--neutral-900));
 }
 
-.section-subtitle {
+.section-subtitle-aboutpage {
   font-size: 1.125rem;
   color: rgb(var(--neutral-600));
   line-height: 1.6;
 }
 
-.values-grid {
+.values-grid-aboutpage {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
 }
 
-.value-card {
+.value-card-aboutpage {
   padding: 2.5rem 2rem;
   background: white;
   border-radius: var(--radius-xl);
@@ -232,7 +232,7 @@
   overflow: hidden;
 }
 
-.value-card::before {
+.value-card-aboutpage::before {
   content: '';
   position: absolute;
   top: 0;
@@ -245,12 +245,12 @@
   );
 }
 
-.value-card:hover {
+.value-card-aboutpage:hover {
   transform: translateY(-10px);
   box-shadow: var(--shadow-xl);
 }
 
-.value-icon {
+.value-icon-aboutpage {
   width: 80px;
   height: 80px;
   margin: 0 auto 1.5rem;
@@ -264,35 +264,35 @@
   justify-content: center;
 }
 
-.value-icon svg {
+.value-icon-aboutpage svg {
   font-size: 2rem;
   color: rgb(var(--primary-600));
 }
 
-.value-card h3 {
+.value-card-aboutpage h3 {
   font-size: 1.5rem;
   margin-bottom: 1rem;
   color: rgb(var(--neutral-900));
 }
 
-.value-card p {
+.value-card-aboutpage p {
   color: rgb(var(--neutral-600));
   line-height: 1.6;
 }
 
 /* Types Section */
-.types-section {
+.types-section-aboutpage {
   padding: 6rem 0;
   background: rgb(var(--neutral-50));
 }
 
-.types-grid {
+.types-grid-aboutpage {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
 }
 
-.type-card {
+.type-card-aboutpage {
   padding: 2.5rem;
   background: white;
   border-radius: var(--radius-xl);
@@ -303,7 +303,7 @@
   overflow: hidden;
 }
 
-.type-card::after {
+.type-card-aboutpage::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -319,16 +319,16 @@
   transition: transform 0.6s ease;
 }
 
-.type-card:hover::after {
+.type-card-aboutpage:hover::after {
   transform: translateX(100%);
 }
 
-.type-card:hover {
+.type-card-aboutpage:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow-lg);
 }
 
-.type-icon {
+.type-icon-aboutpage {
   width: 80px;
   height: 80px;
   margin: 0 auto 1.5rem;
@@ -342,24 +342,24 @@
   justify-content: center;
 }
 
-.type-icon svg {
+.type-icon-aboutpage svg {
   font-size: 2rem;
   color: rgb(var(--primary-600));
 }
 
-.type-card h3 {
+.type-card-aboutpage h3 {
   font-size: 1.5rem;
   margin-bottom: 1rem;
   color: rgb(var(--neutral-900));
 }
 
-.type-card p {
+.type-card-aboutpage p {
   color: rgb(var(--neutral-600));
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
 
-.type-link {
+.type-link-aboutpage {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -372,24 +372,24 @@
   transition: all var(--transition);
 }
 
-.type-link:hover {
+.type-link-aboutpage:hover {
   color: rgb(var(--primary-700));
   gap: 0.75rem;
 }
 
 /* Team Section */
-.team-section {
+.team-section-aboutpage {
   padding: 6rem 0;
   background: white;
 }
 
-.team-grid {
+.team-grid-aboutpage {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
 }
 
-.team-card {
+.team-card-aboutpage {
   background: white;
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -398,29 +398,29 @@
   border: 1px solid rgb(var(--neutral-200));
 }
 
-.team-card:hover {
+.team-card-aboutpage:hover {
   transform: translateY(-8px);
   box-shadow: var(--shadow-xl);
 }
 
-.team-image {
+.team-image-aboutpage {
   position: relative;
   height: 300px;
   overflow: hidden;
 }
 
-.team-image img {
+.team-image-aboutpage img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform var(--transition-slow);
 }
 
-.team-card:hover .team-image img {
+.team-card-aboutpage:hover .team-image-aboutpage img {
   transform: scale(1.05);
 }
 
-.team-overlay {
+.team-overlay-aboutpage {
   position: absolute;
   top: 0;
   left: 0;
@@ -433,11 +433,11 @@
   transition: all var(--transition);
 }
 
-.team-card:hover .team-overlay {
+.team-card-aboutpage:hover .team-overlay-aboutpage {
   background: rgba(var(--primary-600), 0.7);
 }
 
-.team-overlay a {
+.team-overlay-aboutpage a {
   width: 50px;
   height: 50px;
   background: white;
@@ -451,34 +451,34 @@
   transition: all var(--transition);
 }
 
-.team-card:hover .team-overlay a {
+.team-card-aboutpage:hover .team-overlay-aboutpage a {
   transform: translateY(0);
   opacity: 1;
 }
 
-.team-info {
+.team-info-aboutpage {
   padding: 2rem;
 }
 
-.team-info h3 {
+.team-info-aboutpage h3 {
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
   color: rgb(var(--neutral-900));
 }
 
-.team-role {
+.team-role-aboutpage {
   color: rgb(var(--primary-600));
   font-weight: 600;
   margin-bottom: 1rem;
 }
 
-.team-bio {
+.team-bio-aboutpage {
   color: rgb(var(--neutral-600));
   line-height: 1.6;
 }
 
 /* Office Section */
-.office-section {
+.office-section-aboutpage {
   padding: 6rem 0;
   background: linear-gradient(135deg, 
       rgba(var(--primary-50), 0.5) 0%,
@@ -487,27 +487,27 @@
   );
 }
 
-.office-content {
+.office-content-aboutpage {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
   align-items: start;
 }
 
-.office-details {
+.office-details-aboutpage {
   display: flex;
   flex-direction: column;
   gap: 2rem;
   margin: 2rem 0;
 }
 
-.detail-item {
+.detail-item-aboutpage {
   display: flex;
   align-items: flex-start;
   gap: 1.5rem;
 }
 
-.detail-item svg {
+.detail-item-aboutpage svg {
   width: 48px;
   height: 48px;
   background: rgb(var(--primary-50));
@@ -517,19 +517,19 @@
   flex-shrink: 0;
 }
 
-.detail-item h4 {
+.detail-item-aboutpage h4 {
   font-size: 1.125rem;
   margin-bottom: 0.5rem;
   color: rgb(var(--neutral-900));
 }
 
-.detail-item p {
+.detail-item-aboutpage p {
   color: rgb(var(--neutral-600));
   line-height: 1.5;
 }
 
 /* Обновленные стили для Office секции */
-.office-section {
+.office-section-aboutpage {
   background: linear-gradient(135deg, 
       rgba(var(--primary-50), 0.5) 0%,
       white 50%,
@@ -537,14 +537,14 @@
   );
 }
 
-.office-features {
+.office-features-aboutpage {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin: 2rem 0 3rem;
 }
 
-.feature {
+.feature-aboutpage {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -555,18 +555,18 @@
   transition: all var(--transition);
 }
 
-.feature:hover {
+.feature-aboutpage:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow);
   border-color: rgb(var(--primary-300));
 }
 
-.feature svg {
+.feature-aboutpage svg {
   color: rgb(var(--accent-green));
   font-size: 1.25rem;
 }
 
-.office-cta {
+.office-cta-aboutpage {
   margin-top: 3rem;
   padding: 2rem;
   background: rgb(var(--primary-50));
@@ -574,7 +574,7 @@
   border: 1px solid rgb(var(--primary-100));
 }
 
-.cta-note {
+.cta-note-aboutpage {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -583,19 +583,19 @@
   margin-bottom: 1.5rem;
 }
 
-.cta-note svg {
+.cta-note-aboutpage svg {
   color: rgb(var(--primary-600));
 }
 
-.map-info h4 {
+.map-info-aboutpage h4 {
   color: rgb(var(--primary-700));
 }
 
-.office-map {
+.office-map-aboutpage {
   height: 100%;
 }
 
-.map-container {
+.map-container-aboutpage {
   height: 400px;
   background: linear-gradient(135deg, 
       rgb(var(--neutral-100)) 0%,
@@ -609,12 +609,12 @@
   overflow: hidden;
 }
 
-.map-placeholder {
+.map-placeholder-aboutpage {
   text-align: center;
   padding: 2rem;
 }
 
-.map-marker {
+.map-marker-aboutpage {
   width: 80px;
   height: 80px;
   margin: 0 auto 1.5rem;
@@ -631,35 +631,35 @@
   50% { transform: scale(1.05); }
 }
 
-.map-marker svg {
+.map-marker-aboutpage svg {
   color: white;
   font-size: 2rem;
 }
 
-.map-info h4 {
+.map-info-aboutpage h4 {
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
   color: rgb(var(--neutral-900));
 }
 
-.map-info p {
+.map-info-aboutpage p {
   color: rgb(var(--neutral-600));
   margin-bottom: 1.5rem;
 }
 
 /* Testimonials */
-.testimonials-section {
+.testimonials-section-aboutpage {
   padding: 6rem 0;
   background: white;
 }
 
-.testimonials-grid {
+.testimonials-grid-aboutpage {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
 }
 
-.testimonial-card {
+.testimonial-card-aboutpage {
   padding: 2.5rem;
   background: rgb(var(--neutral-50));
   border-radius: var(--radius-xl);
@@ -667,7 +667,7 @@
   border: 1px solid rgb(var(--neutral-200));
 }
 
-.testimonial-card::before {
+.testimonial-card-aboutpage::before {
   content: '"';
   position: absolute;
   top: 1.5rem;
@@ -678,17 +678,17 @@
   line-height: 1;
 }
 
-.testimonial-rating {
+.testimonial-rating-aboutpage {
   display: flex;
   gap: 0.25rem;
   margin-bottom: 1.5rem;
 }
 
-.testimonial-rating svg {
+.testimonial-rating-aboutpage svg {
   color: rgb(var(--accent-amber));
 }
 
-.testimonial-text {
+.testimonial-text-aboutpage {
   font-size: 1.125rem;
   line-height: 1.6;
   color: rgb(var(--neutral-700));
@@ -697,19 +697,19 @@
   z-index: 1;
 }
 
-.testimonial-author h4 {
+.testimonial-author-aboutpage h4 {
   font-size: 1.125rem;
   margin-bottom: 0.25rem;
   color: rgb(var(--neutral-900));
 }
 
-.testimonial-author p {
+.testimonial-author-aboutpage p {
   color: rgb(var(--neutral-600));
   font-size: 0.875rem;
 }
 
 /* CTA Section */
-.about-cta {
+.about-cta-aboutpage {
   padding: 6rem 0;
   background: linear-gradient(135deg, 
       rgb(var(--primary-600)) 0%,
@@ -719,30 +719,30 @@
   text-align: center;
 }
 
-.cta-content {
+.cta-content-aboutpage {
   max-width: 600px;
   margin: 0 auto;
 }
 
-.cta-icon {
+.cta-icon-aboutpage {
   font-size: 3rem;
   margin-bottom: 1.5rem;
   color: rgba(255, 255, 255, 0.9);
 }
 
-.cta-content h2 {
+.cta-content-aboutpage h2 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
   color: white;
 }
 
-.cta-content p {
+.cta-content-aboutpage p {
   font-size: 1.25rem;
   margin-bottom: 2rem;
   opacity: 0.9;
 }
 
-.cta-buttons {
+.cta-buttons-aboutpage {
   display: flex;
   gap: 1rem;
   justify-content: center;
@@ -750,75 +750,533 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .hero-content,
-  .office-content {
+  .hero-content-aboutpage,
+  .office-content-aboutpage {
     grid-template-columns: 1fr;
     gap: 3rem;
   }
   
-  .hero-text {
+  .hero-text-aboutpage {
     text-align: center;
     margin: 0 auto;
   }
   
-  .hero-stats {
+  .hero-stats-aboutpage {
     justify-content: center;
   }
 }
 
 @media (max-width: 768px) {
-  .about-hero {
+  .about-hero-aboutpage {
     padding: 6rem 0 4rem;
   }
   
-  .hero-text h1 {
+  .hero-text-aboutpage h1 {
     font-size: 2.5rem;
   }
   
-  .hero-stats {
+  .hero-stats-aboutpage {
     grid-template-columns: 1fr;
   }
   
-  .hero-cta-buttons {
+  .hero-cta-buttons-aboutpage {
     flex-direction: column;
   }
   
-  .hero-cta-buttons .btn-lg {
+  .hero-cta-buttons-aboutpage .btn-lg {
     justify-content: center;
   }
   
-  .office-features {
+  .office-features-aboutpage {
     grid-template-columns: 1fr;
   }
   
-  .office-cta {
+  .office-cta-aboutpage {
     text-align: center;
   }
   
-  .cta-buttons {
+  .cta-buttons-aboutpage {
     flex-direction: column;
   }
 }
 
 @media (max-width: 480px) {
-  .hero-badge {
+  .hero-badge-aboutpage {
     font-size: 0.875rem;
     padding: 0.5rem 1rem;
   }
   
-  .hero-description {
+  .hero-description-aboutpage {
     font-size: 1.125rem;
   }
   
-  .section-header h2 {
+  .section-header-aboutpage h2 {
     font-size: 2rem;
   }
   
-  .stat-content h3 {
+  .stat-content-aboutpage h3 {
     font-size: 1.5rem;
   }
   
-  .hero-cta-buttons .btn-lg {
+  .hero-cta-buttons-aboutpage .btn-lg {
     width: 100%;
+  }
+}
+
+/* ====== Улучшенная Office Section ====== */
+
+/* Контейнер карты Яндекс */
+.yandex-map-wrapper {
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 1.5rem;
+}
+
+.map-overlay-info {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 280px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(var(--neutral-200), 0.5);
+  z-index: 10;
+}
+
+.map-marker-animated {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, 
+      rgb(var(--primary-500)) 0%,
+      rgb(var(--primary-600)) 100%
+  );
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.map-marker-animated::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  z-index: -1;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.map-marker-animated svg {
+  color: white;
+  font-size: 1.25rem;
+}
+
+.map-info-content h5 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: rgb(var(--neutral-900));
+  font-weight: 600;
+}
+
+.map-info-content p {
+  font-size: 0.9375rem;
+  color: rgb(var(--neutral-700));
+  margin-bottom: 0.125rem;
+}
+
+.map-info-content small {
+  font-size: 0.75rem;
+  color: rgb(var(--neutral-600));
+}
+
+/* Детали контактов */
+.detail-item-aboutpage {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgb(var(--neutral-200));
+  transition: all var(--transition);
+  margin-bottom: 1rem;
+}
+
+.detail-item-aboutpage:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: rgb(var(--primary-300));
+}
+
+.detail-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, 
+      rgb(var(--primary-50)) 0%,
+      rgb(var(--primary-100)) 100%
+  );
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.detail-icon-wrapper svg {
+  color: rgb(var(--primary-600));
+  font-size: 1.25rem;
+}
+
+.detail-item-aboutpage h4 {
+  font-size: 1.125rem;
+  margin-bottom: 0.75rem;
+  color: rgb(var(--neutral-900));
+  font-weight: 600;
+}
+
+.detail-address, .detail-building {
+  color: rgb(var(--neutral-700));
+  margin-bottom: 0.25rem;
+}
+
+.detail-building {
+  font-size: 0.9375rem;
+}
+
+.detail-note {
+  color: rgb(var(--primary-600));
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgb(var(--neutral-200));
+}
+
+.detail-phone a,
+.detail-email a {
+  color: rgb(var(--neutral-900));
+  text-decoration: none;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+  transition: color var(--transition);
+}
+
+.detail-phone a:hover,
+.detail-email a:hover {
+  color: rgb(var(--primary-600));
+}
+
+.detail-whatsapp {
+  color: rgb(var(--accent-green));
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.working-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hours-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hours-item span {
+  color: rgb(var(--neutral-600));
+  font-size: 0.9375rem;
+}
+
+.hours-item strong {
+  color: rgb(var(--neutral-900));
+  font-weight: 600;
+}
+
+/* CTA карточка */
+.office-cta-aboutpage {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, 
+      rgb(var(--primary-50)) 0%,
+      rgb(var(--primary-100)) 100%
+  );
+  border-radius: var(--radius-xl);
+  border: 1px solid rgb(var(--primary-200));
+  box-shadow: var(--shadow);
+}
+
+.cta-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.cta-icon {
+  width: 64px;
+  height: 64px;
+  background: rgb(var(--primary-600));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cta-icon svg {
+  color: white;
+  font-size: 1.5rem;
+}
+
+.cta-text h4 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: rgb(var(--primary-800));
+}
+
+.cta-text p {
+  color: rgb(var(--primary-700));
+  line-height: 1.5;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cta-buttons .btn {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+}
+
+/* Карточка приглашения */
+.visit-info-card {
+  background: linear-gradient(135deg, 
+      rgba(var(--accent-green), 0.1) 0%,
+      rgba(var(--accent-green), 0.05) 100%
+  );
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  border: 1px solid rgba(var(--accent-green), 0.2);
+  margin-top: 1.5rem;
+}
+
+.visit-icon {
+  width: 56px;
+  height: 56px;
+  background: rgb(var(--accent-green));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.visit-icon svg {
+  color: white;
+  font-size: 1.25rem;
+}
+
+.visit-content h4 {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: rgb(var(--neutral-900));
+}
+
+.visit-content p {
+  color: rgb(var(--neutral-700));
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.visit-bonus {
+  color: rgb(var(--accent-green));
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: rgba(var(--accent-green), 0.1);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+}
+
+/* Действия с картой */
+.map-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.map-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+}
+
+/* Особенности */
+.office-features-aboutpage {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 2rem 0 2.5rem;
+}
+
+.feature-aboutpage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgb(var(--neutral-200));
+  transition: all var(--transition);
+}
+
+.feature-aboutpage:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: rgb(var(--primary-300));
+}
+
+.feature-aboutpage svg {
+  color: rgb(var(--accent-green));
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.feature-aboutpage span {
+  color: rgb(var(--neutral-800));
+  font-weight: 500;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+  .office-content-aboutpage {
+    gap: 3rem;
+  }
+  
+  .cta-buttons .btn {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 992px) {
+  .office-content-aboutpage {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  
+  .office-features-aboutpage {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .cta-buttons {
+    justify-content: center;
+  }
+  
+  .visit-info-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .visit-icon {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .office-features-aboutpage {
+    grid-template-columns: 1fr;
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+  }
+  
+  .cta-buttons .btn {
+    width: 100%;
+  }
+  
+  .map-actions {
+    flex-direction: column;
+  }
+  
+  .map-action-btn {
+    width: 100%;
+  }
+  
+  .detail-item-aboutpage {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .detail-icon-wrapper {
+    margin-bottom: 0.5rem;
+  }
+  
+  .cta-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .map-overlay-info {
+    flex-direction: column;
+    text-align: center;
+    max-width: 200px;
+    padding: 1rem;
+  }
+  
+  .map-marker-animated {
+    margin-bottom: 0.5rem;
+  }
+  
+  .office-cta-aboutpage {
+    padding: 1.5rem;
   }
 }

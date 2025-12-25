@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+
 import Header from "../components/Header";
-import Footer from "../components/Footer";
 import "./Home.css";
 
 // Импорт Font Awesome
@@ -16,170 +15,146 @@ import {
   faUsers,
   faCheckCircle,
   faHeadset,
-  faPlusCircle
+  faStar,
+  faChevronRight,
+  faShieldAlt,
+  faCalendarCheck,
+  faHome,
+  faHeart,
+  faCouch
 } from '@fortawesome/free-solid-svg-icons';
 
 const Home: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'rent' | 'post'>('rent');
+ 
 
   const properties = [
     {
-      badge: "Аренда",
-      type: "rent" as const,
+      badge: "Популярное",
+      type: "featured" as const,
       imageUrl: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop",
-      price: "120,000 ₽/мес",
-      address: "Санкт-Петербург, Приморский р-н",
-      info: "2-комн. квартира, 65 м²",
+      price: "850 BYN/мес",
+      address: "Минский район, Логойск",
+      info: "Современный двухэтажный дом",
       beds: 2,
       baths: 1,
       area: 65,
-      year: 2022,
+      rating: 4.8,
+      features: ["С мебелью", "Кондиционер", "Балкон"]
     },
     {
-      badge: "Аренда",
-      type: "rent" as const,
+      badge: "Новое",
+      type: "new" as const,
       imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop",
-      price: "85,000 ₽/мес",
-      address: "Казань, Вахитовский р-н",
-      info: "1-комн. квартира, 45 м²",
+      price: "650 BYN/мес",
+      address: "Гомель, Советский район",
+      info: "Уютная 1-комн. квартира",
       beds: 1,
       baths: 1,
       area: 45,
-      year: 2021,
+      rating: 4.5,
+      features: ["Ремонт 2023", "Паркинг", "Лифт"]
     },
     {
-      badge: "Аренда",
-      type: "rent" as const,
+      badge: "Премиум",
+      type: "premium" as const,
       imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
-      price: "250,000 ₽/мес",
-      address: "Москва, ЦАО, ул. Тверская",
-      info: "3-комн. квартира, 85 м²",
+      price: "1,200 BYN/мес",
+      address: "Минск, Ленинский район",
+      info: "Просторная 3-комн. квартира",
       beds: 3,
       baths: 2,
       area: 85,
-      year: 2023,
+      rating: 4.9,
+      features: ["С видом", "Камин", "Два балкона"]
     },
     {
-      badge: "Аренда",
-      type: "rent" as const,
+      badge: "Выгодное",
+      type: "discount" as const,
       imageUrl: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop",
-      price: "180,000 ₽/мес",
-      address: "Москва, Хамовники",
-      info: "4-комн. квартира, 120 м²",
+      price: "950 BYN/мес",
+      address: "Брест, Московский район",
+      info: "Светлая 4-комн. квартира",
       beds: 4,
       baths: 2,
       area: 120,
-      year: 2022,
+      rating: 4.7,
+      features: ["С террасой", "Кабинет", "Гардеробная"]
     },
+  ];
+
+  const categories = [
+    { icon: faHome, label: "Виллы", count: "10+" },
+    { icon: faBuilding, label: "Особняки", count: "20+" },
+    { icon: faCouch, label: "Меблированные", count: "45+" },
+    { icon: faHome, label: "Коттеджи", count: "45+" },
+  ];
+
+  const benefits = [
+    {
+      icon: faShieldAlt,
+      title: "Безопасные сделки",
+      description: "Все договоры проверяются юристами"
+    },
+    {
+      icon: faCalendarCheck,
+      title: "Быстрое заселение",
+      description: "Средний срок оформления - 3 дня"
+    },
+    {
+      icon: faCheckCircle,
+      title: "Проверенные объекты",
+      description: "Каждое жилье проходит верификацию"
+    }
   ];
 
   const stats = [
-    { number: "5,000+", label: "Арендных объектов", icon: faBuilding },
-    { number: "1,200+", label: "Довольных арендаторов", icon: faUsers },
-    { number: "95%", label: "Успешных сделок", icon: faCheckCircle },
-    { number: "24/7", label: "Поддержка клиентов", icon: faHeadset },
-  ];
-
-  const steps = [
-    {
-      number: "1",
-      title: "Найдите жилье",
-      description: "Используйте фильтры для поиска подходящих вариантов аренды"
-    },
-    {
-      number: "2",
-      title: "Свяжитесь с владельцем",
-      description: "Организуйте просмотр и обсудите условия аренды"
-    },
-    {
-      number: "3",
-      title: "Безопасная сделка",
-      description: "Заключите договор аренды с нашей помощью"
-    }
+    { number: "5,000+", label: "Активных предложений", icon: faBuilding },
+    { number: "98%", label: "Довольных клиентов", icon: faUsers },
+    { number: "24/7", label: "Поддержка", icon: faHeadset },
+    { number: "15 мин", label: "Среднее время ответа", icon: faCheckCircle },
   ];
 
   return (
     <>
       <Header />
 
-      <section className="hero-home">
+      {/* Hero Section */}
+      <section className="hero-modern">
+        <div className="hero-overlay"></div>
         <div className="container">
-          <div className="hero-content-home">
-            <h1>Найдите идеальное жилье для аренды</h1>
-            <p>
-              Более 5,000+ предложений по аренде жилья по всей Беларуси. 
-              Безопасно, удобно и выгодно с нашей платформой.
-            </p>
-            
-            <div className="search-box-container-home">
-              <div className="search-box-home">
-                <div className="search-tabs-home">
-                  <button 
-                    className={`tab-home ${activeTab === 'rent' ? 'tab-active-home' : ''}`}
-                    onClick={() => setActiveTab('rent')}
-                  >
-                    <FontAwesomeIcon icon={faSearch} className="tab-icon-home" /> 
-                    Найти жилье
-                  </button>
-                  <button 
-                    className={`tab-home ${activeTab === 'post' ? 'tab-active-home' : ''}`}
-                    onClick={() => setActiveTab('post')}
-                  >
-                    <FontAwesomeIcon icon={faPlusCircle} className="tab-icon-home" /> 
-                    Сдать жилье
-                  </button>
-                </div>
-                
-                <div className="search-grid-home">
-                  <div className="search-group-home">
-                    <label className="search-label-home">Город</label>
-                    <select className="search-select-home">
-                      <option value="">Все города</option>
-                      <option value="moscow">Минск</option>
-                      <option value="spb">Гомель</option>
-                      <option value="kazan">Гродно</option>
-                      <option value="ekb">Брест</option>
-                      <option value="nsk">Витебск</option>
-                      <option value="mgl">Могилев</option>
-                    </select>
+          <div className="hero-content-modern">
+            <div className="hero-text-modern">
+              <h1 className="hero-title-modern">
+                <span className="gradient-text">Найди свой идеальный дом</span>
+                <br />в несколько кликов
+              </h1>
+              <p className="hero-subtitle-modern">
+                Самый удобный способ аренды жилья в Беларуси. 
+                Более 5,000 проверенных вариантов для комфортной жизни.
+              </p>
+              <div className="hero-actions-modern">
+                <button className="btn-primary-modern">
+                  <FontAwesomeIcon icon={faSearch} />
+                  Начать поиск
+                </button>
+                <button className="btn-secondary-modern">
+                  <FontAwesomeIcon icon={faBuilding} />
+                  Сдать жилье
+                </button>
+              </div>
+            </div>
+            <div className="hero-image-modern">
+              <div className="floating-card-modern">
+                <div className="card-content-modern">
+                  <div className="card-badge-modern">Топ выбор</div>
+                  <img 
+                    src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop" 
+                    alt="Лучшее предложение" 
+                  />
+                  <div className="card-info-modern">
+                    <h4>Минский район, Логойск</h4>
+                    <p>1850 BYN/мес • 2-этажный дом</p>
                   </div>
-                  
-                  <div className="search-group-home">
-                    <label className="search-label-home">Этажи</label>
-                    <select className="search-select-home">
-                      <option value="">Любое количество</option>
-                      <option value="apartment">Один</option>
-                      <option value="house">Два</option>
-                      <option value="room">Три</option>
-                      <option value="apartments">Чеыре</option>
-                    </select>
-                  </div>
-                  
-                  <div className="search-group-home">
-                    <label className="search-label-home">Срок аренды</label>
-                    <select className="search-select-home">
-                      <option value="">Любой срок</option>
-                      <option value="day">Посуточно</option>
-                      <option value="month">Помесячно</option>
-                      <option value="year">На длительный срок</option>
-                    </select>
-                  </div>
-                  
-                  <div className="search-group-home">
-                    <label className="search-label-home">Цена, BYN/мес</label>
-                    <select className="search-select-home">
-                      <option value="">Любая цена</option>
-                      <option value="0-30000">до 1000</option>
-                      <option value="30000-60000">1000-2000</option>
-                      <option value="60000-100000">2000-3500</option>
-                      <option value="100000+">от 3500</option>
-                    </select>
-                  </div>
-                  
-                  <button className="search-button-home">
-                    <FontAwesomeIcon icon={faSearch} /> 
-                    {activeTab === 'rent' ? 'Найти жилье' : 'Разместить объявление'}
-                  </button>
                 </div>
               </div>
             </div>
@@ -187,111 +162,159 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="featured-home">
+      {/* Categories Section */}
+      <section className="categories-section">
         <div className="container">
-          <h2 className="section-title-home">Популярные предложения</h2>
-          <p className="section-subtitle-home">
-            Самые востребованные объекты для аренды, проверенные нашими специалистами
+          <h2 className="section-title-modern">Категории жилья</h2>
+          <p className="section-subtitle-modern">
+            Выберите тип жилья, который подходит именно вам
           </p>
           
-          <div className="properties-grid-home">
+          <div className="categories-grid-modern">
+            {categories.map((category, index) => (
+              <div key={index} className="category-card-modern">
+                <div className="category-icon-modern">
+                  <FontAwesomeIcon icon={category.icon} />
+                </div>
+                <h3>{category.label}</h3>
+                <p>{category.count} предложений</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Properties */}
+      <section className="featured-section-modern">
+        <div className="container">
+          <div className="section-header-modern">
+            <div>
+              <h2 className="section-title-modern">Популярные предложения</h2>
+              <p className="section-subtitle-modern">
+                Самые востребованные варианты этой недели
+              </p>
+            </div>
+            <button className="view-all-btn-modern">
+              Все предложения
+              <FontAwesomeIcon icon={faArrowRight} />
+            </button>
+          </div>
+          
+          <div className="properties-grid-modern">
             {properties.map((property, index) => (
-              <div key={index} className="property-card-home">
-                <div className={`property-badge-home ${property.type}`}>
+              <div key={index} className="property-card-modern">
+                <div className={`property-badge-modern ${property.type}`}>
                   {property.badge}
                 </div>
-                <div className="property-image-home">
+                <div className="property-image-modern">
                   <img src={property.imageUrl} alt={property.address} />
+                  <button className="favorite-btn-modern">
+                    <FontAwesomeIcon icon={faHeart} />
+                  </button>
                 </div>
-                <div className="property-content-home">
-                  <div className="property-price-home">{property.price}</div>
-                  <div className="property-address-home">
-                    <FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}
+                <div className="property-content-modern">
+                  <div className="property-price-modern">
+                    <span className="price-modern">{property.price}</span>
+                    <div className="rating-modern">
+                      <FontAwesomeIcon icon={faStar} />
+                      <span>{property.rating}</span>
+                    </div>
                   </div>
-                  <div className="property-info-home">{property.info}</div>
-                  <div className="property-features-home">
-                    <span className="property-feature-home">
+                  <h3 className="property-title-modern">{property.info}</h3>
+                  <div className="property-address-modern">
+                    <FontAwesomeIcon icon={faMapMarkerAlt} />
+                    {property.address}
+                  </div>
+                  <div className="property-features-modern">
+                    <span className="feature-modern">
                       <FontAwesomeIcon icon={faBed} /> {property.beds}
                     </span>
-                    <span className="property-feature-home">
+                    <span className="feature-modern">
                       <FontAwesomeIcon icon={faBath} /> {property.baths}
                     </span>
-                    <span className="property-feature-home">
+                    <span className="feature-modern">
                       <FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²
                     </span>
                   </div>
+                  <div className="property-tags-modern">
+                    {property.features.map((feature, idx) => (
+                      <span key={idx} className="tag-modern">{feature}</span>
+                    ))}
+                  </div>
+                  <button className="property-btn-modern">
+                    Подробнее
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="benefits-section">
+        <div className="container">
+          <h2 className="section-title-modern">Почему выбирают нас</h2>
+          <p className="section-subtitle-modern">
+            Мы делаем аренду жилья простой и безопасной
+          </p>
           
-          <div className="text-center">
-            <button className="btn btn-primary btn-lg">
-              Смотреть все предложения
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-            </button>
+          <div className="benefits-grid-modern">
+            {benefits.map((benefit, index) => (
+              <div key={index} className="benefit-card-modern">
+                <div className="benefit-icon-modern">
+                  <FontAwesomeIcon icon={benefit.icon} />
+                </div>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="stats-home">
+      <section className="stats-section-modern">
         <div className="container">
-          <div className="stats-grid-home">
+          <div className="stats-grid-modern">
             {stats.map((stat, index) => (
-              <div key={index} className="stat-item-home">
-                <div className="stat-icon-home">
+              <div key={index} className="stat-item-modern">
+                <div className="stat-icon-modern">
                   <FontAwesomeIcon icon={stat.icon} />
                 </div>
-                <div className="stat-number-home">{stat.number}</div>
-                <div className="stat-label-home">{stat.label}</div>
+                <div className="stat-content-modern">
+                  <div className="stat-number-modern">{stat.number}</div>
+                  <div className="stat-label-modern">{stat.label}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="how-it-works-home">
+      {/* Newsletter */}
+      <section className="newsletter-section">
         <div className="container">
-          <h2 className="section-title-home">Как это работает</h2>
-          <p className="section-subtitle-home">
-            Простой и безопасный процесс аренды жилья
-          </p>
-          
-          <div className="steps-grid-home">
-            {steps.map((step, index) => (
-              <div key={index} className="step-home">
-                <div className="step-number-home">{step.number}</div>
-                <h3>{step.title}</h3>
-                <p>{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="cta-section-home">
-        <div className="container">
-          <div className="cta-content-home">
-            <h2>Готовы найти свое идеальное жилье?</h2>
-            <p>
-              Начните поиск уже сегодня или разместите свое объявление об аренде
-            </p>
-            <div className="cta-buttons-home">
-              <button className="btn btn-primary cta-primary-home">
-                Начать поиск
-              </button>
-              <button className="btn cta-secondary-home">
-                Сдать жилье
+          <div className="newsletter-content-modern">
+            <div className="newsletter-text-modern">
+              <h2>Получайте лучшие предложения первыми</h2>
+              <p>Подпишитесь на рассылку и узнавайте о новых объектах</p>
+            </div>
+            <div className="newsletter-form-modern">
+              <input 
+                type="email" 
+                placeholder="Ваш email" 
+                className="email-input-modern"
+              />
+              <button className="subscribe-btn-modern">
+                Подписаться
+                <FontAwesomeIcon icon={faChevronRight} />
               </button>
             </div>
           </div>
         </div>
       </section>
-
-      <Footer />
     </>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Header from "../components/Header";
-import Footer from "../components/Footer";
 import AgentCard from "../components/AgentCard";
 import type { Agent } from "../components/AgentCard";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -11,14 +10,10 @@ import {
   faSortAmountDown,
   faChevronDown,
   faTimes,
-  faMedal,
   faStar,
-  faUsers,
   faMapMarkerAlt,
   faHome,
   faClock,
-  faCheckCircle,
-  faTree
 } from '@fortawesome/free-solid-svg-icons';
 import "./Agents.css";
 
@@ -63,8 +58,6 @@ const Agents: React.FC = () => {
         reviewsCount: 128,
         experience: 8,
         propertiesManaged: 156,
-        isOnline: true,
-        responseTime: "15 мин",
         description: "Специализируюсь на загородных домах в Минской области. Помогу найти идеальный вариант для ваших нужд.",
         location: "Минская область",
         satisfactionRate: 97,
@@ -90,8 +83,7 @@ const Agents: React.FC = () => {
         reviewsCount: 94,
         experience: 6,
         propertiesManaged: 112,
-        isOnline: false,
-        responseTime: "30 мин",
+
         description: "Специализируюсь на домах у озер и рек. Знаю все лучшие локации для отдыха на природе.",
         location: "Витебская область",
         satisfactionRate: 96,
@@ -117,8 +109,6 @@ const Agents: React.FC = () => {
         reviewsCount: 87,
         experience: 10,
         propertiesManaged: 143,
-        isOnline: true,
-        responseTime: "20 мин",
         description: "Эксперт по старинным усадьбам и современным коттеджам. Работаю по всей Беларуси.",
         location: "Гродненская область",
         satisfactionRate: 94,
@@ -144,8 +134,6 @@ const Agents: React.FC = () => {
         reviewsCount: 76,
         experience: 5,
         propertiesManaged: 89,
-        isOnline: true,
-        responseTime: "10 мин",
         description: "Специализируюсь на аренде домов для отдыха и отпуска. Помогу быстро найти подходящий вариант.",
         location: "Брестская область",
         satisfactionRate: 95,
@@ -171,8 +159,6 @@ const Agents: React.FC = () => {
         reviewsCount: 65,
         experience: 12,
         propertiesManaged: 178,
-        isOnline: false,
-        responseTime: "45 мин",
         description: "Работаю с большими домами для семей. Помогаю найти просторное жилье для комфортной жизни.",
         location: "Могилевская область",
         satisfactionRate: 96,
@@ -198,8 +184,6 @@ const Agents: React.FC = () => {
         reviewsCount: 53,
         experience: 4,
         propertiesManaged: 67,
-        isOnline: true,
-        responseTime: "15 мин",
         description: "Специализируюсь на экологичных домах и домах с земельным участком. Работаю в Гомельской области.",
         location: "Гомельская область",
         satisfactionRate: 92,
@@ -225,8 +209,7 @@ const Agents: React.FC = () => {
         reviewsCount: 42,
         experience: 15,
         propertiesManaged: 89,
-        isOnline: true,
-        responseTime: "60 мин",
+
         description: "Работаю с эксклюзивными загородными резиденциями. Индивидуальный подход и конфиденциальность.",
         location: "Минск",
         satisfactionRate: 98,
@@ -252,8 +235,6 @@ const Agents: React.FC = () => {
         reviewsCount: 38,
         experience: 7,
         propertiesManaged: 54,
-        isOnline: false,
-        responseTime: "2 часа",
         description: "Специализируюсь на домах в исторических и культурных местах Беларуси.",
         location: "Несвиж",
         satisfactionRate: 93,
@@ -368,22 +349,20 @@ const Agents: React.FC = () => {
           <div className="spinner-agent"></div>
           <p>Загрузка агентов...</p>
         </div>
-        <Footer />
       </>
     );
   }
 
   return (
     <>
-      <Header />
-
+       <Header />
       <div className="agents-page-agent">
         <section className="agents-hero-agent">
           <div className="container">
             <div className="agents-hero-content-agent">
               <h1>Наши профессиональные агенты по домам</h1>
               <p>
-                {filteredAgents.length} специалистов готовы помочь вам с арендой домов в Беларуси
+                Наши специалисты готовы помочь вам с арендой домов в Беларуси
               </p>
 
               <div className="agents-search-agent">
@@ -476,30 +455,6 @@ const Agents: React.FC = () => {
                 </select>
               </div>
 
-              <div className="agents-stats-agent">
-                <div className="stat-card-agent">
-                  <FontAwesomeIcon icon={faUsers}/>
-                  <div className="stat-content-agent">
-                    <span>{agents.length}</span>
-                    <span>Агентов</span>
-                  </div>
-                </div>
-                <div className="stat-card-agent">
-                  <FontAwesomeIcon icon={faMedal}/>
-                  <div className="stat-content-agent">
-                    <span>{agents.filter(a => a.rating >= 4.8).length}</span>
-                    <span>Топ-рейтинг</span>
-                  </div>
-                </div>
-                <div className="stat-card-agent">
-                  <FontAwesomeIcon icon={faCheckCircle}/>
-                  <div className="stat-content-agent">
-                    <span>98%</span>
-                    <span>Успешных сделок</span>
-                  </div>
-                </div>
-              </div>
-
               <div className="filter-actions-agent">
                 <button className="btn-secondary filter-reset-agent" onClick={resetFilters}>
                   Сбросить фильтры
@@ -574,51 +529,12 @@ const Agents: React.FC = () => {
                   ))}
                 </div>
               )}
-
-              {/* Преимущества */}
-              <div className="agents-benefits-agent">
-                <h2>Почему выбирают наших агентов по домам?</h2>
-                <div className="benefits-grid-agent">
-                  <div className="benefit-card-agent">
-                    <FontAwesomeIcon icon={faMedal}/>
-                    <h3>Специализация на домах</h3>
-                    <p>Все наши агенты — эксперты именно по загородным домам и коттеджам в Беларуси</p>
-                  </div>
-
-                  <div className="benefit-card-agent">
-                    <FontAwesomeIcon icon={faStar}/>
-                    <h3>Знание рынка Беларуси</h3>
-                    <p>Глубокое понимание особенностей рынка недвижимости в регионах Беларуси</p>
-                  </div>
-
-                  <div className="benefit-card-agent">
-                    <FontAwesomeIcon icon={faTree}/>
-                    <h3>Экспертиза по участкам</h3>
-                    <p>Помогаем оценить не только дом, но и земельный участок, инфраструктуру</p>
-                  </div>
-
-                  <div className="benefit-card-agent">
-                    <FontAwesomeIcon icon={faCheckCircle}/>
-                    <h3>Юридическое сопровождение</h3>
-                    <p>Полное юридическое сопровождение сделок с загородной недвижимостью</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA секция */}
-              <div className="agents-cta-agent">
-                <h2>Нужна помощь в подборе дома?</h2>
-                <p>Наши специалисты подберут идеальный вариант по вашим критериям и бюджету</p>
-                <button className="btn-primary" onClick={() => alert('Форма подбора дома будет открыта')}>
-                  Подобрать дом с экспертом
-                </button>
-              </div>
             </main>
           </div>
         </div>
       </div>
 
-      <Footer />
+      
     </>
   );
 };

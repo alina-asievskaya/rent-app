@@ -1,80 +1,461 @@
-  import React, { useState, useEffect } from "react";
-  import { useLocation } from "react-router-dom";
-  import Header from "../components/Header";
-  import Footer from "../components/Footer";
-  import PropertyCard from "../components/PropertyCard";
-  import "./Catalog.css";
+import React, { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import Header from "../components/Header";
+import "./Catalog.css";
 
-  // Импорт Font Awesome
-  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-  import {
-    faFilter,
-    faSlidersH,
-    faSortAmountDown,
-    faSortAmountUp,
-    faMapMarkerAlt,
-    faRulerCombined,
-    faBed,
-    faBath,
-    faStar,
-    faFire,
-    faClock,
-    faCheckCircle,
-    faChevronDown,
-    faTimes,
-    faHeart as faHeartSolid
-  } from '@fortawesome/free-solid-svg-icons';
-  import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
-  import type { IconProp } from '@fortawesome/fontawesome-svg-core';
+// Импорт Font Awesome
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faFilter,
+  faSlidersH,
+  faSortAmountDown,
+  faSortAmountUp,
+  faMapMarkerAlt,
+  faRulerCombined,
+  faBed,
+  faBath,
+  faStar,
+  faFire,
+  faClock,
+  faCheckCircle,
+  faChevronDown,
+  faTimes,
+  faHome,
+  faHeart as faHeartSolid,
+  faSnowflake,
+  faWifi,
+  faShieldAlt,
+  faCar,
+  faTree,
+  faSwimmingPool,
+  faHotTub,
+  faExclamationTriangle
+} from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
+import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 
-  // Типы для фильтров
-  interface FilterOptions {
-    city: string;
-    propertyType: string;
-    rooms: string;
-    priceMin: string;
-    priceMax: string;
-    areaMin: string;
-    areaMax: string;
-    features: string[];
-  }
+// Типы для фильтров
+interface FilterOptions {
+  city: string;
+  propertyType: string;
+  rooms: string;
+  priceMin: string;
+  priceMax: string;
+  areaMin: string;
+  areaMax: string;
+  features: string[];
+}
 
-  interface SortOption {
-    id: string;
-    label: string;
-    icon: IconProp;
-  }
+interface SortOption {
+  id: string;
+  label: string;
+  icon: IconProp;
+}
 
-  interface Property {
-    id: number;
-    badge: string;
-    imageUrl: string;
-    price: string;
-    address: string;
-    info: string;
-    beds: number;
-    baths: number;
-    area: number;
-    year: number;
-    rating: number;
-    isPremium: boolean;
-    isHot: boolean;
-    description: string;
-    features: string[];
-  }
+interface Property {
+  id: number;
+  badge: string;
+  imageUrl: string;
+  price: string;
+  address: string;
+  info: string;
+  beds: number;
+  baths: number;
+  area: number;
+  year: number;
+  rating: number;
+  description: string;
+  features: string[];
+  houseType?: string;
+  region?: string;
+  city?: string;
+  street?: string;
+  rooms?: number;
+  bathrooms?: number;
+  floor?: number;
+  isPremium?: boolean;
+  isHot?: boolean;
+  photos?: string[];
+  ownerName?: string;
+  ownerEmail?: string;
+  announcementData?: string;
+}
 
-  const Catalog: React.FC = () => {
-    const location = useLocation();
-    const [properties, setProperties] = useState<Property[]>([]);
-    const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showFilters, setShowFilters] = useState(false);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [sortBy, setSortBy] = useState('price-asc');
-    const [favorites, setFavorites] = useState<Set<number>>(new Set());
+interface ApiResponse {
+  success: boolean;
+  data: Property[];
+  total?: number;
+  message?: string;
+  error?: string;
+}
 
-    // Состояние фильтров
-    const [filters, setFilters] = useState<FilterOptions>({
+const Catalog: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate(); 
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState('price-asc');
+  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  // Состояние фильтров
+  const [filters, setFilters] = useState<FilterOptions>({
+    city: '',
+    propertyType: '',
+    rooms: '',
+    priceMin: '',
+    priceMax: '',
+    areaMin: '',
+    areaMax: '',
+    features: []
+  });
+
+  // Данные для фильтров - извлекаем уникальные города из данных
+  const cities = useMemo(() => {
+    const uniqueCities = Array.from(new Set(
+      properties
+        .map(p => p.city)
+        .filter((city): city is string => city != null && city.trim() !== "")
+    ));
+    return ["Все города", ...uniqueCities];
+  }, [properties]);
+
+  const propertyTypes = useMemo(() => {
+    const uniqueTypes = Array.from(new Set(
+      properties
+        .map(p => p.houseType)
+        .filter((type): type is string => type != null && type.trim() !== "")
+    ));
+    return ["Все типы", ...uniqueTypes];
+  }, [properties]);
+
+  const roomOptions = ["Любое", "1", "2", "3", "4+"];
+  const featuresOptions = [
+    "Кондиционер",
+    "Мебель", 
+    "Интернет",
+    "Охрана",
+    "Парковка",
+    "Гараж",
+    "Сад",
+    "Бассейн",
+    "Сауна"
+  ];
+  
+  const sortOptions: SortOption[] = [
+    { id: 'price-asc', label: 'Цена: по возрастанию', icon: faSortAmountUp },
+    { id: 'price-desc', label: 'Цена: по убыванию', icon: faSortAmountDown },
+    { id: 'area-desc', label: 'Площадь: большая', icon: faRulerCombined },
+    { id: 'newest', label: 'Сначала новые', icon: faClock },
+    { id: 'popular', label: 'Популярные', icon: faFire }
+  ];
+
+  // Функция для загрузки данных из API
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      setApiError(null);
+      
+      // ДЕБАГ: проверяем URL
+      const API_URL = 'http://localhost:5213/api'; // Прямой URL
+      console.log('Загружаю данные с:', `${API_URL}/houses/catalog`);
+      
+      const response = await fetch(`${API_URL}/houses/catalog`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors', // Явно указываем режим CORS
+      });
+
+      console.log('Статус ответа:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+      }
+
+      const result: ApiResponse = await response.json();
+      console.log('Данные получены:', result);
+      
+      if (result.success && result.data) {
+        // Трансформируем данные из API в формат, который ожидает компонент
+        const transformedProperties = result.data.map(house => {
+          // Преобразуем числовую цену в строковый формат
+          const priceStr = house.price || '';
+          const priceMatch = priceStr.match(/(\d+)/);
+          const numericPrice = priceMatch ? parseInt(priceMatch[1]) : 0;
+          
+          // Определяем год из даты объявления
+          const year = house.announcementData 
+            ? new Date(house.announcementData).getFullYear()
+            : new Date().getFullYear();
+          
+          // Формируем адрес
+          const address = house.address || 
+            (house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указан');
+          
+          // Формируем информацию
+          const info = house.info || 
+            `${house.rooms || house.beds || 1}-комн. ${house.houseType?.toLowerCase() || 'дом'}, ${house.area || 0} м²`;
+          
+          return {
+            id: house.id || 0,
+            badge: house.badge || "Аренда",
+            imageUrl: house.imageUrl || 
+              (house.photos && house.photos[0]) || 
+              "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop",
+            price: priceStr || `${numericPrice} BYN/мес`,
+            address: address,
+            info: info,
+            beds: house.beds || house.rooms || 1,
+            baths: house.baths || house.bathrooms || 1,
+            area: house.area || 0,
+            year: year,
+            rating: house.rating || 4.5,
+            description: house.description || "Описание отсутствует",
+            features: house.features || [],
+            // Сохраняем дополнительные поля из API
+            houseType: house.houseType,
+            region: house.region,
+            city: house.city,
+            street: house.street,
+            rooms: house.rooms,
+            bathrooms: house.bathrooms,
+            floor: house.floor,
+            isPremium: house.isPremium,
+            isHot: house.isHot,
+            photos: house.photos,
+            ownerName: house.ownerName,
+            ownerEmail: house.ownerEmail,
+            announcementData: house.announcementData
+          };
+        });
+        
+        console.log('Трансформированные данные:', transformedProperties.length, 'объявлений');
+        setProperties(transformedProperties);
+      } else {
+        throw new Error(result.message || 'Не удалось загрузить данные');
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке данных:', error);
+      
+      // Подробная диагностика ошибки
+      let errorMessage = 'Неизвестная ошибка';
+      
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        errorMessage = 'Не удалось подключиться к серверу. Возможные причины:\n' +
+                       '1. Бекенд не запущен на localhost:5000\n' +
+                       '2. Проблемы с CORS настройками\n' +
+                       '3. Сетевая ошибка';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setApiError(errorMessage);
+      
+      // В случае ошибки показываем демо-данные
+      const mockProperties: Property[] = [
+        {
+          id: 1,
+          badge: "Аренда",
+          imageUrl: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop",
+          price: "1200 BYN/мес",
+          address: "Боровляны, Минский район",
+          info: "2-комн. квартира, 65 м²",
+          beds: 2,
+          baths: 1,
+          area: 65,
+          year: 2022,
+          rating: 4.8,
+          description: "Светлая квартира с современным ремонтом, мебелью и техникой. Рядом метро и парк.",
+          features: ["Мебель", "Интернет", "Парковка"]
+        },
+        {
+          id: 2,
+          badge: "Аренда", 
+          imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop",
+          price: "850 BYN/мес",
+          address: "Минск, Центральный район",
+          info: "1-комн. квартира, 45 м²",
+          beds: 1,
+          baths: 1,
+          area: 45,
+          year: 2021,
+          rating: 4.5,
+          description: "Уютная квартира в новом доме. Идеально для одного человека или пары.",
+          features: ["Мебель", "Кондиционер"]
+        }
+      ];
+      setProperties(mockProperties);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Загрузка данных при монтировании компонента
+  useEffect(() => {
+    fetchProperties();
+    
+    // Парсинг query параметров из URL
+    const searchParams = new URLSearchParams(location.search);
+    const city = searchParams.get('city');
+    const type = searchParams.get('type');
+    
+    const initialFilters: FilterOptions = {
+      city: city || '',
+      propertyType: type || '',
+      rooms: '',
+      priceMin: '',
+      priceMax: '',
+      areaMin: '',
+      areaMax: '',
+      features: []
+    };
+    
+    setFilters(initialFilters);
+  }, [location.search]);
+
+  // Функция для получения иконки по названию особенности
+  const getFeatureIcon = (feature: string) => {
+    const iconMap: Record<string, IconProp> = {
+      "Кондиционер": faSnowflake,
+      "Мебель": faHome,
+      "Интернет": faWifi,
+      "Охрана": faShieldAlt,
+      "Парковка": faCar,
+      "Гараж": faCar,
+      "Сад": faTree,
+      "Бассейн": faSwimmingPool,
+      "Сауна": faHotTub
+    };
+    return iconMap[feature] || faCheckCircle;
+  };
+
+  // Фильтрация + сортировка через useMemo
+  const filteredProperties = useMemo(() => {
+    let result = [...properties];
+
+    // Фильтр по городу
+    if (filters.city && filters.city !== "Все города") {
+      result = result.filter(prop => 
+        (prop.city && prop.city.includes(filters.city)) || 
+        prop.address.includes(filters.city)
+      );
+    }
+
+    // Фильтр по типу недвижимости
+    if (filters.propertyType && filters.propertyType !== "Все типы") {
+      result = result.filter(prop => 
+        (prop.houseType && prop.houseType.toLowerCase().includes(filters.propertyType.toLowerCase())) ||
+        prop.info.toLowerCase().includes(filters.propertyType.toLowerCase())
+      );
+    }
+
+    // Фильтр по комнатам
+    if (filters.rooms && filters.rooms !== "Любое") {
+      if (filters.rooms === "4+") {
+        result = result.filter(prop => prop.beds >= 4);
+      } else {
+        const roomsNum = parseInt(filters.rooms);
+        result = result.filter(prop => prop.beds === roomsNum);
+      }
+    }
+
+    // Фильтр по цене
+    if (filters.priceMin) {
+      const minPrice = parseInt(filters.priceMin.replace(/\D/g, ''));
+      if (!isNaN(minPrice)) {
+        result = result.filter(prop => {
+          const propPrice = parseInt(prop.price.replace(/\D/g, ''));
+          return propPrice >= minPrice;
+        });
+      }
+    }
+
+    if (filters.priceMax) {
+      const maxPrice = parseInt(filters.priceMax.replace(/\D/g, ''));
+      if (!isNaN(maxPrice)) {
+        result = result.filter(prop => {
+          const propPrice = parseInt(prop.price.replace(/\D/g, ''));
+          return propPrice <= maxPrice;
+        });
+      }
+    }
+
+    // Фильтр по площади
+    if (filters.areaMin) {
+      const minArea = parseInt(filters.areaMin);
+      if (!isNaN(minArea)) {
+        result = result.filter(prop => prop.area >= minArea);
+      }
+    }
+
+    if (filters.areaMax) {
+      const maxArea = parseInt(filters.areaMax);
+      if (!isNaN(maxArea)) {
+        result = result.filter(prop => prop.area <= maxArea);
+      }
+    }
+
+    // Фильтр по особенностям
+    if (filters.features.length > 0) {
+      result = result.filter(prop =>
+        filters.features.every(feature => prop.features.includes(feature))
+      );
+    }
+
+    // Сортировка
+    result.sort((a, b) => {
+      const priceA = parseInt(a.price.replace(/\D/g, '')) || 0;
+      const priceB = parseInt(b.price.replace(/\D/g, '')) || 0;
+
+      switch (sortBy) {
+        case "price-asc": {
+          return priceA - priceB;
+        }
+        case "price-desc": {
+          return priceB - priceA;
+        }
+        case "area-desc": {
+          return (b.area || 0) - (a.area || 0);
+        }
+        case "newest": {
+          // Сортировка по дате объявления
+          const dateA = a.announcementData ? new Date(a.announcementData).getTime() : 0;
+          const dateB = b.announcementData ? new Date(b.announcementData).getTime() : 0;
+          return dateB - dateA;
+        }
+        case "popular": {
+          // Используем рейтинг для популярности
+          return (b.rating || 0) - (a.rating || 0);
+        }
+        default: {
+          return 0;
+        }
+      }
+    });
+
+    return result;
+  }, [properties, filters, sortBy]);
+
+  // Обработчики фильтров
+  const handleFilterChange = (key: keyof FilterOptions, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleFeatureToggle = (feature: string) => {
+    setFilters(prev => ({
+      ...prev,
+      features: prev.features.includes(feature)
+        ? prev.features.filter(f => f !== feature)
+        : [...prev.features, feature]
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
       city: '',
       propertyType: '',
       rooms: '',
@@ -84,707 +465,463 @@
       areaMax: '',
       features: []
     });
+  };
 
-    // Данные для фильтров
-    const cities = ["Все города", "Москва", "Санкт-Петербург", "Казань", "Екатеринбург", "Новосибирск", "Сочи"];
-    const propertyTypes = ["Все типы", "Квартира", "Дом", "Апартаменты", "Комната", "Таунхаус"];
-    const roomOptions = ["Любое", "1", "2", "3", "4+"];
-    const featuresOptions = ["Меблированная", "С ремонтом", "С техникой", "Балкон/лоджия", "Парковка", "Консьерж", "Лифт"];
+  const toggleFavorite = (id: number) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(id)) {
+        newFavorites.delete(id);
+      } else {
+        newFavorites.add(id);
+      }
+      return newFavorites;
+    });
+  };
+
+  // Быстрый фильтр по типу дома
+  const quickFilterByType = (type: string) => {
+    handleFilterChange('propertyType', type);
+  };
+
+  // Обновление URL при изменении фильтров
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.city) params.set('city', filters.city);
+    if (filters.propertyType) params.set('type', filters.propertyType);
     
-    const sortOptions: SortOption[] = [
-      { id: 'price-asc', label: 'Цена: по возрастанию', icon: faSortAmountUp },
-      { id: 'price-desc', label: 'Цена: по убыванию', icon: faSortAmountDown },
-      { id: 'area-desc', label: 'Площадь: большая', icon: faRulerCombined },
-      { id: 'newest', label: 'Сначала новые', icon: faClock },
-      { id: 'popular', label: 'Популярные', icon: faFire }
-    ];
+    navigate({ search: params.toString() }, { replace: true });
+  }, [filters.city, filters.propertyType, navigate]);
 
-    // Функция фильтрации и сортировки - вынесена из useEffect
-    const filterAndSortProperties = (
-      propertiesList: Property[], 
-      filterOptions: FilterOptions, 
-      sortOption: string
-    ): Property[] => {
-      let result = [...propertiesList];
+  // Функция для повторной загрузки данных
+  const retryFetch = () => {
+    fetchProperties();
+  };
 
-      // Применение фильтров
-      if (filterOptions.city && filterOptions.city !== "Все города") {
-        result = result.filter(prop => 
-          prop.address.toLowerCase().includes(filterOptions.city.toLowerCase())
-        );
-      }
-
-      if (filterOptions.propertyType && filterOptions.propertyType !== "Все типы") {
-        result = result.filter(prop => 
-          prop.info.toLowerCase().includes(filterOptions.propertyType.toLowerCase()) ||
-          prop.description.toLowerCase().includes(filterOptions.propertyType.toLowerCase())
-        );
-      }
-
-      if (filterOptions.rooms && filterOptions.rooms !== "Любое") {
-        result = result.filter(prop => {
-          if (filterOptions.rooms === "4+") {
-            return prop.beds >= 4;
-          }
-          return prop.beds === parseInt(filterOptions.rooms);
-        });
-      }
-
-      if (filterOptions.priceMin) {
-        const minPrice = parseInt(filterOptions.priceMin.replace(/\D/g, ''));
-        result = result.filter(prop => {
-          const propPrice = parseInt(prop.price.replace(/\D/g, ''));
-          return propPrice >= minPrice;
-        });
-      }
-
-      if (filterOptions.priceMax) {
-        const maxPrice = parseInt(filterOptions.priceMax.replace(/\D/g, ''));
-        result = result.filter(prop => {
-          const propPrice = parseInt(prop.price.replace(/\D/g, ''));
-          return propPrice <= maxPrice;
-        });
-      }
-
-      if (filterOptions.features.length > 0) {
-        result = result.filter(prop =>
-          filterOptions.features.every(feature => 
-            prop.features.includes(feature)
-          )
-        );
-      }
-
-      // Применение сортировки
-      result.sort((a, b) => {
-        const priceA = parseInt(a.price.replace(/\D/g, ''));
-        const priceB = parseInt(b.price.replace(/\D/g, ''));
-
-        switch (sortOption) {
-          case 'price-asc':
-            return priceA - priceB;
-          case 'price-desc':
-            return priceB - priceA;
-          case 'area-desc':
-            return b.area - a.area;
-          case 'newest':
-            return b.year - a.year;
-          case 'popular':
-            return b.rating - a.rating;
-          default:
-            return 0;
-        }
-      });
-
-      return result;
-    };
-
-    // Загрузка данных
-    useEffect(() => {
-      // Заглушка с данными (в реальном приложении здесь будет запрос к API)
-      const mockProperties: Property[] = [
-        {
-          id: 1,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop",
-          price: "120,000 ₽/мес",
-          address: "Санкт-Петербург, Приморский район",
-          info: "2-комн. квартира, 65 м²",
-          beds: 2,
-          baths: 1,
-          area: 65,
-          year: 2022,
-          rating: 4.8,
-          isPremium: true,
-          isHot: true,
-          description: "Светлая квартира с современным ремонтом, мебелью и техникой. Рядом метро и парк.",
-          features: ["Меблированная", "С техникой", "Балкон"]
-        },
-        {
-          id: 2,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop",
-          price: "85,000 ₽/мес",
-          address: "Казань, Вахитовский район",
-          info: "1-комн. квартира, 45 м²",
-          beds: 1,
-          baths: 1,
-          area: 45,
-          year: 2021,
-          rating: 4.5,
-          isPremium: false,
-          isHot: true,
-          description: "Уютная квартира в новом доме. Идеально для одного человека или пары.",
-          features: ["Меблированная", "С ремонтом"]
-        },
-        {
-          id: 3,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
-          price: "250,000 ₽/мес",
-          address: "Москва, ЦАО, ул. Тверская",
-          info: "3-комн. квартира, 85 м²",
-          beds: 3,
-          baths: 2,
-          area: 85,
-          year: 2023,
-          rating: 4.9,
-          isPremium: true,
-          isHot: false,
-          description: "Элитная квартира в историческом центре с панорамным видом на город.",
-          features: ["Меблированная", "С техникой", "Балкон", "Консьерж", "Парковка"]
-        },
-        {
-          id: 4,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop",
-          price: "180,000 ₽/мес",
-          address: "Москва, Хамовники",
-          info: "4-комн. квартира, 120 м²",
-          beds: 4,
-          baths: 2,
-          area: 120,
-          year: 2022,
-          rating: 4.7,
-          isPremium: true,
-          isHot: true,
-          description: "Просторная семейная квартира в престижном районе. Два санузла, кухня-гостиная.",
-          features: ["Меблированная", "С техникой", "Балкон", "Лифт"]
-        },
-        {
-          id: 5,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop",
-          price: "65,000 ₽/мес",
-          address: "Екатеринбург, Центральный район",
-          info: "Студия, 35 м²",
-          beds: 1,
-          baths: 1,
-          area: 35,
-          year: 2020,
-          rating: 4.3,
-          isPremium: false,
-          isHot: false,
-          description: "Современная студия для молодых специалистов. Все необходимое для комфортной жизни.",
-          features: ["Меблированная", "С техникой"]
-        },
-        {
-          id: 6,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop",
-          price: "150,000 ₽/мес",
-          address: "Новосибирск, Академгородок",
-          info: "3-комн. квартира, 75 м²",
-          beds: 3,
-          baths: 1,
-          area: 75,
-          year: 2021,
-          rating: 4.6,
-          isPremium: false,
-          isHot: true,
-          description: "Тихая квартира в научном центре города. Идеально для семьи с детьми.",
-          features: ["Меблированная", "С ремонтом", "Балкон"]
-        },
-        {
-          id: 7,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop",
-          price: "300,000 ₽/мес",
-          address: "Сочи, Адлерский район",
-          info: "Коттедж, 150 м²",
-          beds: 4,
-          baths: 3,
-          area: 150,
-          year: 2023,
-          rating: 4.9,
-          isPremium: true,
-          isHot: true,
-          description: "Современный коттедж у моря. Собственный сад и терраса с видом на море.",
-          features: ["Меблированная", "С техникой", "Парковка"]
-        },
-        {
-          id: 8,
-          badge: "Аренда",
-          imageUrl: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&h=600&fit=crop",
-          price: "95,000 ₽/мес",
-          address: "Москва, ЮЗАО",
-          info: "2-комн. квартира, 60 м²",
-          beds: 2,
-          baths: 1,
-          area: 60,
-          year: 2022,
-          rating: 4.4,
-          isPremium: false,
-          isHot: false,
-          description: "Удобная квартира в спальном районе. Рядом метро и все необходимые инфраструктуры.",
-          features: ["Меблированная", "С ремонтом"]
-        }
-      ];
-
-      // Парсинг query параметров из URL
-      const searchParams = new URLSearchParams(location.search);
-      const city = searchParams.get('city');
-      const type = searchParams.get('type');
-      
-      const initialFilters: FilterOptions = {
-        city: '',
-        propertyType: '',
-        rooms: '',
-        priceMin: '',
-        priceMax: '',
-        areaMin: '',
-        areaMax: '',
-        features: []
-      };
-
-      if (city || type) {
-        initialFilters.city = city || '';
-        initialFilters.propertyType = type || '';
-      }
-
-      // Симуляция загрузки данных с единым обновлением состояния
-      setTimeout(() => {
-        const loadedProperties = mockProperties;
-        setProperties(loadedProperties);
-        setFilters(initialFilters);
-        
-        // Фильтрация после загрузки данных
-        const filtered = filterAndSortProperties(loadedProperties, initialFilters, 'price-asc');
-        setFilteredProperties(filtered);
-        
-        setLoading(false);
-      }, 500);
-    }, [location.search]);
-
-    // Обновление отфильтрованных свойств при изменении фильтров или сортировки
-    useEffect(() => {
-      if (properties.length > 0) {
-        const filtered = filterAndSortProperties(properties, filters, sortBy);
-        // Используем requestAnimationFrame для избежания синхронных обновлений
-        requestAnimationFrame(() => {
-          setFilteredProperties(filtered);
-        });
-      }
-    }, [properties, filters, sortBy]);
-
-    // Обработчики фильтров
-    const handleFilterChange = (key: keyof FilterOptions, value: string) => {
-      setFilters(prev => ({ ...prev, [key]: value }));
-    };
-
-    const handleFeatureToggle = (feature: string) => {
-      setFilters(prev => ({
-        ...prev,
-        features: prev.features.includes(feature)
-          ? prev.features.filter(f => f !== feature)
-          : [...prev.features, feature]
-      }));
-    };
-
-    const resetFilters = () => {
-      setFilters({
-        city: '',
-        propertyType: '',
-        rooms: '',
-        priceMin: '',
-        priceMax: '',
-        areaMin: '',
-        areaMax: '',
-        features: []
-      });
-    };
-
-    const toggleFavorite = (id: number) => {
-      setFavorites(prev => {
-        const newFavorites = new Set(prev);
-        if (newFavorites.has(id)) {
-          newFavorites.delete(id);
-        } else {
-          newFavorites.add(id);
-        }
-        return newFavorites;
-      });
-    };
-
-    // Компонент загрузки
-    if (loading) {
-      return (
-        <>
-          <Header />
-          <div className="catalog-loading">
-            <div className="spinner"></div>
-            <p>Загрузка предложений...</p>
-          </div>
-          <Footer />
-        </>
-      );
-    }
-
+  // Компонент загрузки
+  if (loading) {
     return (
       <>
         <Header />
+        <div className="agents-loading-agent">
+          <div className="spinner-agent"></div>
+          <p>Загрузка предложений...</p>
+        </div>
+      </>
+    );
+  }
 
-        <div className="catalog-page">
-          {/* Hero секция каталога */}
-          <section className="catalog-hero">
-            <div className="container">
-              <div className="catalog-hero-content">
-                <h1>Каталог жилья для аренды</h1>
-                <p>
-                  {filteredProperties.length} предложений {filters.city && `в ${filters.city}`}
-                </p>
-                
-                {/* Быстрые фильтры */}
-                <div className="quick-filters">
+  return (
+    <>
+      <Header />
+      
+      <div className="agents-page-agent">
+        <section className="agents-hero-agent">
+          <div className="container">
+            <div className="agents-hero-content-agent">
+              <h1>Каталог жилья для аренды</h1>
+              <p>
+                {filteredProperties.length} предложений {filters.city && `в ${filters.city}`}
+              </p>
+
+              {/* Быстрые фильтры по типу дома */}
+              <div className="quick-filters-agent">
+                {propertyTypes.slice(1, 5).map(type => (
                   <button 
-                    className={`quick-filter ${filters.city === 'Москва' ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('city', 'Москва')}
+                    key={type}
+                    className={`quick-filter-agent ${filters.propertyType === type ? 'active' : ''}`}
+                    onClick={() => quickFilterByType(type)}
                   >
-                    Москва
+                    {type}
                   </button>
-                  <button 
-                    className={`quick-filter ${filters.city === 'Санкт-Петербург' ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('city', 'Санкт-Петербург')}
-                  >
-                    СПб
-                  </button>
-                  <button 
-                    className={`quick-filter ${filters.propertyType === 'Квартира' ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('propertyType', 'Квартира')}
-                  >
-                    Квартиры
-                  </button>
-                  <button 
-                    className={`quick-filter ${filters.propertyType === 'Дом' ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('propertyType', 'Дом')}
-                  >
-                    Дома
-                  </button>
-                  <button 
-                    className={`quick-filter ${filters.rooms === '1' ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('rooms', '1')}
-                  >
-                    1-комн.
-                  </button>
-                  <button 
-                    className={`quick-filter ${filters.rooms === '2' ? 'active' : ''}`}
-                    onClick={() => handleFilterChange('rooms', '2')}
-                  >
-                    2-комн.
-                  </button>
+                ))}
+                <button 
+                  className="quick-filter-agent reset"
+                  onClick={resetFilters}
+                >
+                  Сбросить
+                </button>
+              </div>
+
+              {/* Показать ошибку если есть */}
+              {apiError && (
+                <div className="api-error-message" style={{
+                  backgroundColor: '#fff3cd',
+                  color: '#856404',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  marginTop: '1.5rem',
+                  fontSize: '0.9rem',
+                  border: '1px solid #ffeaa7'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <FontAwesomeIcon icon={faExclamationTriangle} />
+                    <strong>Ошибка загрузки данных:</strong>
+                  </div>
+                  <div style={{ whiteSpace: 'pre-line', marginBottom: '0.75rem' }}>
+                    {apiError}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      onClick={retryFetch}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Повторить загрузку
+                    </button>
+                    <span style={{ fontSize: '0.8rem', color: '#666' }}>
+                      (Показаны демо-данные)
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="container">
+          <div className="agents-content-agent">
+            {/* Фильтры */}
+            <aside className={`agents-filters-agent ${showFilters ? "show" : ""}`}>
+              <div className="filters-header-agent">
+                <h3><FontAwesomeIcon icon={faFilter}/> Фильтры</h3>
+                <button className="close-filters-agent" onClick={() => setShowFilters(false)}>
+                  <FontAwesomeIcon icon={faTimes}/>
+                </button>
+              </div>
+
+              {/* Город */}
+              <div className="filter-group-agent">
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faMapMarkerAlt}/> Город
+                </label>
+                <select
+                  className="filter-select-agent"
+                  value={filters.city}
+                  onChange={(e) => handleFilterChange("city", e.target.value)}
+                >
+                  {cities.map(city => (
+                    <option key={city} value={city === "Все города" ? "" : city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Тип недвижимости */}
+              <div className="filter-group-agent">
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faHome}/> Тип недвижимости
+                </label>
+                <select
+                  className="filter-select-agent"
+                  value={filters.propertyType}
+                  onChange={(e) => handleFilterChange("propertyType", e.target.value)}
+                >
+                  {propertyTypes.map(type => (
+                    <option key={type} value={type === "Все типы" ? "" : type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Количество комнат */}
+              <div className="filter-group-agent">
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faBed}/> Комнаты
+                </label>
+                <select
+                  className="filter-select-agent"
+                  value={filters.rooms}
+                  onChange={(e) => handleFilterChange("rooms", e.target.value)}
+                >
+                  {roomOptions.map(room => (
+                    <option key={room} value={room === "Любое" ? "" : room}>
+                      {room}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Цена */}
+              <div className="filter-group-agent">
+                <label className="filter-label-agent">Цена, BYN/мес</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    className="filter-select-agent"
+                    placeholder="от 600"
+                    value={filters.priceMin}
+                    onChange={(e) => handleFilterChange("priceMin", e.target.value)}
+                    style={{ flex: 1, textAlign: 'center' }}
+                  />
+                  <span style={{ color: '#78909c' }}>—</span>
+                  <input
+                    type="number"
+                    className="filter-select-agent"
+                    placeholder="до 5000"
+                    value={filters.priceMax}
+                    onChange={(e) => handleFilterChange("priceMax", e.target.value)}
+                    style={{ flex: 1, textAlign: 'center' }}
+                  />
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* Основной контент */}
-          <div className="container">
-            <div className="catalog-content">
-              {/* Боковая панель фильтров */}
-              <aside className={`filters-sidebar ${showFilters ? 'show' : ''}`}>
-                <div className="filters-header">
-                  <h3><FontAwesomeIcon icon={faFilter} /> Фильтры</h3>
-                  <button 
-                    className="close-filters"
-                    onClick={() => setShowFilters(false)}
-                  >
-                    <FontAwesomeIcon icon={faTimes} />
-                  </button>
+              {/* Площадь */}
+              <div className="filter-group-agent">
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faRulerCombined}/> Площадь, м²
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    className="filter-select-agent"
+                    placeholder="от 20"
+                    value={filters.areaMin}
+                    onChange={(e) => handleFilterChange("areaMin", e.target.value)}
+                    style={{ flex: 1, textAlign: 'center' }}
+                  />
+                  <span style={{ color: '#78909c' }}>—</span>
+                  <input
+                    type="number"
+                    className="filter-select-agent"
+                    placeholder="до 200"
+                    value={filters.areaMax}
+                    onChange={(e) => handleFilterChange("areaMax", e.target.value)}
+                    style={{ flex: 1, textAlign: 'center' }}
+                  />
                 </div>
+              </div>
 
-                {/* Город */}
-                <div className="filter-group">
-                  <label className="filter-label">
-                    <FontAwesomeIcon icon={faMapMarkerAlt} /> Город
-                  </label>
-                  <select 
-                    className="filter-select"
-                    value={filters.city}
-                    onChange={(e) => handleFilterChange('city', e.target.value)}
-                  >
-                    {cities.map(city => (
-                      <option key={city} value={city === "Все города" ? "" : city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Тип недвижимости */}
-                <div className="filter-group">
-                  <label className="filter-label">Тип жилья</label>
-                  <select 
-                    className="filter-select"
-                    value={filters.propertyType}
-                    onChange={(e) => handleFilterChange('propertyType', e.target.value)}
-                  >
-                    {propertyTypes.map(type => (
-                      <option key={type} value={type === "Все типы" ? "" : type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Количество комнат */}
-                <div className="filter-group">
-                  <label className="filter-label">Комнаты</label>
-                  <div className="room-buttons">
-                    {roomOptions.map(room => (
-                      <button
-                        key={room}
-                        className={`room-btn ${filters.rooms === room ? 'active' : ''}`}
-                        onClick={() => handleFilterChange('rooms', room === "Любое" ? "" : room)}
-                      >
-                        {room}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Цена */}
-                <div className="filter-group">
-                  <label className="filter-label">Цена, ₽/мес</label>
-                  <div className="price-range">
-                    <input
-                      type="text"
-                      className="price-input"
-                      placeholder="от 30,000"
-                      value={filters.priceMin}
-                      onChange={(e) => handleFilterChange('priceMin', e.target.value)}
-                    />
-                    <span className="price-separator">—</span>
-                    <input
-                      type="text"
-                      className="price-input"
-                      placeholder="до 200,000"
-                      value={filters.priceMax}
-                      onChange={(e) => handleFilterChange('priceMax', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Особенности */}
-                <div className="filter-group">
-                  <label className="filter-label">Особенности</label>
-                  <div className="feature-checkboxes">
-                    {featuresOptions.map(feature => (
-                      <label key={feature} className="feature-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={filters.features.includes(feature)}
-                          onChange={() => handleFeatureToggle(feature)}
+              {/* Особенности (Чекбоксы) */}
+              <div className="filter-group-agent">
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faCheckCircle}/> Особенности
+                </label>
+                <div className="features-checkbox-container">
+                  {featuresOptions.map(feature => (
+                    <label key={feature} className="feature-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={filters.features.includes(feature)}
+                        onChange={() => handleFeatureToggle(feature)}
+                        className="feature-checkbox-input"
+                      />
+                      <span className="feature-checkbox-custom"></span>
+                      <span className="feature-checkbox-text">
+                        <FontAwesomeIcon 
+                          icon={getFeatureIcon(feature)} 
+                          style={{ marginRight: '0.5rem', width: '16px' }}
                         />
-                        <span className="checkmark"></span>
                         {feature}
-                      </label>
-                    ))}
-                  </div>
+                      </span>
+                    </label>
+                  ))}
                 </div>
+              </div>
 
-                {/* Кнопки фильтров */}
-                <div className="filter-actions">
-                  <button className="btn-primary filter-apply">
-                    Применить фильтры
+              <div className="filter-actions-agent">
+                <button className="btn-secondary filter-reset-agent" onClick={resetFilters}>
+                  Сбросить фильтры
+                </button>
+              </div>
+            </aside>
+
+            {/* Основной контент */}
+            <main className="agents-main-agent">
+              <div className="agents-controls-agent">
+                <div className="controls-left-agent">
+                  <button
+                    className="toggle-filters-btn-agent"
+                    onClick={() => setShowFilters(!showFilters)}
+                  >
+                    <FontAwesomeIcon icon={faSlidersH}/> Фильтры
                   </button>
-                  <button className="btn-secondary filter-reset" onClick={resetFilters}>
-                    Сбросить все
-                  </button>
-                </div>
 
-                {/* Статистика */}
-                <div className="filter-stats">
-                  <h4>Популярное сейчас</h4>
-                  <div className="hot-properties">
-                    {properties
-                      .filter(p => p.isHot)
-                      .slice(0, 2)
-                      .map(prop => (
-                        <div key={prop.id} className="hot-property">
-                          <img src={prop.imageUrl} alt={prop.address} />
-                          <div className="hot-property-info">
-                            <div className="hot-property-price">{prop.price}</div>
-                            <div className="hot-property-address">{prop.address}</div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </aside>
-
-              {/* Основной контент */}
-              <main className="catalog-main">
-                {/* Панель управления */}
-                <div className="catalog-controls">
-                  <div className="controls-left">
-                    <button 
-                      className="toggle-filters-btn"
-                      onClick={() => setShowFilters(!showFilters)}
+                  <div className="sort-control-agent">
+                    <FontAwesomeIcon icon={faSortAmountDown}/>
+                    <select
+                      className="sort-select-agent"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
                     >
-                      <FontAwesomeIcon icon={faSlidersH} /> Фильтры
-                    </button>
-                    <div className="sort-control">
-                      <FontAwesomeIcon icon={faSortAmountDown} />
-                      <select 
-                        className="sort-select"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                      >
-                        {sortOptions.map(option => (
-                          <option key={option.id} value={option.id}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <FontAwesomeIcon icon={faChevronDown} className="sort-arrow" />
-                    </div>
-                  </div>
-
-                  <div className="controls-right">
-                    <div className="view-toggle">
-                      <button 
-                        className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                        onClick={() => setViewMode('grid')}
-                        title="Сетка"
-                      >
-                        ▦
-                      </button>
-                      <button 
-                        className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-                        onClick={() => setViewMode('list')}
-                        title="Список"
-                      >
-                        ☰
-                      </button>
-                    </div>
-                    <div className="results-count">
-                      Показано: <strong>{filteredProperties.length}</strong> из {properties.length}
-                    </div>
+                      {sortOptions.map(option => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <FontAwesomeIcon icon={faChevronDown} className="sort-arrow-agent"/>
                   </div>
                 </div>
 
-                {/* Карточки недвижимости */}
-                {filteredProperties.length === 0 ? (
-                  <div className="no-results">
-                    <FontAwesomeIcon icon={faFilter} size="3x" />
-                    <h3>Ничего не найдено</h3>
-                    <p>Попробуйте изменить параметры фильтрации</p>
-                    <button className="btn-primary" onClick={resetFilters}>
-                      Сбросить фильтры
+                <div className="controls-right-agent">
+                  <div className="view-toggle-agent">
+                    <button
+                      className={`view-btn-agent ${viewMode === "grid" ? "active" : ""}`}
+                      onClick={() => setViewMode("grid")}
+                    >
+                      ▦
+                    </button>
+                    <button
+                      className={`view-btn-agent ${viewMode === "list" ? "active" : ""}`}
+                      onClick={() => setViewMode("list")}
+                    >
+                      ☰
                     </button>
                   </div>
-                ) : (
-                  <div className={`properties-container ${viewMode === 'list' ? 'list-view' : 'grid-view'}`}>
-                    {filteredProperties.map(property => (
-                      <div key={property.id} className={`property-item ${viewMode}`}>
-                        <div className="property-item-image">
-                          <img src={property.imageUrl} alt={property.address} />
-                          <div className="property-item-badges">
-                            {property.isPremium && (
-                              <span className="badge premium">
-                                <FontAwesomeIcon icon={faStar} /> Премиум
-                              </span>
-                            )}
-                            {property.isHot && (
-                              <span className="badge hot">
-                                <FontAwesomeIcon icon={faFire} /> Горячее
-                              </span>
-                            )}
-                            <button 
-                              className={`favorite-btn ${favorites.has(property.id) ? 'active' : ''}`}
-                              onClick={() => toggleFavorite(property.id)}
-                            >
-                              <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
-                            </button>
+
+                  <div className="results-count-agent">
+                    Найдено: <strong>{filteredProperties.length}</strong> предложений
+                  </div>
+                </div>
+              </div>
+
+              {/* Список свойств */}
+              {filteredProperties.length === 0 ? (
+                <div className="no-results-agent">
+                  <FontAwesomeIcon icon={faFilter} size="3x"/>
+                  <h3>Предложения не найдены</h3>
+                  <p>Попробуйте изменить параметры фильтрации</p>
+                  <button className="btn-primary" onClick={resetFilters}>
+                    Сбросить фильтры
+                  </button>
+                </div>
+              ) : (
+                <div className={`properties-container ${viewMode === 'list' ? 'list-view' : 'grid-view'}`}>
+                  {filteredProperties.map(property => (
+                    <div 
+                      key={property.id} 
+                      className={`property-item ${viewMode}`}
+                      onClick={() => navigate(`/house/${property.id}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="property-item-image">
+                        <img 
+                          src={property.imageUrl} 
+                          alt={property.address} 
+                          onError={(e) => {
+                            // Fallback изображение если основное не загрузилось
+                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop";
+                          }}
+                        />
+                        <div className="property-item-badges">
+                          <button 
+                            className={`favorite-btn ${favorites.has(property.id) ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(property.id);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="property-item-content">
+                        <div className="property-item-header">
+                          <h3>{property.price}</h3>
+                          <div className="property-rating">
+                            <FontAwesomeIcon icon={faStar} />
+                            <span>{property.rating}</span>
                           </div>
                         </div>
                         
-                        <div className="property-item-content">
-                          <div className="property-item-header">
-                            <h3>{property.price}</h3>
-                            <div className="property-rating">
-                              <FontAwesomeIcon icon={faStar} />
-                              <span>{property.rating}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="property-item-address">
-                            <FontAwesomeIcon icon={faMapMarkerAlt} />
-                            {property.address}
-                          </div>
-                          
-                          <p className="property-item-info">{property.info}</p>
-                          
-                          <div className="property-item-features">
-                            <span>
-                              <FontAwesomeIcon icon={faBed} /> {property.beds} комн.
+                        <div className="property-item-address">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} />
+                          {property.address}
+                        </div>
+                        
+                        <p className="property-item-info">{property.info}</p>
+                        
+                        <div className="property-item-features">
+                          <span>
+                            <FontAwesomeIcon icon={faBed} /> {property.beds} комн.
+                          </span>
+                          <span>
+                            <FontAwesomeIcon icon={faBath} /> {property.baths}
+                          </span>
+                          <span>
+                            <FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²
+                          </span>
+                          <span>
+                            <FontAwesomeIcon icon={faClock} /> {property.year}
+                          </span>
+                        </div>
+                        
+                        <p className="property-item-description">
+                          {property.description}
+                        </p>
+                        
+                        <div className="property-item-tags">
+                          {property.features.map((feature: string, index: number) => (
+                            <span key={index} className="tag">
+                              <FontAwesomeIcon 
+                                icon={getFeatureIcon(feature)} 
+                                style={{ marginRight: '0.25rem' }}
+                              />
+                              {feature}
                             </span>
-                            <span>
-                              <FontAwesomeIcon icon={faBath} /> {property.baths}
-                            </span>
-                            <span>
-                              <FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²
-                            </span>
-                            <span>
-                              <FontAwesomeIcon icon={faCheckCircle} /> {property.year}
-                            </span>
-                          </div>
-                          
-                          <p className="property-item-description">
-                            {property.description}
-                          </p>
-                          
-                          <div className="property-item-tags">
-                            {property.features.map((feature: string, index: number) => (
-                              <span key={index} className="tag">{feature}</span>
-                            ))}
-                          </div>
-                          
-                          <div className="property-item-actions">
-                            <button className="btn-primary">Подробнее</button>
-                            <button className="btn-secondary">Написать владельцу</button>
-                          </div>
+                          ))}
+                        </div>
+                        
+                        <div className="property-item-actions">
+                          <button 
+                            className="btn-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/house/${property.id}`);
+                            }}
+                          >
+                            Подробнее
+                          </button>
+                          <button 
+                            className="btn-secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (property.ownerEmail) {
+                                window.location.href = `mailto:${property.ownerEmail}?subject=Вопрос по объявлению ${property.id}`;
+                              } else if (property.id === 1 || property.id === 2) {
+                                // Для демо-данных
+                                alert('Это демо-объявление. В реальном приложении здесь будет email владельца.');
+                              }
+                            }}
+                            disabled={!property.ownerEmail && property.id > 2}
+                          >
+                            {property.ownerEmail ? 'Написать владельцу' : 'Контакты недоступны'}
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Пагинация */}
-                {filteredProperties.length > 0 && (
-                  <div className="pagination">
-                    <button className="pagination-btn disabled">‹</button>
-                    <button className="pagination-btn active">1</button>
-                    <button className="pagination-btn">2</button>
-                    <button className="pagination-btn">3</button>
-                    <span className="pagination-ellipsis">...</span>
-                    <button className="pagination-btn">10</button>
-                    <button className="pagination-btn">›</button>
-                  </div>
-                )}
-
-                {/* Рекомендации */}
-                <div className="recommendations">
-                  <h3>Возможно, вас заинтересует</h3>
-                  <div className="recommendations-grid">
-                    {properties
-                      .filter(p => !filteredProperties.some(fp => fp.id === p.id))
-                      .slice(0, 3)
-                      .map(property => (
-                        <PropertyCard
-                          key={`rec-${property.id}`}
-                          {...property}
-                        />
-                      ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              </main>
-            </div>
+              )}
+
+              {/* Пагинация */}
+              {filteredProperties.length > 0 && (
+                <div className="pagination">
+                  <button className="pagination-btn disabled">‹</button>
+                  <button className="pagination-btn active">1</button>
+                  <button className="pagination-btn">2</button>
+                  <button className="pagination-btn">3</button>
+                  <span className="pagination-ellipsis">...</span>
+                  <button className="pagination-btn">10</button>
+                  <button className="pagination-btn">›</button>
+                </div>
+              )}
+            </main>
           </div>
         </div>
+      </div>
+    </>
+  );
+};
 
-        <Footer />
-      </>
-    );
-  };
-
-  export default Catalog;
+export default Catalog;

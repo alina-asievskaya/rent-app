@@ -2,20 +2,12 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faStar,
-  faCheckCircle,
   faComments,
   faPhone,
   faEnvelope,
   faMapMarkerAlt,
-  faClock,
-  faChartLine,
-  faHome,
-  faLeaf,
-  faBuilding,
-  faWater,
-  faMountain
+  faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { Link } from 'react-router-dom';
 import './AgentCard.css';
 
@@ -28,8 +20,6 @@ export interface Agent {
   reviewsCount: number;
   experience: number;
   propertiesManaged: number;
-  isOnline: boolean;
-  responseTime: string;
   description: string;
   location: string;
   satisfactionRate: number;
@@ -64,148 +54,224 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
     }
   };
 
-  // Иконки для специализаций
-  const getSpecialtyIcon = (specialty: string): IconDefinition => {
-    const icons: Record<string, IconDefinition> = {
-      'Загородные дома': faHome,
-      'Коттеджи': faHome,
-      'Усадьбы': faBuilding,
-      'Дома с участком': faLeaf,
-      'Эко-дома': faLeaf,
-      'Дома у озера': faWater,
-      'Дома в горах': faMountain,
-      'Семейные дома': faHome
-    };
-    return icons[specialty] || faHome;
+  // Форматирование отзывов
+  const formatReviews = (count: number) => {
+    if (count === 1) return 'отзыв';
+    if (count >= 2 && count <= 4) return 'отзыва';
+    return 'отзывов';
   };
 
+  if (viewMode === 'list') {
+    return (
+      <div className={`agentcard ${viewMode}`}>
+        {/* Левая панель с аватаром и основной информацией */}
+        <div className="agentcard-header">
+          <div className="agentcard-avatar-container">
+            <img 
+              src={agent.avatar} 
+              alt={agent.name}
+              className="agentcard-avatar"
+            />
+          </div>
+          
+          <div className="agentcard-info">
+            <h3 className="agentcard-name">{agent.name}</h3>
+            <p className="agentcard-position">{agent.position}</p>
+            
+            <div className="agentcard-location">
+              <FontAwesomeIcon icon={faMapMarkerAlt} className="agentcard-location-icon" />
+              <span>{agent.location}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Основное содержимое справа */}
+        <div className="agentcard-main-content">
+          {/* Рейтинг и отзывы в одну строку */}
+          <div className="agentcard-rating">
+            <div className="agentcard-stars">
+              <div className="agentcard-stars-container">
+                {[...Array(5)].map((_, i) => (
+                  <FontAwesomeIcon 
+                    key={i}
+                    icon={faStar}
+                    className={`agentcard-star ${i < Math.floor(agent.rating) ? 'filled' : ''}`}
+                  />
+                ))}
+                <span className="agentcard-rating-value">{agent.rating.toFixed(1)}</span>
+              </div>
+              <div className="agentcard-reviews">
+                <FontAwesomeIcon icon={faComments} className="agentcard-reviews-icon" />
+                <span>{agent.reviewsCount} {formatReviews(agent.reviewsCount)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Специализация */}
+          {agent.specialties.length > 0 && (
+            <div className="agentcard-specialties">
+              <div className="agentcard-specialties-list">
+                {agent.specialties.slice(0, 3).map((specialty, index) => (
+                  <span key={index} className="agentcard-specialty">
+                    {specialty}
+                  </span>
+                ))}
+                {agent.specialties.length > 3 && (
+                  <span className="agentcard-specialty-more">
+                    +{agent.specialties.length - 3}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Статистика в строку */}
+          <div className="agentcard-stats">
+            <div className="agentcard-stat-item">
+              <div className="agentcard-stat-icon">
+                <FontAwesomeIcon icon={faCalendarAlt} />
+              </div>
+              <div className="agentcard-stat-content">
+                <div className="agentcard-stat-value">{agent.experience} {agent.experience === 1 ? 'год' : 'лет'}</div>
+                <div className="agentcard-stat-label">опыт</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Кнопки действий */}
+          <div className="agentcard-actions">
+            <Link 
+              to={`/agents/${agent.id}`}
+              className="agentcard-btn agentcard-btn-primary"
+            >
+              Профиль агента
+            </Link>
+            
+            <div className="agentcard-contact-buttons">
+              <button 
+                className="agentcard-btn agentcard-btn-call"
+                onClick={(e) => handleContactClick(e, 'phone')}
+                aria-label="Позвонить"
+              >
+                <FontAwesomeIcon icon={faPhone} />
+                <span>Позвонить</span>
+              </button>
+              <button 
+                className="agentcard-btn agentcard-btn-email"
+                onClick={(e) => handleContactClick(e, 'email')}
+                aria-label="Написать"
+              >
+                <FontAwesomeIcon icon={faEnvelope} />
+                <span>Написать</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Оригинальный код для режима grid
   return (
-    <div className={`agent-card ${viewMode}`}>
-      {/* Аватар и статус */}
-      <div className="agent-header">
-        <div className="agent-avatar-wrapper">
+    <div className={`agentcard ${viewMode}`}>
+      {/* Аватар и основная информация */}
+      <div className="agentcard-header">
+        <div className="agentcard-avatar-container">
           <img 
             src={agent.avatar} 
             alt={agent.name}
-            className="agent-avatar"
+            className="agentcard-avatar"
           />
-          <div className={`agent-status ${agent.isOnline ? 'online' : 'offline'}`}>
-            <div className="status-dot"></div>
-          </div>
         </div>
         
-        <div className="agent-info">
-          <h3 className="agent-name">{agent.name}</h3>
-          <p className="agent-position">{agent.position}</p>
+        <div className="agentcard-info">
+          <h3 className="agentcard-name">{agent.name}</h3>
+          <p className="agentcard-position">{agent.position}</p>
           
-          <div className="agent-location">
-            <FontAwesomeIcon icon={faMapMarkerAlt} />
+          <div className="agentcard-location">
+            <FontAwesomeIcon icon={faMapMarkerAlt} className="agentcard-location-icon" />
             <span>{agent.location}</span>
           </div>
         </div>
       </div>
 
       {/* Рейтинг и отзывы */}
-      <div className="agent-rating-section">
-        <div className="rating-display">
-          <div className="stars">
+      <div className="agentcard-rating">
+        <div className="agentcard-stars">
+          <div className="agentcard-stars-container">
             {[...Array(5)].map((_, i) => (
               <FontAwesomeIcon 
                 key={i}
                 icon={faStar}
-                className={`star ${i < Math.floor(agent.rating) ? 'filled' : ''}`}
+                className={`agentcard-star ${i < Math.floor(agent.rating) ? 'filled' : ''}`}
               />
             ))}
+            <span className="agentcard-rating-value">{agent.rating.toFixed(1)}</span>
           </div>
-          <div className="rating-value">{agent.rating.toFixed(1)}</div>
-        </div>
-        <div className="reviews">
-          <FontAwesomeIcon icon={faComments} />
-          <span>{agent.reviewsCount} отзывов</span>
+          <div className="agentcard-reviews">
+            <FontAwesomeIcon icon={faComments} className="agentcard-reviews-icon" />
+            <span>{agent.reviewsCount} {formatReviews(agent.reviewsCount)}</span>
+          </div>
         </div>
       </div>
 
       {/* Специализация */}
-      <div className="agent-specialties">
-        <div className="specialties-list">
-          {agent.specialties.slice(0, 3).map((specialty, index) => (
-            <div key={index} className="specialty-item">
-              <FontAwesomeIcon icon={getSpecialtyIcon(specialty)} className="specialty-icon" />
-              <span>{specialty}</span>
-            </div>
-          ))}
+      {agent.specialties.length > 0 && (
+        <div className="agentcard-specialties">
+          <div className="agentcard-specialties-list">
+            {agent.specialties.slice(0, 2).map((specialty, index) => (
+              <span key={index} className="agentcard-specialty">
+                {specialty}
+              </span>
+            ))}
+            {agent.specialties.length > 2 && (
+              <span className="agentcard-specialty-more">
+                +{agent.specialties.length - 2}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Статистика */}
-      <div className="agent-stats">
-        <div className="stat-item">
-          <div className="stat-icon">
-            <FontAwesomeIcon icon={faClock} />
+      <div className="agentcard-stats">
+        <div className="agentcard-stat-item">
+          <div className="agentcard-stat-icon">
+            <FontAwesomeIcon icon={faCalendarAlt} />
           </div>
-          <div className="stat-details">
-            <div className="stat-value">{agent.experience} лет</div>
-            <div className="stat-label">Опыт</div>
-          </div>
-        </div>
-        
-        <div className="stat-item">
-          <div className="stat-icon">
-            <FontAwesomeIcon icon={faChartLine} />
-          </div>
-          <div className="stat-details">
-            <div className="stat-value">{agent.propertiesManaged}</div>
-            <div className="stat-label">Домов</div>
-          </div>
-        </div>
-        
-        <div className="stat-item">
-          <div className="stat-icon">
-            <FontAwesomeIcon icon={faCheckCircle} />
-          </div>
-          <div className="stat-details">
-            <div className="stat-value">{agent.stats.dealSuccessRate}%</div>
-            <div className="stat-label">Успешность</div>
+          <div className="agentcard-stat-content">
+            <div className="agentcard-stat-value">{agent.experience} {agent.experience === 1 ? 'год' : 'лет'}</div>
+            <div className="agentcard-stat-label">опыт работы</div>
           </div>
         </div>
       </div>
 
       {/* Кнопки действий */}
-      <div className="agent-actions">
+      <div className="agentcard-actions">
         <Link 
           to={`/agents/${agent.id}`}
-          className="btn-profile"
+          className="agentcard-btn agentcard-btn-primary"
         >
-          Открыть профиль
+          Смотреть профиль
         </Link>
         
-        <div className="quick-contacts">
+        <div className="agentcard-contact-buttons">
           <button 
-            className="contact-btn"
+            className="agentcard-btn agentcard-btn-call"
             onClick={(e) => handleContactClick(e, 'phone')}
-            title="Позвонить"
+            aria-label="Позвонить"
           >
             <FontAwesomeIcon icon={faPhone} />
+            <span>Позвонить</span>
           </button>
           <button 
-            className="contact-btn"
+            className="agentcard-btn agentcard-btn-email"
             onClick={(e) => handleContactClick(e, 'email')}
-            title="Написать"
+            aria-label="Написать"
           >
             <FontAwesomeIcon icon={faEnvelope} />
+            <span>Написать</span>
           </button>
-        </div>
-      </div>
-
-      {/* Быстрая информация при наведении */}
-      <div className="agent-hover-info">
-        <div className="hover-info-item">
-          <FontAwesomeIcon icon={faClock} />
-          <span>Отвечает за {agent.responseTime}</span>
-        </div>
-        <div className="hover-info-item">
-          <FontAwesomeIcon icon={faCheckCircle} />
-          <span>{agent.satisfactionRate}% довольных клиентов</span>
         </div>
       </div>
     </div>

@@ -16,7 +16,8 @@ namespace RentApp.API.Data
         public DbSet<PhotoHouse> PhotoHouses { get; set; }
         public DbSet<ReviewHouse> ReviewHouses { get; set; }
         public DbSet<Convenience> Conveniences { get; set; }
-        public DbSet<Agent> Agents { get; set; } // ДОБАВЬТЕ ЭТУ СТРОКУ
+        public DbSet<Agent> Agents { get; set; } 
+        public DbSet<AgentReview> AgentReviews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -66,7 +67,7 @@ namespace RentApp.API.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Конфигурация Agents (ДОБАВЬТЕ ЭТУ КОНФИГУРАЦИЮ)
+            // Конфигурация Agents
             modelBuilder.Entity<Agent>(entity =>
             {
                 entity.ToTable("Agents");
@@ -99,6 +100,10 @@ namespace RentApp.API.Data
                     .HasColumnType("decimal(3,2)")
                     .HasDefaultValue(0.0)
                     .HasAnnotation("CheckConstraint", "rating >= 0 AND rating <= 5");
+                
+                entity.Property(a => a.ReviewsCount)
+                    .HasColumnName("reviews_count")
+                    .HasDefaultValue(0);
 
                 // Внешний ключ к Users
                 entity.HasOne(a => a.User)
@@ -109,6 +114,56 @@ namespace RentApp.API.Data
                 // Индексы
                 entity.HasIndex(a => a.UserId);
             });
+
+            // Конфигурация AgentReviews
+modelBuilder.Entity<AgentReview>(entity =>
+{
+    entity.ToTable("AgentReviews");
+    entity.HasKey(ar => ar.Id);
+    
+    entity.Property(ar => ar.Id)
+        .HasColumnName("id_rew_agent")
+        .ValueGeneratedOnAdd();
+    
+    entity.Property(ar => ar.UserId)
+        .HasColumnName("id_user")
+        .IsRequired();
+    
+    entity.Property(ar => ar.AgentId)
+        .HasColumnName("id_agent")
+        .IsRequired();
+    
+    entity.Property(ar => ar.Rating)
+        .HasColumnName("rating")
+        .IsRequired();
+    
+    entity.Property(ar => ar.Text)
+        .HasColumnName("text")
+        .IsRequired()
+        .HasMaxLength(2000);
+    
+    entity.Property(ar => ar.DataReviews)
+        .HasColumnName("data_reviews")
+        .HasColumnType("date")
+        .HasDefaultValueSql("GETUTCDATE()");
+
+    // Внешний ключ к Users - измените на Restrict или NoAction
+    entity.HasOne(ar => ar.User)
+        .WithMany()
+        .HasForeignKey(ar => ar.UserId)
+        .OnDelete(DeleteBehavior.Restrict); // ИЗМЕНИЛИ ЗДЕСЬ
+    
+    // Внешний ключ к Agents
+    entity.HasOne(ar => ar.Agent)
+        .WithMany(a => a.Reviews)
+        .HasForeignKey(ar => ar.AgentId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+    // Индексы
+    entity.HasIndex(ar => ar.AgentId);
+    entity.HasIndex(ar => ar.UserId);
+    entity.HasIndex(ar => ar.DataReviews);
+});
 
             // Конфигурация Feedback
             modelBuilder.Entity<Feedback>(entity =>

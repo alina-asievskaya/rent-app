@@ -32,7 +32,11 @@ namespace RentApp.API.Models
         [Range(0, 5)]
         public double Rating { get; set; } = 0;
 
-        // Навигационное свойство
+        [Column("reviews_count")]
+        public int ReviewsCount { get; set; } = 0;
+
+        // Навигационные свойства
         public User User { get; set; } = null!;
+        public ICollection<AgentReview> Reviews { get; set; } = new List<AgentReview>();
     }
 }

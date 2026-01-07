@@ -12,6 +12,7 @@ import ProfilePage from "./pages/ProfilePage";
 import CreateAd from './pages/CreateAd';
 import EditHousePage from './pages/EditHousePage';
 import AdminPanel from "./components/AdminPanel";
+import AgentProfile from "./pages/AgentProfile";
 
 // Компонент для защиты маршрутов
 const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -50,6 +51,7 @@ const AppContent: React.FC = () => {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/house/:id" element={<HouseInfo />} />
+          <Route path="/agents/:id" element={<AgentProfile />} />
           <Route path="/profile" element={
             <PrivateRoute>
               <ProfilePage />

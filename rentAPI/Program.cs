@@ -64,8 +64,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         .EnableDetailedErrors();
 });
 
-// Add Authentication Service
+// Add Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAgentService, AgentService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -125,6 +126,13 @@ builder.Services.AddCors(options =>
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
+});
+
+// Configure logging
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
 });
 
 var app = builder.Build();
@@ -259,6 +267,10 @@ try
         
         var userCount = await dbContext.Users.CountAsync();
         Console.WriteLine($"Total users in database: {userCount}");
+        
+        // Проверяем наличие агентов
+        var agentCount = await dbContext.Agents.CountAsync();
+        Console.WriteLine($"Total agents in database: {agentCount}");
     }
     else
     {
@@ -294,12 +306,11 @@ app.MapGet("/", () =>
             Me = "GET /api/auth/me",
             UpdateProfile = "PUT /api/auth/update-profile"
         },
-        Admin = new
+        Agents = new
         {
-            Users = "GET /api/admin/users",
-            Agents = "GET /api/admin/agents",
-            Feedback = "GET /api/admin/feedback",
-            Stats = "GET /api/admin/stats"
+            Catalog = "GET /api/agents/catalog",
+            GetById = "GET /api/agents/{id}",
+            Specialties = "GET /api/agents/specialties"
         }
     };
     
@@ -316,6 +327,7 @@ Console.WriteLine("=== Available Routes ===");
 Console.WriteLine("- Swagger UI: /swagger");
 Console.WriteLine("- Health Check: /health");
 Console.WriteLine("- API Base: /api");
+Console.WriteLine("- Agents Catalog: GET /api/agents/catalog");
 Console.WriteLine("=========================");
 
 app.Run();

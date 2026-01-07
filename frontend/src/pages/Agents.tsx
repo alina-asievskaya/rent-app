@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Header from "../components/Header";
 import AgentCard from "../components/AgentCard";
 import type { Agent } from "../components/AgentCard";
@@ -11,11 +11,51 @@ import {
   faChevronDown,
   faTimes,
   faStar,
-  faMapMarkerAlt,
   faHome,
   faClock,
+  faExclamationTriangle,
+  faSyncAlt
 } from '@fortawesome/free-solid-svg-icons';
 import "./Agents.css";
+
+// Типы для API ответов
+interface AgentApiResponse {
+  id: number;
+  fio: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  experience: number;
+  rating: number;
+  photo: string;
+  reviewsCount: number;
+  propertiesManaged: number;
+  specialties: string[];
+  description: string;
+  position: string;
+  satisfactionRate: number;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: {
+    agents: AgentApiResponse[];
+    totalCount: number;
+    filters: {
+      specialties: string[];
+    };
+  };
+  message?: string;
+  error?: string;
+  detailed?: string;
+}
+
+interface ApiErrorDetails {
+  message?: string;
+  error?: string;
+  detailed?: string;
+  stackTrace?: string;
+}
 
 const Agents: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -24,18 +64,18 @@ const Agents: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('rating-desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiDetails, setApiDetails] = useState<ApiErrorDetails | null>(null);
 
   // Фильтры
   const [filters, setFilters] = useState({
-    city: '',
     specialty: '',
     experience: '',
     rating: ''
   });
 
-  // Данные для фильтров (адаптировано для Беларуси)
-  const cities = ["Все города", "Минск", "Гродно", "Брест", "Витебск", "Гомель", "Могилев"];
-  const specialties = ["Все", "Загородные дома", "Коттеджи", "Усадьбы", "Дома с участком", "Эко-дома", "Дома у озера"];
+  // Данные для фильтров
+  const [specialties, setSpecialties] = useState(["Все", "Загородные дома", "Коттеджи", "Усадьбы", "Дома с участком", "Эко-дома", "Дома у озера"]);
   const experienceOptions = ["Любой", "1-3 года", "3-5 лет", "5-10 лет", "10+ лет"];
   const ratingOptions = ["Любой", "4.0+", "4.5+", "4.8+"];
 
@@ -46,218 +86,133 @@ const Agents: React.FC = () => {
     { id: 'name-asc', label: 'По имени (А-Я)' }
   ];
 
-  // Загрузка данных агентов (адаптировано для Беларуси)
-  useEffect(() => {
-    const mockAgents: Agent[] = [
-      {
-        id: 1,
-        name: "Александр Петров",
-        position: "Старший агент по загородной недвижимости",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-        rating: 4.9,
-        reviewsCount: 128,
-        experience: 8,
-        propertiesManaged: 156,
-        description: "Специализируюсь на загородных домах в Минской области. Помогу найти идеальный вариант для ваших нужд.",
-        location: "Минская область",
-        satisfactionRate: 97,
-        contact: {
-          phone: "+375 (29) 123-45-67",
-          email: "a.petrov@belhouse.by",
-          location: "Минск, ул. Ленина, 10"
+  // Загрузка данных агентов из API
+  const fetchAgents = useCallback(async () => {
+    try {
+      setLoading(true);
+      setApiError(null);
+      setApiDetails(null);
+      
+      // Формируем параметры запроса
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (filters.specialty && filters.specialty !== "Все") params.append('specialty', filters.specialty);
+      if (filters.experience && filters.experience !== "Любой") params.append('experience', filters.experience);
+      if (filters.rating && filters.rating !== "Любой") params.append('rating', filters.rating);
+      params.append('sortBy', sortBy);
+      
+      console.log('🔄 Загружаю агентов с параметрами:', params.toString());
+      
+      const API_URL = 'http://localhost:5213/api';
+      const url = `${API_URL}/agents/catalog?${params.toString()}`;
+      console.log('📡 URL запроса:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        specialties: ["Загородные дома", "Коттеджи", "Дома с участком"],
-        serviceAreas: ["Минская область", "Минский район"],
-        stats: {
-          avgResponseTime: "15 мин",
-          dealSuccessRate: 98,
-          avgDaysToRent: 7
-        }
-      },
-      {
-        id: 2,
-        name: "Екатерина Смирнова",
-        position: "Эксперт по домам у водоемов",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop",
-        rating: 4.8,
-        reviewsCount: 94,
-        experience: 6,
-        propertiesManaged: 112,
+        mode: 'cors',
+        credentials: 'omit'
+      });
 
-        description: "Специализируюсь на домах у озер и рек. Знаю все лучшие локации для отдыха на природе.",
-        location: "Витебская область",
-        satisfactionRate: 96,
-        contact: {
-          phone: "+375 (29) 987-65-43",
-          email: "e.smirnova@belhouse.by",
-          location: "Витебск"
-        },
-        specialties: ["Дома у озера", "Коттеджи", "Загородные дома"],
-        serviceAreas: ["Витебская область", "Браславский район"],
-        stats: {
-          avgResponseTime: "25 мин",
-          dealSuccessRate: 95,
-          avgDaysToRent: 10
-        }
-      },
-      {
-        id: 3,
-        name: "Дмитрий Иванов",
-        position: "Специалист по усадьбам и коттеджам",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-        rating: 4.7,
-        reviewsCount: 87,
-        experience: 10,
-        propertiesManaged: 143,
-        description: "Эксперт по старинным усадьбам и современным коттеджам. Работаю по всей Беларуси.",
-        location: "Гродненская область",
-        satisfactionRate: 94,
-        contact: {
-          phone: "+375 (29) 456-78-90",
-          email: "d.ivanov@belhouse.by",
-          location: "Гродно"
-        },
-        specialties: ["Усадьбы", "Коттеджи", "Эко-дома"],
-        serviceAreas: ["Гродненская область", "Минская область"],
-        stats: {
-          avgResponseTime: "20 мин",
-          dealSuccessRate: 92,
-          avgDaysToRent: 14
-        }
-      },
-      {
-        id: 4,
-        name: "Ольга Козлова",
-        position: "Агент по аренде домов для отдыха",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
-        rating: 4.6,
-        reviewsCount: 76,
-        experience: 5,
-        propertiesManaged: 89,
-        description: "Специализируюсь на аренде домов для отдыха и отпуска. Помогу быстро найти подходящий вариант.",
-        location: "Брестская область",
-        satisfactionRate: 95,
-        contact: {
-          phone: "+375 (29) 234-56-78",
-          email: "o.kozlova@belhouse.by",
-          location: "Брест"
-        },
-        specialties: ["Загородные дома", "Коттеджи", "Дома у озера"],
-        serviceAreas: ["Брестская область", "Беловежская пуща"],
-        stats: {
-          avgResponseTime: "12 мин",
-          dealSuccessRate: 96,
-          avgDaysToRent: 5
-        }
-      },
-      {
-        id: 5,
-        name: "Михаил Сидоров",
-        position: "Агент по большим семейным домам",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-        rating: 4.9,
-        reviewsCount: 65,
-        experience: 12,
-        propertiesManaged: 178,
-        description: "Работаю с большими домами для семей. Помогаю найти просторное жилье для комфортной жизни.",
-        location: "Могилевская область",
-        satisfactionRate: 96,
-        contact: {
-          phone: "+375 (29) 876-54-32",
-          email: "m.sidorov@belhouse.by",
-          location: "Могилев"
-        },
-        specialties: ["Семейные дома", "Дома с участком", "Загородные дома"],
-        serviceAreas: ["Могилевская область", "Минская область"],
-        stats: {
-          avgResponseTime: "35 мин",
-          dealSuccessRate: 97,
-          avgDaysToRent: 21
-        }
-      },
-      {
-        id: 6,
-        name: "Анна Волкова",
-        position: "Специалист по эко-домам",
-        avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop",
-        rating: 4.5,
-        reviewsCount: 53,
-        experience: 4,
-        propertiesManaged: 67,
-        description: "Специализируюсь на экологичных домах и домах с земельным участком. Работаю в Гомельской области.",
-        location: "Гомельская область",
-        satisfactionRate: 92,
-        contact: {
-          phone: "+375 (29) 345-67-89",
-          email: "a.volkova@belhouse.by",
-          location: "Гомель"
-        },
-        specialties: ["Эко-дома", "Дома с участком", "Коттеджи"],
-        serviceAreas: ["Гомельская область", "Припятский регион"],
-        stats: {
-          avgResponseTime: "18 мин",
-          dealSuccessRate: 90,
-          avgDaysToRent: 12
-        }
-      },
-      {
-        id: 7,
-        name: "Сергей Николаев",
-        position: "Эксперт по элитным загородным домам",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-        rating: 5.0,
-        reviewsCount: 42,
-        experience: 15,
-        propertiesManaged: 89,
-
-        description: "Работаю с эксклюзивными загородными резиденциями. Индивидуальный подход и конфиденциальность.",
-        location: "Минск",
-        satisfactionRate: 98,
-        contact: {
-          phone: "+375 (29) 111-22-33",
-          email: "s.nikolaev@belhouse.by",
-          location: "Минск, пр. Победителей"
-        },
-        specialties: ["Эко-дома", "Усадьбы", "Дома с участком"],
-        serviceAreas: ["Минская область", "Окрестности Минска"],
-        stats: {
-          avgResponseTime: "50 мин",
-          dealSuccessRate: 99,
-          avgDaysToRent: 30
-        }
-      },
-      {
-        id: 8,
-        name: "Ирина Федорова",
-        position: "Специалист по домам в исторических местах",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
-        rating: 4.7,
-        reviewsCount: 38,
-        experience: 7,
-        propertiesManaged: 54,
-        description: "Специализируюсь на домах в исторических и культурных местах Беларуси.",
-        location: "Несвиж",
-        satisfactionRate: 93,
-        contact: {
-          phone: "+375 (29) 999-88-77",
-          email: "i.fedorova@belhouse.by",
-          location: "Несвиж"
-        },
-        specialties: ["Усадьбы", "Исторические дома", "Загородные дома"],
-        serviceAreas: ["Несвиж", "Мир", "Новогрудок"],
-        stats: {
-          avgResponseTime: "1.5 часа",
-          dealSuccessRate: 91,
-          avgDaysToRent: 25
+      console.log('📊 Статус ответа:', response.status, response.statusText);
+      
+      // Пробуем получить текст ответа для отладки
+      const responseText = await response.text();
+      console.log('📝 Текст ответа (первые 1000 символов):', responseText.substring(0, 1000));
+      
+      if (!response.ok) {
+        // Пытаемся парсить как JSON для деталей ошибки
+        let errorData: ApiErrorDetails | null = null;
+        try {
+          errorData = JSON.parse(responseText) as ApiErrorDetails;
+          console.error('❌ Ошибка API:', errorData);
+          setApiDetails(errorData);
+          throw new Error(`API ошибка: ${errorData.message || response.statusText}`);
+        } catch {
+          // Если не JSON, используем текст
+          throw new Error(`HTTP ${response.status}: ${response.statusText}\nОтвет: ${responseText.substring(0, 200)}`);
         }
       }
-    ];
 
-    setTimeout(() => {
-      setAgents(mockAgents);
+      // Парсим JSON
+      const result: ApiResponse = JSON.parse(responseText);
+      console.log('✅ Данные агентов получены. Успех:', result.success);
+      console.log('📊 Структура данных:', {
+        hasData: !!result.data,
+        agentsCount: result.data?.agents?.length || 0,
+        totalCount: result.data?.totalCount || 0,
+        filters: result.data?.filters || {}
+      });
+      
+      if (result.success && result.data && Array.isArray(result.data.agents)) {
+        // Преобразуем данные из API в формат Agent
+        const transformedAgents: Agent[] = result.data.agents.map((agent: AgentApiResponse) => ({
+          id: agent.id || 0,
+          name: agent.fio || "Неизвестный агент",
+          position: agent.position || `Агент по ${agent.specialization || "недвижимости"}`,
+          avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+          rating: agent.rating || 0,
+          reviewsCount: agent.reviewsCount || 0,
+          experience: agent.experience || 0,
+          propertiesManaged: agent.propertiesManaged || 0,
+          description: agent.description || `Специализируюсь на ${agent.specialization || "недвижимости"}. Опыт работы ${agent.experience || 0} лет.`,
+          satisfactionRate: agent.satisfactionRate || 90,
+          contact: {
+            phone: agent.phone || "+375 (29) 000-00-00",
+            email: agent.email || "agent@example.com"
+          },
+          specialties: agent.specialties || [agent.specialization || "Недвижимость"],
+          stats: {
+            avgResponseTime: "15 мин",
+            dealSuccessRate: 95,
+            avgDaysToRent: 7
+          }
+        }));
+        
+        console.log(`✅ Успешно преобразовано ${transformedAgents.length} агентов`);
+        setAgents(transformedAgents);
+        
+        // Обновляем список специализаций из API если они есть
+        if (result.data.filters?.specialties && Array.isArray(result.data.filters.specialties)) {
+          const apiSpecialties = result.data.filters.specialties;
+          console.log('📋 Специализации из API:', apiSpecialties);
+          if (apiSpecialties.length > 0) {
+            setSpecialties(["Все", ...apiSpecialties]);
+          }
+        }
+      } else {
+        console.error('❌ API вернул неожиданную структуру:', result);
+        throw new Error(result.message || 'Не удалось загрузить данные. Неверная структура ответа.');
+      }
+    } catch (error) {
+      console.error('❌ Полная ошибка при загрузке агентов:', error);
+      
+      let errorMessage = 'Не удалось загрузить данные агентов';
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Ошибка сети. Проверьте:\n' +
+                       '1. Бекенд запущен на localhost:5213\n' +
+                       '2. Проверьте консоль бекенда на ошибки\n' +
+                       '3. Попробуйте открыть http://localhost:5213/api/agents/catalog в браузере';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setApiError(errorMessage);
+      
+      // Очищаем список агентов при ошибке
+      setAgents([]);
+    } finally {
       setLoading(false);
-    }, 500);
-  }, []);
+    }
+  }, [searchQuery, filters, sortBy]);
+
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
 
   // Фильтрация + поиск + сортировка через useMemo
   const filteredAgents = useMemo(() => {
@@ -271,11 +226,6 @@ const Agents: React.FC = () => {
         agent.position.toLowerCase().includes(q) ||
         agent.specialties.some(spec => spec.toLowerCase().includes(q))
       );
-    }
-
-    // Фильтр по городу
-    if (filters.city && filters.city !== "Все города") {
-      result = result.filter(agent => agent.location.includes(filters.city));
     }
 
     // Фильтр по специализации
@@ -333,7 +283,6 @@ const Agents: React.FC = () => {
 
   const resetFilters = () => {
     setFilters({
-      city: '',
       specialty: '',
       experience: '',
       rating: ''
@@ -355,7 +304,7 @@ const Agents: React.FC = () => {
 
   return (
     <>
-       <Header />
+      <Header />
       <div className="agents-page-agent">
         <section className="agents-hero-agent">
           <div className="container">
@@ -365,12 +314,83 @@ const Agents: React.FC = () => {
                 Наши специалисты готовы помочь вам с арендой домов в Беларуси
               </p>
 
+              {/* Показать ошибку если есть */}
+              {apiError && (
+                <div className="api-error-message" style={{
+                  backgroundColor: '#ffe6e6',
+                  color: '#cc0000',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  marginTop: '1.5rem',
+                  fontSize: '0.9rem',
+                  border: '1px solid #ff9999'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <FontAwesomeIcon icon={faExclamationTriangle} />
+                    <strong>Ошибка загрузки данных:</strong>
+                  </div>
+                  <div style={{ whiteSpace: 'pre-line', marginBottom: '0.75rem' }}>
+                    {apiError}
+                  </div>
+                  
+                  {apiDetails && (
+                    <div style={{
+                      backgroundColor: '#fff3cd',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.8rem'
+                    }}>
+                      <strong>Детали ошибки:</strong>
+                      <pre style={{ margin: '0.5rem 0', whiteSpace: 'pre-wrap' }}>
+                        {JSON.stringify(apiDetails, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button 
+                      onClick={fetchAgents}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faSyncAlt} />
+                      Повторить загрузку
+                    </button>
+                    <button 
+                      onClick={() => {
+                        window.open('http://localhost:5213/api/agents/catalog', '_blank');
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Проверить API
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="agents-search-agent">
                 <div className="search-box-agent">
                   <FontAwesomeIcon icon={faSearch} className="search-icon-agent" />
                   <input
                     type="text"
-                    placeholder="Поиск агента по имени, специализации или району..."
+                    placeholder="Поиск агента по имени или специализации..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -389,22 +409,6 @@ const Agents: React.FC = () => {
                 <button className="close-filters-agent" onClick={() => setShowFilters(false)}>
                   <FontAwesomeIcon icon={faTimes}/>
                 </button>
-              </div>
-
-              {/* Город/Область */}
-              <div className="filter-group-agent">
-                <label className="filter-label-agent">
-                  <FontAwesomeIcon icon={faMapMarkerAlt}/> Регион
-                </label>
-                <select
-                  className="filter-select-agent"
-                  value={filters.city}
-                  onChange={(e) => handleFilterChange("city", e.target.value)}
-                >
-                  {cities.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
               </div>
 
               {/* Специализация */}
@@ -516,11 +520,25 @@ const Agents: React.FC = () => {
               {filteredAgents.length === 0 ? (
                 <div className="no-results-agent">
                   <FontAwesomeIcon icon={faSearch} size="3x"/>
-                  <h3>Агенты не найдены</h3>
-                  <p>Попробуйте изменить параметры поиска</p>
+                  <h3>{apiError ? "Не удалось загрузить данные" : "Агенты не найдены"}</h3>
+                  <p>
+                    {apiError 
+                      ? "Проверьте подключение к серверу и попробуйте позже" 
+                      : "Попробуйте изменить параметры поиска"}
+                  </p>
                   <button className="btn-primary" onClick={resetFilters}>
                     Сбросить фильтры
                   </button>
+                  {apiError && (
+                    <button 
+                      className="btn-secondary" 
+                      onClick={fetchAgents}
+                      style={{ marginTop: '10px' }}
+                    >
+                      <FontAwesomeIcon icon={faSyncAlt} style={{ marginRight: '5px' }} />
+                      Повторить попытку
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className={`agents-container-agent ${viewMode === "list" ? "list-view-agent" : "grid-view-agent"}`}>
@@ -533,8 +551,6 @@ const Agents: React.FC = () => {
           </div>
         </div>
       </div>
-
-      
     </>
   );
 };

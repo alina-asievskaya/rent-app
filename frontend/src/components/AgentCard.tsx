@@ -5,7 +5,6 @@ import {
   faComments,
   faPhone,
   faEnvelope,
-  faMapMarkerAlt,
   faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
@@ -21,15 +20,12 @@ export interface Agent {
   experience: number;
   propertiesManaged: number;
   description: string;
-  location: string;
   satisfactionRate: number;
   contact: {
     phone: string;
     email: string;
-    location: string;
   };
   specialties: string[];
-  serviceAreas: string[];
   stats: {
     avgResponseTime: string;
     dealSuccessRate: number;
@@ -77,11 +73,6 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
           <div className="agentcard-info">
             <h3 className="agentcard-name">{agent.name}</h3>
             <p className="agentcard-position">{agent.position}</p>
-            
-            <div className="agentcard-location">
-              <FontAwesomeIcon icon={faMapMarkerAlt} className="agentcard-location-icon" />
-              <span>{agent.location}</span>
-            </div>
           </div>
         </div>
 
@@ -187,11 +178,6 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
         <div className="agentcard-info">
           <h3 className="agentcard-name">{agent.name}</h3>
           <p className="agentcard-position">{agent.position}</p>
-          
-          <div className="agentcard-location">
-            <FontAwesomeIcon icon={faMapMarkerAlt} className="agentcard-location-icon" />
-            <span>{agent.location}</span>
-          </div>
         </div>
       </div>
 

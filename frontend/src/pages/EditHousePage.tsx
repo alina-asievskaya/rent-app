@@ -588,8 +588,7 @@ const transformApiData = useCallback((apiData: ApiHouseData): HouseData => {
     return true;
   };
 
-  // Сохранение изменений
-  // Сохранение изменений
+
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
@@ -1058,142 +1057,142 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <p className="section-description">Выберите доступные удобства</p>
                 
                 <div className="features-grid">
-                  <div className="features-column">
-                    <h4>Комфорт</h4>
-                    <div className="checkbox-group">
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="conditioner"
-                          checked={formData.conditioner}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Кондиционер</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="furniture"
-                          checked={formData.furniture}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Мебель</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="internet"
-                          checked={formData.internet}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Интернет</span>
-                      </label>
-                    </div>
-                  </div>
+  <div className="features-column">
+    <h4>Комфорт</h4>
+    <div className="checkbox-group">
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="conditioner"
+          checked={formData.conditioner}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label" style={{ color: '#1e293b' }}>Кондиционер</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="furniture"
+          checked={formData.furniture}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Мебель</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="internet"
+          checked={formData.internet}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Интернет</span>
+      </label>
+    </div>
+  </div>
 
-                  <div className="features-column">
-                    <h4>Безопасность</h4>
-                    <div className="checkbox-group">
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="security"
-                          checked={formData.security}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Охрана</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="videoSurveillance"
-                          checked={formData.videoSurveillance}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Видеонаблюдение</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="fireAlarm"
-                          checked={formData.fireAlarm}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Пожарная сигнализация</span>
-                      </label>
-                    </div>
-                  </div>
+  <div className="features-column">
+    <h4>Безопасность</h4>
+    <div className="checkbox-group">
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="security"
+          checked={formData.security}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Охрана</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="videoSurveillance"
+          checked={formData.videoSurveillance}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Видеонаблюдение</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="fireAlarm"
+          checked={formData.fireAlarm}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Пожарная сигнализация</span>
+      </label>
+    </div>
+  </div>
 
-                  <div className="features-column">
-                    <h4>Инфраструктура</h4>
-                    <div className="checkbox-group">
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="parking"
-                          checked={formData.parking}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Парковка</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="garage"
-                          checked={formData.garage}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Гараж</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="garden"
-                          checked={formData.garden}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Сад</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="swimmingPool"
-                          checked={formData.swimmingPool}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Бассейн</span>
-                      </label>
-                      
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          name="sauna"
-                          checked={formData.sauna}
-                          onChange={handleInputChange}
-                        />
-                        <span className="checkmark"></span>
-                        <span className="checkbox-label">Баня/сауна</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
+  <div className="features-column">
+    <h4>Инфраструктура</h4>
+    <div className="checkbox-group">
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="parking"
+          checked={formData.parking}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Парковка</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="garage"
+          checked={formData.garage}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Гараж</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="garden"
+          checked={formData.garden}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Сад</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="swimmingPool"
+          checked={formData.swimmingPool}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Бассейн</span>
+      </label>
+      
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          name="sauna"
+          checked={formData.sauna}
+          onChange={handleInputChange}
+        />
+        <span className="custom-checkbox"></span>
+        <span className="checkbox-label">Баня/сауна</span>
+      </label>
+    </div>
+  </div>
+</div>
 
                 {/* Окружение */}
                 <div className="environment-section">

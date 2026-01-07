@@ -143,7 +143,7 @@ const HouseCard: React.FC<HouseCardProps> = ({
                   console.log('Написать владельцу', house.id);
                 }}
               >
-                Написать владельцу
+                Сосать владельцу
               </button>
             </div>
           </>

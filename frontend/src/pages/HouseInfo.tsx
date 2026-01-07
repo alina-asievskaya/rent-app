@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import {useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -11,7 +11,6 @@ import {
   faCalendarAlt,
   faPhone,
   faComment,
-  faEnvelope,
   faHeart,
   faCheck,
   faSubway,
@@ -20,102 +19,523 @@ import {
   faTree,
   faStar,
   faStarHalfAlt,
-
-  faChevronLeft
+  faChevronLeft,
+  faSnowflake,
+  faWifi,
+  faShieldAlt,
+  faCar,
+  faSwimmingPool,
+  faHotTub,
+  faSpinner,
+  faUser,
+  faReply
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
 
-interface House {
+// Интерфейс для данных с сервера
+interface ApiHouseInfo {
   id: number;
-  badge: string;
-  imageUrl: string;
-  price: string;
-  address: string;
-  info: string;
-  beds: number;
-  baths: number;
+  price: number;
   area: number;
-  year: number;
-  rating: number;
-  isPremium: boolean;
-  isHot: boolean;
   description: string;
-  features: string[];
-  owner: {
-    name: string;
-    avatar: string;
-    rating: number;
-    reviews: number;
-    isVerified: boolean;
+  houseType: string;
+  announcementData: string;
+  active: boolean;
+  photos: string[];
+  houseInfo?: {
+    region?: string;
+    city?: string;
+    street?: string;
+    rooms?: number;
+    bathrooms?: number;
+    floor?: number;
   };
-  locationFeatures: {
-    metro: string;
-    schools: string;
-    shops: string;
-    parks: string;
+  owner?: {
+    fio?: string;
+    email?: string;
+    phone_num?: string;
   };
-  images: string[];
+  convenience?: {
+    conditioner: boolean;
+    furniture: boolean;
+    internet: boolean;
+    security: boolean;
+    videoSurveillance: boolean;
+    fireAlarm: boolean;
+    parking: boolean;
+    garage: boolean;
+    garden: boolean;
+    swimmingPool: boolean;
+    sauna: boolean;
+    transport?: string;
+    education?: string;
+    shops?: string;
+  };
 }
+
+// Упрощенный интерфейс для компонента
+interface HouseInfo {
+  id: number;
+  price: number;
+  area: number;
+  description: string;
+  houseType: string;
+  announcementData: string;
+  active: boolean;
+  photos: string[];
+  region?: string;
+  city?: string;
+  street?: string;
+  rooms?: number;
+  bathrooms?: number;
+  floor?: number;
+  owner?: {
+    fio?: string;
+    email?: string;
+    phone_num?: string;
+    avatar?: string;
+  };
+  convenience?: {
+    conditioner: boolean;
+    furniture: boolean;
+    internet: boolean;
+    security: boolean;
+    videoSurveillance: boolean;
+    fireAlarm: boolean;
+    parking: boolean;
+    garage: boolean;
+    garden: boolean;
+    swimmingPool: boolean;
+    sauna: boolean;
+    transport?: string;
+    education?: string;
+    shops?: string;
+  };
+}
+
+interface Review {
+  id: number;
+  id_user: number;
+  rating: number;
+  text: string;
+  id_houses: number;
+  data_reviews: string;
+  user?: {
+    fio?: string;
+  };
+  owner_reply?: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: ApiHouseInfo;
+  message?: string;
+}
+
+interface ReviewsResponse {
+  success: boolean;
+  data: Review[];
+  message?: string;
+}
+
+interface UserResponse {
+  success: boolean;
+  data: {
+    fio?: string;
+    email?: string;
+    phone_num?: string;
+    avatar?: string;
+  };
+}
+
+// Тип для иконок
+type IconType = typeof faCheck;
 
 const HouseInfo: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [house, setHouse] = useState<HouseInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [newReview, setNewReview] = useState({ rating: 5, text: "" });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [ownerInfo, setOwnerInfo] = useState<{
+    fio?: string;
+    email?: string;
+    phone_num?: string;
+    avatar?: string;
+  } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
-  // Пример данных о доме
-  const house: House = {
-    id: parseInt(id || "1"),
-    badge: "Аренда",
-    imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop",
-    price: "45,000 BYN/мес",
-    address: "Минская область, д. Ратомка, ул. Лесная, 15",
-    info: "Загородный дом для аренды, 250 м²",
-    beds: 4,
-    baths: 3,
-    area: 250,
-    year: 2020,
-    rating: 4.8,
-    isPremium: true,
-    isHot: true,
-    description: `Просторный загородный дом для аренды в живописной местности. Идеальное место для отдыха от городской суеты. Дом построен из экологически чистых материалов, имеет современную отделку и всю необходимую технику.
+  // Проверка авторизации и получение текущего пользователя
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const tokenData = JSON.parse(atob(token.split('.')[1]));
+        if (tokenData.userId) {
+          setCurrentUserId(tokenData.userId);
+        }
+      } catch (error) {
+        console.error('Ошибка при декодировании токена:', error);
+      }
+    }
+  }, []);
+
+  // Загрузка отзывов (ИСПРАВЛЕНО: GET запрос, а не POST)
+  const fetchReviews = useCallback(async () => {
+    try {
+      setLoadingReviews(true);
+      const API_URL = 'http://localhost:5213/api';
+      
+      const response = await fetch(`${API_URL}/houses/${id}/reviews`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result: ReviewsResponse = await response.json();
+        if (result.success && result.data) {
+          setReviews(result.data);
+        }
+      } else if (response.status !== 404) {
+        console.error('Ошибка при загрузке отзывов:', response.status);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке отзывов:', error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, [id]);
+
+  // Загрузка информации о владельце
+  const fetchOwnerInfo = useCallback(async (owner: { email?: string; fio?: string; phone_num?: string; avatar?: string }) => {
+    try {
+      const API_URL = 'http://localhost:5213/api';
+      if (owner.email) {
+        const response = await fetch(`${API_URL}/houses/users/by-email/${encodeURIComponent(owner.email)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const result: UserResponse = await response.json();
+          if (result.success && result.data) {
+            setOwnerInfo(result.data);
+          }
+        }
+      } else {
+        setOwnerInfo({
+          fio: owner.fio,
+          email: owner.email,
+          phone_num: owner.phone_num,
+          avatar: owner.avatar
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке информации о владельце:', error);
+      setOwnerInfo({
+        fio: owner.fio,
+        email: owner.email,
+        phone_num: owner.phone_num,
+        avatar: owner.avatar
+      });
+    }
+  }, []);
+
+  // Преобразование данных из API в формат для компонента
+  const transformApiDataToHouseInfo = (apiData: ApiHouseInfo): HouseInfo => {
+    return {
+      id: apiData.id,
+      price: apiData.price,
+      area: apiData.area,
+      description: apiData.description,
+      houseType: apiData.houseType,
+      announcementData: apiData.announcementData,
+      active: apiData.active,
+      photos: apiData.photos,
+      // Распаковываем houseInfo в корень объекта
+      region: apiData.houseInfo?.region,
+      city: apiData.houseInfo?.city,
+      street: apiData.houseInfo?.street,
+      rooms: apiData.houseInfo?.rooms,
+      bathrooms: apiData.houseInfo?.bathrooms,
+      floor: apiData.houseInfo?.floor,
+      owner: apiData.owner,
+      convenience: apiData.convenience
+    };
+  };
+
+  // Загрузка данных о доме
+  useEffect(() => {
+    const fetchHouseData = async () => {
+      try {
+        setLoading(true);
+        const API_URL = 'http://localhost:5213/api';
+        
+        const response = await fetch(`${API_URL}/houses/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result: ApiResponse = await response.json();
+        
+        if (result.success && result.data) {
+          // Преобразуем данные из API в формат для компонента
+          const transformedData = transformApiDataToHouseInfo(result.data);
+          setHouse(transformedData);
+          
+          // Загружаем отзывы
+          fetchReviews();
+          
+          // Загружаем информацию о владельце если есть
+          if (result.data.owner) {
+            fetchOwnerInfo(result.data.owner);
+          }
+          
+          // Проверяем, является ли текущий пользователь владельцем
+          if (currentUserId) {
+            const responseOwner = await fetch(`${API_URL}/houses/${id}/is-owner`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (responseOwner.ok) {
+              const resultOwner = await responseOwner.json();
+              setIsOwner(resultOwner.success && resultOwner.isOwner);
+            }
+          }
+        } else {
+          throw new Error(result.message || 'Не удалось загрузить данные о доме');
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных о доме:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHouseData();
+  }, [id, fetchReviews, fetchOwnerInfo, currentUserId]);
+
+  // Отправка отзыва
+  const handleSubmitReview = async () => {
+    try {
+      setSubmittingReview(true);
+      const API_URL = 'http://localhost:5213/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        alert('Для отправки отзыва необходимо авторизоваться');
+        navigate('/login');
+        return;
+      }
+
+      if (isOwner) {
+        alert('Владелец не может оставлять отзыв на свое объявление');
+        return;
+      }
+
+      // Проверяем, что текст отзыва содержит минимум 10 символов
+      if (newReview.text.trim().length < 10) {
+        alert('Текст отзыва должен содержать минимум 10 символов');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/houses/${id}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating: newReview.rating,
+          text: newReview.text,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert('Отзыв успешно отправлен!');
+          setNewReview({ rating: 5, text: "" });
+          fetchReviews();
+        } else {
+          alert(result.message || 'Ошибка при отправке отзыва');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Неизвестная ошибка сервера' }));
+        alert(`Ошибка сервера: ${errorData.message || response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Ошибка при отправке отзыва:', error);
+      alert('Ошибка при отправке отзыва');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  // Ответ владельца на отзыв
+  const handleReplyToReview = async (reviewId: number) => {
+    const replyText = prompt('Введите ваш ответ на отзыв:');
+    if (!replyText || !replyText.trim()) return;
+
+    try {
+      const API_URL = 'http://localhost:5213/api';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        alert('Для ответа на отзыв необходимо авторизоваться');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/houses/reviews/${reviewId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reply: replyText,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert('Ответ успешно отправлен!');
+          fetchReviews();
+        } else {
+          alert(result.message || 'Ошибка при отправке ответа');
+        }
+      } else {
+        alert('Ошибка сервера при отправке ответа');
+      }
+    } catch (error) {
+      console.error('Ошибка при отправке ответа на отзыв:', error);
+      alert('Ошибка при отправке ответа');
+    }
+  };
+
+  // Функция для форматирования даты публикации
+  const formatAnnouncementDate = (dateString: string) => {
+    try {
+      // Пытаемся разобрать дату в формате yyyy-MM-dd
+      const [year, month, day] = dateString.split('-').map(Number);
+      if (year && month && day) {
+        const date = new Date(year, month - 1, day);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'numeric',
+            year: 'numeric'
+          });
+        }
+      }
+      return 'Дата не указана';
+    } catch (error) {
+      console.error('Ошибка при форматировании даты:', error);
+      return 'Дата не указана';
+    }
+  };
+
+  // Функция для форматирования даты отзыва (исправленная)
+  const formatReviewDate = (dateString: string) => {
+    try {
+      // Проверяем разные форматы даты
+      if (!dateString) return 'Дата не указана';
+      
+      // Если дата уже в формате ISO (содержит T)
+      if (dateString.includes('T')) {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          });
+        }
+      }
+      
+      // Если дата в формате yyyy-MM-dd
+      if (dateString.includes('-')) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        if (year && month && day) {
+          const date = new Date(year, month - 1, day);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString('ru-RU', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            });
+          }
+        }
+      }
+      
+      console.log('Неизвестный формат даты:', dateString);
+      return 'Дата не указана';
+    } catch (error) {
+      console.error('Ошибка при форматировании даты отзыва:', error, 'dateString:', dateString);
+      return 'Дата не указана';
+    }
+  };
+
+  // Функция для получения иконки по названию особенности
+  const getFeatureIcon = (feature: string): IconType => {
+    const iconMap: Record<string, IconType> = {
+      "Кондиционер": faSnowflake,
+      "Мебель": faCheck,
+      "Интернет": faWifi,
+      "Охрана": faShieldAlt,
+      "Видеонаблюдение": faShieldAlt,
+      "Пожарная сигнализация": faShieldAlt,
+      "Парковка": faCar,
+      "Гараж": faCar,
+      "Сад": faTree,
+      "Бассейн": faSwimmingPool,
+      "Сауна": faHotTub
+    };
+    return iconMap[feature] || faCheck;
+  };
+
+  // Функция для получения списка особенностей из convenience
+  const getFeaturesList = () => {
+    if (!house?.convenience) return [];
     
-Двухэтажный дом с террасой и большим участком. На первом этаже: просторная гостиная с камином, кухня-столовая, кабинет, гостевой санузел. На втором этаже: 3 спальни, 2 ванные комнаты, гардеробная.
+    const features: string[] = [];
+    const conv = house.convenience;
     
-Участок 15 соток с садом, беседкой и местом для барбекю. Есть гараж на 2 машины.`,
-    features: [
-      "Полностью меблированный",
-      "Вся техника в наличии",
-      "Камин",
-      "Терраса с видом на лес",
-      "Гараж на 2 машины",
-      "Участок 15 соток",
-      "Беседка с мангалом",
-      "Система безопасности",
-      "Wi-Fi по всему дому",
-      "Спутниковое ТВ"
-    ],
-    owner: {
-      name: "Андрей Иванов",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80",
-      rating: 4.9,
-      reviews: 24,
-      isVerified: true
-    },
-    locationFeatures: {
-      metro: "Ближайшая станция - 15 км",
-      schools: "Школа в 5 км",
-      shops: "Магазины в 3 км",
-      parks: "Лесной массив рядом"
-    },
-    images: [
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop",
-      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1200&h=800&fit=crop",
-      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&h=800&fit=crop",
-      "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1200&h=800&fit=crop",
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&h=800&fit=crop"
-    ]
+    if (conv.conditioner) features.push("Кондиционер");
+    if (conv.furniture) features.push("Мебель");
+    if (conv.internet) features.push("Интернет");
+    if (conv.security) features.push("Охрана");
+    if (conv.videoSurveillance) features.push("Видеонаблюдение");
+    if (conv.fireAlarm) features.push("Пожарная сигнализация");
+    if (conv.parking) features.push("Парковка");
+    if (conv.garage) features.push("Гараж");
+    if (conv.garden) features.push("Сад");
+    if (conv.swimmingPool) features.push("Бассейн");
+    if (conv.sauna) features.push("Сауна");
+    
+    return features;
   };
 
   const toggleFavorite = () => {
@@ -139,8 +559,63 @@ const HouseInfo: React.FC = () => {
       stars.push(<FontAwesomeIcon key="half" icon={faStarHalfAlt} className="star-icon" />);
     }
     
+    const totalStars = 5;
+    const emptyStars = totalStars - fullStars - (hasHalfStar ? 1 : 0);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(<FontAwesomeIcon key={`empty-${i}`} icon={faStar} className="star-icon empty-star" />);
+    }
+    
     return stars;
   };
+
+  // Функция для звонка
+  const handleCall = () => {
+    if (ownerInfo?.phone_num) {
+      window.location.href = `tel:${ownerInfo.phone_num}`;
+    } else {
+      alert('Телефон владельца не указан');
+    }
+  };
+
+  // Функция для отправки сообщения
+  const handleMessage = () => {
+    alert('Функция чата будет доступна в ближайшее время');
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="loading-container">
+          <FontAwesomeIcon icon={faSpinner} spin size="3x" />
+          <p>Загрузка информации о доме...</p>
+        </div>
+      </>
+    );
+  }
+
+  if (!house) {
+    return (
+      <>
+        <Header />
+        <div className="error-container">
+          <h2>Дом не найден</h2>
+          <p>К сожалению, информация о данном доме недоступна.</p>
+          <button onClick={handleBack} className="btn-primary-house">
+            Вернуться назад
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  const features = getFeaturesList();
+  const mainImage = house.photos?.[0] || "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop";
+  const images = house.photos && house.photos.length > 0 ? house.photos : [mainImage];
+  const address = house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указан';
+  const info = `${house.houseType || 'Дом'}, ${house.area} м²`;
+  const formattedPrice = `${house.price?.toLocaleString('ru-RU')} BYN/мес`;
+  const announcementDate = formatAnnouncementDate(house.announcementData);
 
   return (
     <>
@@ -158,25 +633,15 @@ const HouseInfo: React.FC = () => {
           <section className="gallery-section-house">
             <div className="gallery-house">
               <div className="main-image-house">
-                <img src={house.images[activeImage]} alt={`Дом ${activeImage + 1}`} />
+                <img src={images[activeImage]} alt={`Дом ${activeImage + 1}`} />
                 <div className="image-badges-house">
                   <span className="property-badge-house available-house">
-                    {house.badge}
+                    Аренда
                   </span>
-                  {house.isPremium && (
-                    <span className="property-badge-house premium-house">
-                      <FontAwesomeIcon icon={faStar} /> Премиум
-                    </span>
-                  )}
-                  {house.isHot && (
-                    <span className="property-badge-house hot-house">
-                      🔥 Горячее
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="thumbnails-house">
-                {house.images.slice(0, 5).map((img, index) => (
+                {images.slice(0, 5).map((img, index) => (
                   <div 
                     key={index} 
                     className={`thumbnail-house ${index === activeImage ? 'active-house' : ''}`}
@@ -185,9 +650,9 @@ const HouseInfo: React.FC = () => {
                     <img src={img} alt={`Миниатюра ${index + 1}`} />
                   </div>
                 ))}
-                {house.images.length > 5 && (
+                {images.length > 5 && (
                   <button className="more-photos-house">
-                    +{house.images.length - 5} фото
+                    +{images.length - 5} фото
                   </button>
                 )}
               </div>
@@ -201,13 +666,13 @@ const HouseInfo: React.FC = () => {
               <div className="main-content-house">
                 {/* Заголовок */}
                 <div className="property-header-house">
-                  <h1>{house.info}</h1>
+                  <h1>{info}</h1>
                   <p className="property-address-house">
                     <FontAwesomeIcon icon={faMapMarkerAlt} />
-                    {house.address}
+                    {address}
                   </p>
                   <div className="price-section-house">
-                    <h2>{house.price}</h2>
+                    <h2>{formattedPrice}</h2>
                   </div>
                 </div>
 
@@ -223,29 +688,31 @@ const HouseInfo: React.FC = () => {
                   <div className="feature-item-house">
                     <FontAwesomeIcon icon={faBed} />
                     <div>
-                      <span className="feature-value-house">{house.beds}</span>
-                      <span className="feature-label-house">Спальни</span>
+                      <span className="feature-value-house">{house.rooms || '?'}</span>
+                      <span className="feature-label-house">Комнаты</span>
                     </div>
                   </div>
                   <div className="feature-item-house">
                     <FontAwesomeIcon icon={faBath} />
                     <div>
-                      <span className="feature-value-house">{house.baths}</span>
-                      <span className="feature-label-house">Ванные</span>
+                      <span className="feature-value-house">{house.bathrooms || '?'}</span>
+                      <span className="feature-label-house">Санузлы</span>
                     </div>
                   </div>
                   <div className="feature-item-house">
                     <FontAwesomeIcon icon={faBuilding} />
                     <div>
-                      <span className="feature-value-house">2 этажа</span>
+                      <span className="feature-value-house">{house.floor || '?'}</span>
                       <span className="feature-label-house">Этажность</span>
                     </div>
                   </div>
                   <div className="feature-item-house">
                     <FontAwesomeIcon icon={faCalendarAlt} />
                     <div>
-                      <span className="feature-value-house">{house.year}</span>
-                      <span className="feature-label-house">Год постройки</span>
+                      <span className="feature-value-house">
+                        {announcementDate}
+                      </span>
+                      <span className="feature-label-house">Дата публикации</span>
                     </div>
                   </div>
                 </div>
@@ -253,71 +720,167 @@ const HouseInfo: React.FC = () => {
                 {/* Описание */}
                 <div className="description-section-house">
                   <h3>Описание дома</h3>
-                  {house.description.split('\n').map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
+                  {house.description ? (
+                    <p>{house.description}</p>
+                  ) : (
+                    <p>Описание отсутствует</p>
+                  )}
                 </div>
 
                 {/* Особенности */}
-                <div className="features-section-house">
-                  <h3>Особенности дома</h3>
-                  <div className="features-grid-house">
-                    {house.features.map((feature, index) => (
-                      <div key={index} className="feature-item-check-house">
-                        <FontAwesomeIcon icon={faCheck} />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
+                {features.length > 0 && (
+                  <div className="features-section-house">
+                    <h3>Особенности дома</h3>
+                    <div className="features-grid-house">
+                      {features.map((feature, index) => (
+                        <div key={index} className="feature-item-check-house">
+                          <FontAwesomeIcon icon={getFeatureIcon(feature)} />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Расположение */}
-                <div className="location-section-house">
-                  <h3>Расположение и инфраструктура</h3>
-                  <div className="location-info-house">
-                    <div className="location-features-house">
-                      <div className="location-item-house">
-                        <FontAwesomeIcon icon={faSubway} />
-                        <div>
-                          <strong>Транспорт:</strong>
-                          <span>{house.locationFeatures.metro}</span>
-                        </div>
-                      </div>
-                      <div className="location-item-house">
-                        <FontAwesomeIcon icon={faSchool} />
-                        <div>
-                          <strong>Образование:</strong>
-                          <span>{house.locationFeatures.schools}</span>
-                        </div>
-                      </div>
-                      <div className="location-item-house">
-                        <FontAwesomeIcon icon={faStore} />
-                        <div>
-                          <strong>Магазины:</strong>
-                          <span>{house.locationFeatures.shops}</span>
-                        </div>
-                      </div>
-                      <div className="location-item-house">
-                        <FontAwesomeIcon icon={faTree} />
-                        <div>
-                          <strong>Отдых:</strong>
-                          <span>{house.locationFeatures.parks}</span>
-                        </div>
+                {/* Инфраструктура */}
+                {house.convenience?.transport || house.convenience?.education || house.convenience?.shops ? (
+                  <div className="location-section-house">
+                    <h3>Инфраструктура поблизости</h3>
+                    <div className="location-info-house">
+                      <div className="location-features-house">
+                        {house.convenience.transport && (
+                          <div className="location-item-house">
+                            <FontAwesomeIcon icon={faSubway} />
+                            <div>
+                              <strong>Транспорт:</strong>
+                              <span>{house.convenience.transport}</span>
+                            </div>
+                          </div>
+                        )}
+                        {house.convenience.education && (
+                          <div className="location-item-house">
+                            <FontAwesomeIcon icon={faSchool} />
+                            <div>
+                              <strong>Образование:</strong>
+                              <span>{house.convenience.education}</span>
+                            </div>
+                          </div>
+                        )}
+                        {house.convenience.shops && (
+                          <div className="location-item-house">
+                            <FontAwesomeIcon icon={faStore} />
+                            <div>
+                              <strong>Магазины:</strong>
+                              <span>{house.convenience.shops}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="map-placeholder-house">
-                      <div className="map-image-house">
-                        {/* Здесь будет карта */}
-                        <div className="map-overlay-house">
-                          <p>Карта расположения дома</p>
+                  </div>
+                ) : null}
+
+                {/* Отзывы */}
+                <div className="reviews-section-house">
+                  <h3>Отзывы о доме</h3>
+                  
+                  {/* Форма для добавления отзыва */}
+                  {!isOwner && (
+                    <div className="review-form-house">
+                      <h4>Оставить отзыв</h4>
+                      <div className="rating-input-house">
+                        <span>Рейтинг:</span>
+                        <div className="stars-input-house">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <FontAwesomeIcon
+                              key={star}
+                              icon={faStar}
+                              className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
+                              onClick={() => setNewReview({ ...newReview, rating: star })}
+                            />
+                          ))}
                         </div>
                       </div>
-                      <button className="btn-secondary-house">
-                        <FontAwesomeIcon icon={faMapMarkerAlt} />
-                        Открыть карту
+                      <div className="review-text-house">
+                        <textarea
+                          value={newReview.text}
+                          onChange={(e) => setNewReview({ ...newReview, text: e.target.value })}
+                          placeholder="Расскажите о вашем опыте (минимум 10 символов)..."
+                          rows={4}
+                        />
+                        <div className="char-count">
+                          {newReview.text.length}/1000 символов
+                        </div>
+                      </div>
+                      <button 
+                        className="btn-primary-house"
+                        onClick={handleSubmitReview}
+                        disabled={submittingReview || newReview.text.trim().length < 10}
+                      >
+                        {submittingReview ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} spin />
+                            Отправка...
+                          </>
+                        ) : (
+                          'Отправить отзыв'
+                        )}
                       </button>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Список отзывов */}
+                  {loadingReviews ? (
+                    <div className="loading-reviews">
+                      <FontAwesomeIcon icon={faSpinner} spin />
+                      <span>Загрузка отзывов...</span>
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <div className="reviews-list-house">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="review-item-house">
+                          <div className="review-header-house">
+                            <div className="reviewer-info-house">
+                              <FontAwesomeIcon icon={faUser} />
+                              <span>{review.user?.fio || 'Анонимный пользователь'}</span>
+                            </div>
+                            <div className="review-rating-house">
+                              {renderStars(review.rating)}
+                              <span className="review-date-house">
+                                <FontAwesomeIcon icon={faCalendarAlt} />
+                                {formatReviewDate(review.data_reviews)}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="review-text-content">{review.text}</p>
+                          
+                          {/* Ответ владельца */}
+                          {review.owner_reply && (
+                            <div className="owner-reply-house">
+                              <div className="owner-reply-header">
+                                <FontAwesomeIcon icon={faReply} />
+                                <strong>Ответ владельца:</strong>
+                              </div>
+                              <p className="owner-reply-text">{review.owner_reply}</p>
+                            </div>
+                          )}
+                          
+                          {/* Кнопка ответа для владельца */}
+                          {isOwner && !review.owner_reply && (
+                            <button 
+                              className="reply-button-house"
+                              onClick={() => handleReplyToReview(review.id)}
+                            >
+                              <FontAwesomeIcon icon={faReply} />
+                              Ответить на отзыв
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-reviews-house">Пока нет отзывов. Будьте первым!</p>
+                  )}
                 </div>
               </div>
 
@@ -326,33 +889,28 @@ const HouseInfo: React.FC = () => {
                 {/* Карточка владельца */}
                 <div className="contact-card-house">
                   <div className="owner-info-house">
-                    <img src={house.owner.avatar} alt={house.owner.name} />
-                    <div className="owner-details-house">
-                      <h4>Владелец: {house.owner.name}</h4>
-                      <p>Владелец дома</p>
-                      <div className="owner-rating-house">
-                        {renderStars(house.owner.rating)}
-                        <span>{house.owner.rating} ({house.owner.reviews} отзывов)</span>
-                      </div>
-                      {house.owner.isVerified && (
-                        <div className="verified-badge-house">
-                          ✅ Проверенный владелец
-                        </div>
+                    <div className="owner-avatar-house">
+                      {ownerInfo?.avatar ? (
+                        <img src={ownerInfo.avatar} alt={ownerInfo.fio || 'Владелец'} />
+                      ) : (
+                        <FontAwesomeIcon icon={faUser} className="avatar-placeholder" />
                       )}
+                    </div>
+                    <div className="owner-details-house">
+                      <h4>Владелец: {ownerInfo?.fio || house.owner?.fio || 'Не указан'}</h4>
+                      <p>Владелец недвижимости</p>
                     </div>
                   </div>
                   <div className="contact-actions-house">
-                    <button className="btn-primary-house full-width-house">
-                      <FontAwesomeIcon icon={faPhone} />
-                      Позвонить владельцу
-                    </button>
-                    <button className="btn-secondary-house full-width-house">
+                    {ownerInfo?.phone_num && (
+                      <button className="btn-primary-house full-width-house" onClick={handleCall}>
+                        <FontAwesomeIcon icon={faPhone} />
+                        Позвонить владельцу
+                      </button>
+                    )}
+                    <button className="btn-secondary-house full-width-house" onClick={handleMessage}>
                       <FontAwesomeIcon icon={faComment} />
                       Написать сообщение
-                    </button>
-                    <button className="btn-outline-house full-width-house">
-                      <FontAwesomeIcon icon={faEnvelope} />
-                      Отправить email
                     </button>
                   </div>
                   
@@ -360,7 +918,7 @@ const HouseInfo: React.FC = () => {
                   <div className="contact-meta-house">
                     <div className="meta-item-house">
                       <FontAwesomeIcon icon={faCalendarAlt} />
-                      <span>Опубликовано 3 дня назад</span>
+                      <span>{announcementDate}</span>
                     </div>
                   </div>
                 </div>
@@ -380,7 +938,6 @@ const HouseInfo: React.FC = () => {
           </section>
         </div>
       </div>
-
     </>
   );
 };

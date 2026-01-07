@@ -678,3 +678,323 @@
     height: 60px;
   }
 }
+
+/* Стили для загрузки */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-container svg {
+  color: #2962ff;
+  margin-bottom: 1.5rem;
+}
+
+.error-container h2 {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.error-container p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+/* Аватар владельца */
+.owner-avatar-house {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f8fbff;
+  border: 3px solid #e3f2fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.owner-avatar-house img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  font-size: 2rem;
+  color: #2962ff;
+}
+
+/* Отзывы */
+.reviews-section-house {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid #e3f2fd;
+}
+
+.reviews-section-house h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #1a237e;
+}
+
+.review-form-house {
+  background: #f8fbff;
+  border: 1px solid #e3f2fd;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.review-form-house h4 {
+  margin-bottom: 1rem;
+  color: #37474f;
+}
+
+.rating-input-house {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rating-input-house span {
+  color: #37474f;
+  font-weight: 500;
+}
+
+.stars-input-house {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.star-input {
+  font-size: 1.5rem;
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.star-input.active {
+  color: #f59e0b;
+}
+
+.review-text-house textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #e3f2fd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.review-text-house textarea:focus {
+  outline: none;
+  border-color: #2962ff;
+}
+
+.reviews-list-house {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.review-item-house {
+  background: white;
+  border: 1px solid #e3f2fd;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.review-header-house {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .review-header-house {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+.reviewer-info-house {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reviewer-info-house svg {
+  color: #64748b;
+}
+
+.reviewer-info-house span {
+  font-weight: 600;
+  color: #37474f;
+}
+
+.review-rating-house {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.review-date-house {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.review-text-content {
+  color: #37474f;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.no-reviews-house {
+  color: #64748b;
+  text-align: center;
+  padding: 2rem;
+  background: #f8fbff;
+  border-radius: 12px;
+  border: 1px dashed #e3f2fd;
+}
+
+.loading-reviews {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #64748b;
+  padding: 2rem;
+}
+
+/* Пустые звезды */
+.empty-star {
+  color: #e5e7eb !important;
+}
+
+/* Кнопка избранного */
+.active-favorite {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+/* Регион и город */
+.property-region-house {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+/* Кнопка звонка и email */
+.btn-primary-house:disabled,
+.btn-secondary-house:disabled,
+.btn-outline-house:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Тип дома */
+.house-type-badge {
+  display: inline-block;
+  background: rgba(41, 98, 255, 0.1);
+  color: #2962ff;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .gallery-house {
+    grid-template-columns: 1fr;
+  }
+  
+  .thumbnails-house {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0.5rem;
+  }
+  
+  .thumbnail-house {
+    min-width: 80px;
+    height: 60px;
+  }
+  
+  .key-features-house {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .features-grid-house {
+    grid-template-columns: 1fr;
+  }
+}
+/* Ответ владельца */
+.owner-reply-house {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border-left: 4px solid #2962ff;
+}
+
+.owner-reply-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.owner-reply-header svg {
+  color: #2962ff;
+}
+
+.owner-reply-header strong {
+  color: #1a237e;
+}
+
+.owner-reply-text {
+  color: #37474f;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Кнопка ответа */
+.reply-button-house {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: #f8fbff;
+  border: 1px solid #e3f2fd;
+  border-radius: 6px;
+  color: #2962ff;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;  
+}
+
+.reply-button-house:hover {
+  background: #e8f0fe;
+  border-color: #2962ff;
+}

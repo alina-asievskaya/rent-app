@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using RentApp.API.Data;
 using RentApp.API.Services;
@@ -10,7 +11,43 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// Configure Swagger with JWT support
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "RentApp API",
+        Version = "v1",
+        Description = "API for Real Estate Application"
+    });
+
+    // Add JWT Authentication to Swagger
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -54,6 +91,28 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+    
+    // For debugging JWT issues
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"JWT Authentication failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine($"JWT Token validated for: {context.Principal?.Identity?.Name}");
+            return Task.CompletedTask;
+        }
+    };
+});
+
+// Add Authorization with roles
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("User", policy => policy.RequireRole("User"));
 });
 
 // Configure CORS
@@ -74,20 +133,74 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RentApp API v1");
+        c.RoutePrefix = "swagger"; // Makes swagger available at /swagger
+        c.ConfigObject.AdditionalItems["syntaxHighlight"] = new Dictionary<string, object>
+        {
+            ["activated"] = false
+        };
+    });
 }
 
-// Отключаем HTTPS редирект в разработке
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+// ВАЖНО: правильный порядок middleware
+app.UseHttpsRedirection();
 
+// CORS должен быть ПОСЛЕ UseHttpsRedirection и ДО других middleware
 app.UseCors("AllowAll");
+
+// Логирование запросов
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path;
+    var method = context.Request.Method;
+    
+    // Логируем только запросы к API для отладки
+    if (path.StartsWithSegments("/api"))
+    {
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {method} {path}");
+        
+        // Логируем тело POST/PUT запросов
+        if (method == "POST" || method == "PUT")
+        {
+            context.Request.EnableBuffering();
+            
+            using (var reader = new StreamReader(
+                context.Request.Body,
+                encoding: Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 1024,
+                leaveOpen: true))
+            {
+                var body = await reader.ReadToEndAsync();
+                context.Request.Body.Position = 0;
+                
+                if (!string.IsNullOrEmpty(body) && body.Length < 1000) // Логируем только маленькие тела
+                {
+                    Console.WriteLine($"Request body: {body}");
+                }
+            }
+        }
+    }
+    
+    await next();
+});
+
+// Аутентификация и авторизация
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Маршрутизация - MapControllers должен быть ПОСЛЕ UseAuthorization
 app.MapControllers();
+
+// Fallback для SPA (если фронтенд встроен)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.MapFallbackToFile("index.html");
+}
 
 // Initialize database with better error handling
 try
@@ -119,16 +232,33 @@ try
             Console.WriteLine("Database ensured created successfully.");
         }
         
-        // Seed initial data if needed
-        if (!await dbContext.Users.AnyAsync())
+        // Проверяем существование администратора
+        var adminExists = await dbContext.Users.AnyAsync(u => u.Email == "admin@gmail.com");
+        if (!adminExists)
         {
-            Console.WriteLine("No users found, database is empty.");
+            Console.WriteLine("Admin user not found. Creating admin account...");
+            
+            var adminPassword = BCrypt.Net.BCrypt.HashPassword("admin123");
+            var adminUser = new RentApp.API.Models.User
+            {
+                Email = "admin@gmail.com",
+                Fio = "System Administrator",
+                Password = adminPassword,
+                Phone_num = "+375000000000",
+                Id_agent = false
+            };
+            
+            await dbContext.Users.AddAsync(adminUser);
+            await dbContext.SaveChangesAsync();
+            Console.WriteLine("Admin user created successfully.");
         }
         else
         {
-            var userCount = await dbContext.Users.CountAsync();
-            Console.WriteLine($"Found {userCount} users in database.");
+            Console.WriteLine("Admin user already exists.");
         }
+        
+        var userCount = await dbContext.Users.CountAsync();
+        Console.WriteLine($"Total users in database: {userCount}");
     }
     else
     {
@@ -147,8 +277,45 @@ catch (Exception ex)
         Console.WriteLine($"Inner type: {ex.InnerException.GetType().FullName}");
     }
     
-    Console.WriteLine($"Stack trace: {ex.StackTrace}");
     Console.WriteLine($"=== END ERROR ===");
 }
+
+// Выводим информацию о доступных маршрутах
+app.MapGet("/", () => 
+{
+    var routes = new
+    {
+        ApiDocs = "/swagger",
+        HealthCheck = "/health",
+        Auth = new
+        {
+            Login = "POST /api/auth/login",
+            Register = "POST /api/auth/register",
+            Me = "GET /api/auth/me",
+            UpdateProfile = "PUT /api/auth/update-profile"
+        },
+        Admin = new
+        {
+            Users = "GET /api/admin/users",
+            Agents = "GET /api/admin/agents",
+            Feedback = "GET /api/admin/feedback",
+            Stats = "GET /api/admin/stats"
+        }
+    };
+    
+    return Results.Json(routes);
+});
+
+// Простой health check
+app.MapGet("/health", () => Results.Ok(new { status = "OK", timestamp = DateTime.UtcNow }));
+
+Console.WriteLine("=== Application Starting ===");
+Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine($"Application Name: {app.Environment.ApplicationName}");
+Console.WriteLine("=== Available Routes ===");
+Console.WriteLine("- Swagger UI: /swagger");
+Console.WriteLine("- Health Check: /health");
+Console.WriteLine("- API Base: /api");
+Console.WriteLine("=========================");
 
 app.Run();

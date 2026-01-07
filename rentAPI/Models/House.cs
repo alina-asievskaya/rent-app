@@ -38,7 +38,11 @@ namespace RentApp.API.Models
 
         [Column("house_type")]
         [MaxLength(50)]
-        public string HouseType { get; set; } = "Коттедж"; // Коттедж, Вилла, Особняк, Таунхаус, Усадьба, Резиденция
+        public string HouseType { get; set; } = "Коттедж";
+
+        [Column("rating")]
+        [Range(0, 5)]
+        public double Rating { get; set; } = 0; // Новое поле
 
         // Навигационные свойства
         public User Owner { get; set; } = null!;

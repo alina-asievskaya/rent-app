@@ -24,7 +24,7 @@ namespace RentApp.API.Models
         [Column("city")]
         [MaxLength(100)]
         public string City { get; set; } = string.Empty;
-
+    
         [Required]
         [Column("street")]
         [MaxLength(200)]

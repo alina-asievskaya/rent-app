@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentApp.API.Data;
 
@@ -11,9 +12,11 @@ using RentApp.API.Data;
 namespace rentAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251225180759_AddRatingToHouse")]
+    partial class AddRatingToHouse
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,52 +24,6 @@ namespace rentAPI.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("RentApp.API.Models.Agent", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id_agent");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Experience")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("experience");
-
-                    b.Property<string>("Photo")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("photo");
-
-                    b.Property<decimal>("Rating")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(3,2)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("rating")
-                        .HasAnnotation("CheckConstraint", "rating >= 0 AND rating <= 5");
-
-                    b.Property<string>("Specialization")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("specialization");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("id_user");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Agents", (string)null);
-                });
 
             modelBuilder.Entity("RentApp.API.Models.Convenience", b =>
                 {
@@ -451,17 +408,6 @@ namespace rentAPI.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("RentApp.API.Models.Agent", b =>
-                {
-                    b.HasOne("RentApp.API.Models.User", "User")
-                        .WithOne("AgentInfo")
-                        .HasForeignKey("RentApp.API.Models.Agent", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("RentApp.API.Models.Convenience", b =>
                 {
                     b.HasOne("RentApp.API.Models.House", "House")
@@ -547,11 +493,6 @@ namespace rentAPI.Migrations
                     b.Navigation("Photos");
 
                     b.Navigation("Reviews");
-                });
-
-            modelBuilder.Entity("RentApp.API.Models.User", b =>
-                {
-                    b.Navigation("AgentInfo");
                 });
 #pragma warning restore 612, 618
         }

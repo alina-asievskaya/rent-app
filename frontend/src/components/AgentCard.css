@@ -559,3 +559,199 @@
   border-color: var(--agentcard-primary);
   color: white;
 }
+
+/* Стили для кнопки выхода */
+.adminpage-nav-logout {
+  color: #dc3545;
+}
+
+.adminpage-nav-logout:hover {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+/* Стили для загрузки фото */
+.adminpage-photo-upload {
+  border: 2px dashed #667eea;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(102, 126, 234, 0.05);
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.adminpage-photo-upload:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #764ba2;
+}
+
+.adminpage-photo-preview {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.adminpage-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adminpage-photo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.adminpage-photo-preview:hover .adminpage-photo-overlay {
+  opacity: 1;
+}
+
+.adminpage-photo-change,
+.adminpage-photo-remove {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.adminpage-photo-change:hover {
+  background: #667eea;
+  color: white;
+}
+
+.adminpage-photo-remove:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.adminpage-photo-placeholder {
+  color: #667eea;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.adminpage-photo-placeholder i {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.adminpage-photo-placeholder p {
+  margin: 0;
+  color: #a0aec0;
+}
+
+.adminpage-photo-hint {
+  font-size: 12px;
+  color: #718096;
+}
+
+.adminpage-photo-select-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.adminpage-photo-select-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.adminpage-photo-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 46, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  border-radius: 10px;
+}
+
+.adminpage-spinner-small {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.adminpage-photo-loading p {
+  color: white;
+  font-size: 14px;
+  margin: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Иконка выхода в навигации */
+.adminpage-logout-icon { 
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M7.5 3.75A1.5 1.5 0 006 5.25v13.5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5V15a.75.75 0 011.5 0v3.75a3 3 0 01-3 3h-6a3 3 0 01-3-3V5.25a3 3 0 013-3h6a3 3 0 013 3V9A.75.75 0 0115 9V5.25a1.5 1.5 0 00-1.5-1.5h-6zm10.72 4.72a.75.75 0 011.06 0l3 3a.75.75 0 010 1.06l-3 3a.75.75 0 11-1.06-1.06l1.72-1.72H9a.75.75 0 010-1.5h10.94l-1.72-1.72a.75.75 0 010-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E"); 
+}
+
+/* Адаптивность для загрузки фото */
+@media (max-width: 768px) {
+  .adminpage-photo-upload {
+    min-height: 120px;
+  }
+  
+  .adminpage-photo-preview {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .adminpage-photo-placeholder i {
+    font-size: 30px;
+  }
+  
+  .adminpage-photo-placeholder p {
+    font-size: 14px;
+  }
+  
+  .adminpage-photo-hint {
+    font-size: 11px;
+  }
+}

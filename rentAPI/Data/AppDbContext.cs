@@ -16,6 +16,7 @@ namespace RentApp.API.Data
         public DbSet<PhotoHouse> PhotoHouses { get; set; }
         public DbSet<ReviewHouse> ReviewHouses { get; set; }
         public DbSet<Convenience> Conveniences { get; set; }
+        public DbSet<Agent> Agents { get; set; } // ДОБАВЬТЕ ЭТУ СТРОКУ
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -57,6 +58,56 @@ namespace RentApp.API.Data
                 // Уникальные индексы
                 entity.HasIndex(u => u.Email).IsUnique();
                 entity.HasIndex(u => u.Phone_num).IsUnique();
+
+                // Связь с Agent
+                entity.HasOne(u => u.AgentInfo)
+                    .WithOne(a => a.User)
+                    .HasForeignKey<Agent>(a => a.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Конфигурация Agents (ДОБАВЬТЕ ЭТУ КОНФИГУРАЦИЮ)
+            modelBuilder.Entity<Agent>(entity =>
+            {
+                entity.ToTable("Agents");
+                entity.HasKey(a => a.Id);
+                
+                entity.Property(a => a.Id)
+                    .HasColumnName("id_agent")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(a => a.UserId)
+                    .HasColumnName("id_user")
+                    .IsRequired();
+                
+                entity.Property(a => a.Specialization)
+                    .HasColumnName("specialization")
+                    .IsRequired()
+                    .HasMaxLength(100);
+                
+                entity.Property(a => a.Experience)
+                    .HasColumnName("experience")
+                    .IsRequired()
+                    .HasDefaultValue(0);
+                
+                entity.Property(a => a.Photo)
+                    .HasColumnName("photo")
+                    .HasMaxLength(500);
+                
+                entity.Property(a => a.Rating)
+                    .HasColumnName("rating")
+                    .HasColumnType("decimal(3,2)")
+                    .HasDefaultValue(0.0)
+                    .HasAnnotation("CheckConstraint", "rating >= 0 AND rating <= 5");
+
+                // Внешний ключ к Users
+                entity.HasOne(a => a.User)
+                    .WithOne(u => u.AgentInfo)
+                    .HasForeignKey<Agent>(a => a.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Индексы
+                entity.HasIndex(a => a.UserId);
             });
 
             // Конфигурация Feedback

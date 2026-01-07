@@ -1,5 +1,9 @@
 /* ===== VARIABLES ===== */
-
+:root {
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-light: #94a3b8;
+}
 
 /* ===== NOTIFICATION SYSTEM ===== */
 .notification {
@@ -621,6 +625,7 @@
 }
 
 /* ===== CHECKBOX ===== */
+/* ===== CHECKBOX STYLES ===== */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -639,7 +644,8 @@
   display: none;
 }
 
-.checkmark {
+/* Специфичный класс для чекбоксов - изменим название */
+.custom-checkbox {
   width: 22px;
   height: 22px;
   border: 2px solid var(--border-color);
@@ -650,16 +656,16 @@
   margin-top: 2px;
 }
 
-.checkbox:hover .checkmark {
+.checkbox:hover .custom-checkbox {
   border-color: var(--primary-color);
 }
 
-.checkbox input:checked + .checkmark {
+.checkbox input:checked + .custom-checkbox {
   background: var(--primary-color);
   border-color: var(--primary-color);
 }
 
-.checkbox input:checked + .checkmark::after {
+.checkbox input:checked + .custom-checkbox::after {
   content: '✓';
   position: absolute;
   top: 50%;
@@ -671,8 +677,8 @@
 }
 
 .checkbox-label {
+  color: #1e293b !important;
   font-weight: 500;
-  color: var(--text-primary);
   line-height: 1.5;
 }
 
@@ -1206,9 +1212,12 @@
     grid-template-columns: 1fr;
   }
   
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
+ .features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  margin: 30px 0;
+}
   
   .environment-grid {
     grid-template-columns: 1fr;

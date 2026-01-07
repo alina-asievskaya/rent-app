@@ -107,8 +107,6 @@ namespace RentApp.API.Controllers
             });
         }
 
-        // === НОВЫЕ МЕТОДЫ ДЛЯ ЛИЧНОГО КАБИНЕТА ===
-
         [HttpGet("me")]
         [Authorize]
         public async Task<IActionResult> GetCurrentUser()
@@ -129,7 +127,8 @@ namespace RentApp.API.Controllers
                         u.Email,
                         u.Fio,
                         u.Phone_num,
-                        u.Id_agent
+                        u.Id_agent,
+                        IsAdmin = u.Email.ToLower() == "admin@gmail.com"
                     })
                     .FirstOrDefaultAsync();
 
@@ -165,7 +164,6 @@ namespace RentApp.API.Controllers
                     return NotFound(new { success = false, message = "Пользователь не найден" });
                 }
 
-                // Проверка уникальности телефона
                 if (!string.IsNullOrEmpty(updateDto.Phone_num) && 
                     updateDto.Phone_num != user.Phone_num)
                 {
@@ -178,7 +176,6 @@ namespace RentApp.API.Controllers
                     }
                 }
 
-                // Обновляем только разрешенные поля
                 if (!string.IsNullOrEmpty(updateDto.Fio))
                 {
                     user.Fio = updateDto.Fio;

@@ -6,7 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using RentApp.API.Data;
 using RentApp.API.DTOs;
 using RentApp.API.Models;
-using RentApp.API.Services;
 
 namespace RentApp.API.Services
 {
@@ -78,7 +77,9 @@ namespace RentApp.API.Services
                     return (false, "Неверный email или пароль", null);
                 }
 
-                var token = GenerateJwtToken(user);
+                // Проверяем, является ли пользователь администратором
+                bool isAdmin = loginDto.Email.ToLower() == "admin@gmail.com";
+                var token = GenerateJwtToken(user, isAdmin);
 
                 var response = new LoginResponseDto
                 {
@@ -98,36 +99,47 @@ namespace RentApp.API.Services
             }
         }
 
-        public string GenerateJwtToken(User user)
-{
-    var jwtSettings = _configuration.GetSection("JwtSettings");
-    
-    var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
-    
-    var claims = new[]
-    {
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), // user.Id
-        new Claim(ClaimTypes.Email, user.Email),
-        new Claim(ClaimTypes.Name, user.Fio),
-        new Claim("Phone", user.Phone_num),
-        new Claim("IsAgent", user.Id_agent.ToString())
-    };
+        public string GenerateJwtToken(User user, bool isAdmin = false)
+        {
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            
+            var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
+            
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.Fio),
+                new Claim("Phone", user.Phone_num),
+                new Claim("IsAgent", user.Id_agent.ToString())
+            };
 
-    var tokenDescriptor = new SecurityTokenDescriptor
-    {
-        Subject = new ClaimsIdentity(claims),
-        Expires = DateTime.UtcNow.AddDays(7),
-        Issuer = jwtSettings["Issuer"],
-        Audience = jwtSettings["Audience"],
-        SigningCredentials = new SigningCredentials(
-            new SymmetricSecurityKey(key),
-            SecurityAlgorithms.HmacSha256Signature)
-    };
+            // Добавляем роль администратора
+            if (isAdmin)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+            }
 
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var token = tokenHandler.CreateToken(tokenDescriptor);
-    
-    return tokenHandler.WriteToken(token);
-}
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Issuer = jwtSettings["Issuer"],
+                Audience = jwtSettings["Audience"],
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            
+            return tokenHandler.WriteToken(token);
+        }
+
+        public async Task<bool> IsAdminAsync(string email)
+        {
+            return email.ToLower() == "admin@gmail.com";
+        }
     }
 }

@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,17 +8,17 @@ namespace RentApp.API.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id_user")] // Соответствует SQL столбцу
+        [Column("id_user")]
         public int Id { get; set; }
 
         [Required]
         [EmailAddress]
-        [MaxLength(50)] // Изменено с 100 на 50
+        [MaxLength(50)]
         [Column("email")]
         public string Email { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength] // MAX вместо конкретной длины
+        [MaxLength]
         [Column("fio")]
         public string Fio { get; set; } = string.Empty;
 
@@ -38,6 +37,7 @@ namespace RentApp.API.Models
         [Column("id_agent")]
         public bool Id_agent { get; set; } = false;
 
-        // Убрал CreatedAt, так как его нет в SQL таблице
+        // Навигационное свойство для Agent (ДОБАВЬТЕ ЭТО)
+        public Agent? AgentInfo { get; set; }
     }
 }

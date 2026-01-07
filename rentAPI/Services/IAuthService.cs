@@ -7,6 +7,7 @@ namespace RentApp.API.Services
     {
         Task<(bool success, string message, int? userId)> RegisterAsync(RegisterDto registerDto);
         Task<(bool success, string message, LoginResponseDto? response)> LoginAsync(LoginDto loginDto);
-        string GenerateJwtToken(User user);
+        string GenerateJwtToken(User user, bool isAdmin = false);
+        Task<bool> IsAdminAsync(string email);
     }
 }

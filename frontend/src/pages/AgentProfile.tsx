@@ -30,11 +30,9 @@ interface AgentProfileData {
   rating: number;
   photo: string;
   reviewsCount: number;
-  propertiesManaged: number;
   specialties: string[];
   description: string;
   position: string;
-  satisfactionRate: number;
 }
 
 interface AgentReview {
@@ -71,22 +69,102 @@ const AgentProfile: React.FC = () => {
   const [newReview, setNewReview] = useState({ rating: 5, text: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Проверка авторизации
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const tokenData = JSON.parse(atob(token.split('.')[1]));
-        if (tokenData.userId) {
-          setCurrentUserId(tokenData.userId);
-        }
-      } catch (error) {
-        console.error('Ошибка при декодировании токена:', error);
-      }
+  // Функция для декодирования токена
+  const decodeToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Ошибка при декодировании токена:', error);
+      return null;
     }
+  };
+
+  // Проверка авторизации и получение данных пользователя
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      console.log('🔑 Проверка авторизации, токен:', token ? 'есть' : 'нет');
+      
+      if (token) {
+        try {
+          // Пробуем декодировать токен
+          const payload = decodeToken(token);
+          
+          if (payload) {
+            console.log('📋 Payload токена:', payload);
+            
+            // Ищем userId в разных возможных полях
+            const userId = payload.userId || payload.sub || payload.nameid || payload.unique_name;
+            
+            if (userId) {
+              console.log('✅ Найден User ID:', userId);
+              setCurrentUserId(parseInt(userId));
+              localStorage.setItem('currentUserId', userId.toString());
+            } else {
+              console.log('❌ User ID не найден в токене');
+            }
+            
+            // Проверяем, является ли пользователь администратором
+            const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+            
+            if (Array.isArray(roles)) {
+              setIsAdmin(roles.includes('Admin'));
+              console.log('👑 Роли пользователя (массив):', roles, 'Админ:', roles.includes('Admin'));
+            } else if (typeof roles === 'string') {
+              setIsAdmin(roles === 'Admin');
+              console.log('👑 Роль пользователя (строка):', roles, 'Админ:', roles === 'Admin');
+            } else {
+              console.log('👑 Роли не найдены в токене');
+              setIsAdmin(false);
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при декодировании токена:', error);
+        }
+      } else {
+        console.log('❌ Токен отсутствует');
+        setCurrentUserId(null);
+        setIsAdmin(false);
+        localStorage.removeItem('currentUserId');
+      }
+    };
+
+    checkAuth();
   }, []);
+
+  // Проверка возможности оставить отзыв
+  const canLeaveReview = (): boolean => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('🔐 Нет токена - нельзя оставить отзыв');
+      return false;
+    }
+    
+    // Администраторы не могут оставлять отзывы (согласно вашему бэкенду)
+    if (isAdmin) {
+      console.log('🚫 Пользователь - администратор, нельзя оставить отзыв');
+      return false;
+    }
+    
+    // Проверяем, что есть userId
+    if (!currentUserId) {
+      console.log('❌ Нет User ID - нельзя оставить отзыв');
+      return false;
+    }
+    
+    console.log('✅ Пользователь может оставить отзыв');
+    return true;
+  };
 
   // Загрузка отзывов
   const fetchReviews = async () => {
@@ -127,7 +205,6 @@ const AgentProfile: React.FC = () => {
         
         console.log(`📡 Загружаю данные агента с ID: ${id}`);
         
-        // Загружаем основную информацию об агенте
         const agentResponse = await fetch(`${API_URL}/agents/${id}`, {
           method: 'GET',
           headers: {
@@ -187,13 +264,43 @@ const AgentProfile: React.FC = () => {
   };
 
   const handleSubmitReview = async () => {
-    if (!id || !currentUserId) {
+    console.log('🔄 handleSubmitReview called');
+    console.log('📊 Current state:', {
+      id, 
+      currentUserId, 
+      isAdmin,
+      textLength: newReview.text.length,
+      text: newReview.text
+    });
+    
+    if (!id) {
+      alert('Ошибка: ID агента не найден');
+      return;
+    }
+
+    // Проверяем авторизацию
+    const token = localStorage.getItem('token');
+    if (!token) {
       alert('Для отправки отзыва необходимо авторизоваться');
       navigate('/login');
       return;
     }
 
-    // Проверки
+    // Проверяем, что пользователь не администратор
+    if (isAdmin) {
+      alert('Администраторы не могут оставлять отзывы');
+      return;
+    }
+
+    // Проверяем, что есть userId
+    if (!currentUserId) {
+      alert('Ошибка: не удалось определить пользователя. Пожалуйста, войдите снова.');
+      localStorage.removeItem('token');
+      navigate('/login');
+      return;
+    }
+
+    // Проверки текста отзыва
     if (newReview.text.trim().length < 10) {
       alert('Текст отзыва должен содержать минимум 10 символов');
       return;
@@ -207,13 +314,11 @@ const AgentProfile: React.FC = () => {
     try {
       setSubmittingReview(true);
       const API_URL = 'http://localhost:5213/api';
-      const token = localStorage.getItem('token');
       
-      if (!token) {
-        alert('Для отправки отзыва необходимо авторизоваться');
-        navigate('/login');
-        return;
-      }
+      console.log('📤 Sending review with data:', {
+        rating: newReview.rating,
+        text: newReview.text.trim(),
+      });
 
       const response = await fetch(`${API_URL}/agents/${id}/reviews`, {
         method: 'POST',
@@ -227,7 +332,10 @@ const AgentProfile: React.FC = () => {
         }),
       });
 
+      console.log('📥 Response status:', response.status);
+      
       const result = await response.json();
+      console.log('📥 Response data:', result);
       
       if (response.ok && result.success) {
         alert('Отзыв успешно добавлен!');
@@ -256,6 +364,18 @@ const AgentProfile: React.FC = () => {
     } finally {
       setSubmittingReview(false);
     }
+  };
+
+  // Обработчик клика по звездам для незарегистрированных пользователей
+  const handleStarClickUnauthorized = () => {
+    alert('Для оценки агента необходимо авторизоваться');
+    navigate('/login');
+  };
+
+  // Обработчик клика по textarea для незарегистрированных пользователей
+  const handleTextareaClickUnauthorized = () => {
+    alert('Для оставления отзыва необходимо авторизоваться');
+    navigate('/login');
   };
 
   if (loading) {
@@ -301,16 +421,21 @@ const AgentProfile: React.FC = () => {
     return 'отзывов';
   };
 
-  // Проверяем, оставлял ли текущий пользователь отзыв
-  const hasUserReviewed = currentUserId ? 
-    reviews.some(review => review.userId === currentUserId) : false;
+  // Получаем результат проверки
+  const canLeaveReviewResult = canLeaveReview();
+  
+  console.log('🔐 canLeaveReview check:', {
+    hasToken: !!localStorage.getItem('token'),
+    currentUserId,
+    isAdmin,
+    canLeaveReview: canLeaveReviewResult
+  });
 
   return (
     <>
       <Header />
       
       <div className="agent-profile-page">
-        {/* Кнопка назад */}
         <div className="agent-profile-header">
           <button className="back-button-agent" onClick={handleBack}>
             <FontAwesomeIcon icon={faChevronLeft} />
@@ -318,12 +443,10 @@ const AgentProfile: React.FC = () => {
           </button>
         </div>
 
-        {/* Основной контент */}
         <div className="container-agent">
           <div className="agent-profile-layout">
             {/* Левая колонка - информация об агенте */}
             <div className="agent-profile-sidebar">
-              {/* Карточка агента */}
               <div className="agent-profile-card">
                 <div className="agent-avatar-container">
                   <img 
@@ -388,7 +511,7 @@ const AgentProfile: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Статистика - ТОЛЬКО ОПЫТ */}
+                {/* Статистика */}
                 <div className="agent-stats">
                   <h3>Статистика</h3>
                   <div className="stats-grid">
@@ -418,7 +541,6 @@ const AgentProfile: React.FC = () => {
 
             {/* Правая колонка - детальная информация */}
             <div className="agent-profile-content">
-              {/* Вкладки */}
               <div className="agent-tabs">
                 <button 
                   className={`tab ${activeTab === 'about' ? 'active' : ''}`}
@@ -434,14 +556,12 @@ const AgentProfile: React.FC = () => {
                 </button>
               </div>
 
-              {/* Контент вкладок */}
               <div className="tab-content">
                 {activeTab === 'about' && (
                   <div className="about-section">
                     <h2>Обо мне</h2>
                     <p className="agent-description">{agent.description}</p>
                     
-                    {/* Специализации */}
                     {agent.specialties && agent.specialties.length > 0 && (
                       <div className="specialties-section">
                         <h3>Специализация</h3>
@@ -456,7 +576,6 @@ const AgentProfile: React.FC = () => {
                       </div>
                     )}
                     
-                    {/* Преимущества */}
                     <div className="advantages-section">
                       <h3>Мои преимущества</h3>
                       <div className="advantages-grid">
@@ -498,39 +617,47 @@ const AgentProfile: React.FC = () => {
                   <div className="reviews-section">
                     <h2>Отзывы клиентов</h2>
                     
-                    {/* Форма добавления отзыва */}
-                    {currentUserId && !hasUserReviewed && (
-                      <div className="review-form-section">
-                        <h3>Оставить отзыв</h3>
-                        <div className="review-form">
-                          <div className="rating-input">
-                            <span>Ваша оценка:</span>
-                            <div className="stars-input">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <FontAwesomeIcon
-                                  key={star}
-                                  icon={faStar}
-                                  className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
-                                  onClick={() => setNewReview({ ...newReview, rating: star })}
-                                />
-                              ))}
-                            </div>
+                    {/* ФОРМА ОТЗЫВА */}
+                    <div className="review-form-section">
+                      <h3>Оставить отзыв</h3>
+                      <div className="review-form">
+                        <div className="rating-input">
+                          <span>Ваша оценка:</span>
+                          <div className="stars-input">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <FontAwesomeIcon
+                                key={star}
+                                icon={faStar}
+                                className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
+                                onClick={canLeaveReviewResult ? 
+                                  () => setNewReview({ ...newReview, rating: star }) : 
+                                  handleStarClickUnauthorized}
+                              />
+                            ))}
                           </div>
-                          <div className="review-text-input">
-                            <textarea
-                              value={newReview.text}
-                              onChange={(e) => setNewReview({ ...newReview, text: e.target.value })}
-                              placeholder="Расскажите о вашем опыте работы с агентом (минимум 10 символов)..."
-                              rows={4}
-                              maxLength={2000}
-                            />
-                            <div className="char-count">
-                              {newReview.text.length}/2000 символов
-                              {newReview.text.length < 10 && (
-                                <span className="char-warning"> (минимум 10 символов)</span>
-                              )}
-                            </div>
+                        </div>
+                        <div className="review-text-input">
+                          <textarea
+                            value={newReview.text}
+                            onChange={canLeaveReviewResult ? 
+                              (e) => setNewReview({ ...newReview, text: e.target.value }) : 
+                              undefined}
+                            onClick={!canLeaveReviewResult ? handleTextareaClickUnauthorized : undefined}
+                            placeholder={canLeaveReviewResult ? 
+                              "Расскажите о вашем опыте работы с агентом (минимум 10 символов)..." :
+                              "Для оставления отзыва необходимо авторизоваться"}
+                            rows={4}
+                            maxLength={2000}
+                            readOnly={!canLeaveReviewResult}
+                          />
+                          <div className="char-count">
+                            {newReview.text.length}/2000 символов
+                            {newReview.text.length < 10 && (
+                              <span className="char-warning"> (минимум 10 символов)</span>
+                            )}
                           </div>
+                        </div>
+                        {canLeaveReviewResult ? (
                           <button 
                             className="btn-primary-agent"
                             onClick={handleSubmitReview}
@@ -545,9 +672,17 @@ const AgentProfile: React.FC = () => {
                               'Отправить отзыв'
                             )}
                           </button>
-                        </div>
+                        ) : (
+                          <button 
+                            className="btn-primary-agent"
+                            onClick={() => navigate('/login')}
+                          >
+                            {isAdmin ? 'Администраторы не могут оставлять отзывы' : 'Войти для отправки отзыва'}
+                          </button>
+                        )}
+                        
                       </div>
-                    )}
+                    </div>
                     
                     {/* Список отзывов */}
                     {loadingReviews ? (

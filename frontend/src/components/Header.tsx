@@ -107,6 +107,11 @@ const Header: React.FC = () => {
   }, []);
 
   const toggleFavorites = () => {
+    // Если пользователь не авторизован, показываем модалку входа
+    if (!isLoggedIn) {
+      openAuthModal(true);
+      return;
+    }
     setShowFavorites(!showFavorites);
   };
 
@@ -301,6 +306,7 @@ const Header: React.FC = () => {
     localStorage.removeItem('user');
     setIsLoggedIn(false);
     setUserData(null);
+    setFavorites([]); // Очищаем избранное при выходе
     navigate('/');
   };
 
@@ -310,6 +316,10 @@ const Header: React.FC = () => {
 
   // Проверяем, является ли пользователь администратором
   const isAdmin = userData?.email?.toLowerCase() === 'admin@gmail.com';
+
+  // Проверяем, должен ли показываться раздел избранного
+  // Показываем только авторизованным пользователям, которые не являются администраторами
+  const shouldShowFavorites = isLoggedIn && !isAdmin;
 
   // Класс для Header в зависимости от страницы
   const headerClass = `header ${isProfilePage ? 'header-fixed' : ''}`;
@@ -360,13 +370,14 @@ const Header: React.FC = () => {
           </ul>
           
           <div className="nav-auth">
-            {/* Кнопка избранного - НЕ показываем для админа */}
-            {!isAdmin && (
+            {/* Кнопка избранного - показываем только авторизованным пользователям, которые не администраторы */}
+            {shouldShowFavorites && (
               <div className="nav-favorites">
                 <button 
                   className="nav-favorites-btn" 
                   onClick={toggleFavorites}
                   aria-label="Избранное"
+                  title="Избранное"
                 >
                   <FontAwesomeIcon 
                     icon={favorites.length > 0 ? faHeartSolid : faHeartOutline} 
@@ -431,6 +442,20 @@ const Header: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Альтернативная кнопка избранного для неавторизованных пользователей (если нужно показать иконку для привлечения внимания) */}
+            {!isLoggedIn && (
+              <div className="nav-favorites">
+                <button 
+                  className="nav-favorites-btn" 
+                  onClick={() => openAuthModal(true)}
+                  aria-label="Избранное"
+                  title="Войдите, чтобы добавить в избранное"
+                >
+                  <FontAwesomeIcon icon={faHeartOutline} />
+                </button>
               </div>
             )}
             

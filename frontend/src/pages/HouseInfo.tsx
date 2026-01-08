@@ -171,23 +171,109 @@ const HouseInfo: React.FC = () => {
   } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Проверка авторизации и получение текущего пользователя
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const tokenData = JSON.parse(atob(token.split('.')[1]));
-        if (tokenData.userId) {
-          setCurrentUserId(tokenData.userId);
-        }
-      } catch (error) {
-        console.error('Ошибка при декодировании токена:', error);
-      }
+  // Функция для декодирования токена
+  const decodeToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Ошибка при декодировании токена:', error);
+      return null;
     }
+  };
+
+  // Проверка авторизации и получение данных пользователя
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      console.log('🔑 Проверка авторизации, токен:', token ? 'есть' : 'нет');
+      
+      if (token) {
+        try {
+          // Пробуем декодировать токен
+          const payload = decodeToken(token);
+          
+          if (payload) {
+            console.log('📋 Payload токена:', payload);
+            
+            // Ищем userId в разных возможных полях
+            const userId = payload.userId || payload.sub || payload.nameid || payload.unique_name;
+            
+            if (userId) {
+              console.log('✅ Найден User ID:', userId);
+              setCurrentUserId(parseInt(userId));
+              localStorage.setItem('currentUserId', userId.toString());
+            } else {
+              console.log('❌ User ID не найден в токене');
+            }
+            
+            // Проверяем, является ли пользователь администратором
+            const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+            
+            if (Array.isArray(roles)) {
+              setIsAdmin(roles.includes('Admin'));
+              console.log('👑 Роли пользователя (массив):', roles, 'Админ:', roles.includes('Admin'));
+            } else if (typeof roles === 'string') {
+              setIsAdmin(roles === 'Admin');
+              console.log('👑 Роль пользователя (строка):', roles, 'Админ:', roles === 'Admin');
+            } else {
+              console.log('👑 Роли не найдены в токене');
+              setIsAdmin(false);
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при декодировании токена:', error);
+        }
+      } else {
+        console.log('❌ Токен отсутствует');
+        setCurrentUserId(null);
+        setIsAdmin(false);
+        localStorage.removeItem('currentUserId');
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  // Загрузка отзывов (ИСПРАВЛЕНО: GET запрос, а не POST)
+  // Проверка возможности оставить отзыв
+  const canLeaveReview = (): boolean => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('🔐 Нет токена - нельзя оставить отзыв');
+      return false;
+    }
+    
+    // Администраторы не могут оставлять отзывы
+    if (isAdmin) {
+      console.log('🚫 Пользователь - администратор, нельзя оставить отзыв');
+      return false;
+    }
+    
+    // Владелец не может оставлять отзывы на свое объявление
+    if (isOwner) {
+      console.log('🚫 Пользователь - владелец, нельзя оставить отзыв на свое объявление');
+      return false;
+    }
+    
+    // Проверяем, что есть userId
+    if (!currentUserId) {
+      console.log('❌ Нет User ID - нельзя оставить отзыв');
+      return false;
+    }
+    
+    console.log('✅ Пользователь может оставить отзыв');
+    return true;
+  };
+
+  // Загрузка отзывов
   const fetchReviews = useCallback(async () => {
     try {
       setLoadingReviews(true);
@@ -336,29 +422,82 @@ const HouseInfo: React.FC = () => {
     fetchHouseData();
   }, [id, fetchReviews, fetchOwnerInfo, currentUserId]);
 
+  // Обработчик клика по звездам для незарегистрированных пользователей
+  const handleStarClickUnauthorized = () => {
+    alert('Для оценки необходимо авторизоваться');
+    navigate('/login');
+  };
+
+  // Обработчик клика по textarea для незарегистрированных пользователей
+  const handleTextareaClickUnauthorized = () => {
+    alert('Для оставления отзыва необходимо авторизоваться');
+    navigate('/login');
+  };
+
   // Отправка отзыва
   const handleSubmitReview = async () => {
+    console.log('🔄 handleSubmitReview called');
+    console.log('📊 Current state:', {
+      id, 
+      currentUserId, 
+      isAdmin,
+      isOwner,
+      textLength: newReview.text.length,
+      text: newReview.text
+    });
+    
+    if (!id) {
+      alert('Ошибка: ID дома не найден');
+      return;
+    }
+
+    // Проверяем авторизацию
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для отправки отзыва необходимо авторизоваться');
+      navigate('/login');
+      return;
+    }
+
+    // Проверяем, что пользователь не администратор
+    if (isAdmin) {
+      alert('Администраторы не могут оставлять отзывы');
+      return;
+    }
+
+    // Проверяем, что пользователь не владелец
+    if (isOwner) {
+      alert('Владелец не может оставлять отзыв на свое объявление');
+      return;
+    }
+
+    // Проверяем, что есть userId
+    if (!currentUserId) {
+      alert('Ошибка: не удалось определить пользователя. Пожалуйста, войдите снова.');
+      localStorage.removeItem('token');
+      navigate('/login');
+      return;
+    }
+
+    // Проверки текста отзыва
+    if (newReview.text.trim().length < 10) {
+      alert('Текст отзыва должен содержать минимум 10 символов');
+      return;
+    }
+
+    if (newReview.text.length > 1000) {
+      alert('Текст отзыва не должен превышать 1000 символов');
+      return;
+    }
+
     try {
       setSubmittingReview(true);
       const API_URL = 'http://localhost:5213/api';
-      const token = localStorage.getItem('token');
       
-      if (!token) {
-        alert('Для отправки отзыва необходимо авторизоваться');
-        navigate('/login');
-        return;
-      }
-
-      if (isOwner) {
-        alert('Владелец не может оставлять отзыв на свое объявление');
-        return;
-      }
-
-      // Проверяем, что текст отзыва содержит минимум 10 символов
-      if (newReview.text.trim().length < 10) {
-        alert('Текст отзыва должен содержать минимум 10 символов');
-        return;
-      }
+      console.log('📤 Sending review with data:', {
+        rating: newReview.rating,
+        text: newReview.text.trim(),
+      });
 
       const response = await fetch(`${API_URL}/houses/${id}/reviews`, {
         method: 'POST',
@@ -368,22 +507,21 @@ const HouseInfo: React.FC = () => {
         },
         body: JSON.stringify({
           rating: newReview.rating,
-          text: newReview.text,
+          text: newReview.text.trim(),
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          alert('Отзыв успешно отправлен!');
-          setNewReview({ rating: 5, text: "" });
-          fetchReviews();
-        } else {
-          alert(result.message || 'Ошибка при отправке отзыва');
-        }
+      console.log('📥 Response status:', response.status);
+      
+      const result = await response.json();
+      console.log('📥 Response data:', result);
+      
+      if (response.ok && result.success) {
+        alert('Отзыв успешно добавлен!');
+        setNewReview({ rating: 5, text: "" });
+        fetchReviews();
       } else {
-        const errorData = await response.json().catch(() => ({ message: 'Неизвестная ошибка сервера' }));
-        alert(`Ошибка сервера: ${errorData.message || response.statusText}`);
+        alert(result.message || 'Ошибка при добавлении отзыва');
       }
     } catch (error) {
       console.error('Ошибка при отправке отзыва:', error);
@@ -581,6 +719,17 @@ const HouseInfo: React.FC = () => {
   const handleMessage = () => {
     alert('Функция чата будет доступна в ближайшее время');
   };
+
+  // Получаем результат проверки
+  const canLeaveReviewResult = canLeaveReview();
+  
+  console.log('🔐 canLeaveReview check:', {
+    hasToken: !!localStorage.getItem('token'),
+    currentUserId,
+    isAdmin,
+    isOwner,
+    canLeaveReview: canLeaveReviewResult
+  });
 
   if (loading) {
     return (
@@ -785,33 +934,45 @@ const HouseInfo: React.FC = () => {
                   <h3>Отзывы о доме</h3>
                   
                   {/* Форма для добавления отзыва */}
-                  {!isOwner && (
-                    <div className="review-form-house">
-                      <h4>Оставить отзыв</h4>
-                      <div className="rating-input-house">
-                        <span>Рейтинг:</span>
-                        <div className="stars-input-house">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <FontAwesomeIcon
-                              key={star}
-                              icon={faStar}
-                              className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
-                              onClick={() => setNewReview({ ...newReview, rating: star })}
-                            />
-                          ))}
-                        </div>
+                  <div className="review-form-house">
+                    <h4>Оставить отзыв</h4>
+                    <div className="rating-input-house">
+                      <span>Рейтинг:</span>
+                      <div className="stars-input-house">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <FontAwesomeIcon
+                            key={star}
+                            icon={faStar}
+                            className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
+                            onClick={canLeaveReviewResult ? 
+                              () => setNewReview({ ...newReview, rating: star }) : 
+                              handleStarClickUnauthorized}
+                          />
+                        ))}
                       </div>
-                      <div className="review-text-house">
-                        <textarea
-                          value={newReview.text}
-                          onChange={(e) => setNewReview({ ...newReview, text: e.target.value })}
-                          placeholder="Расскажите о вашем опыте (минимум 10 символов)..."
-                          rows={4}
-                        />
-                        <div className="char-count">
-                          {newReview.text.length}/1000 символов
-                        </div>
+                    </div>
+                    <div className="review-text-house">
+                      <textarea
+                        value={newReview.text}
+                        onChange={canLeaveReviewResult ? 
+                          (e) => setNewReview({ ...newReview, text: e.target.value }) : 
+                          undefined}
+                        onClick={!canLeaveReviewResult ? handleTextareaClickUnauthorized : undefined}
+                        placeholder={canLeaveReviewResult ? 
+                          "Расскажите о вашем опыте (минимум 10 символов)..." :
+                          "Для оставления отзыва необходимо авторизоваться"}
+                        rows={4}
+                        maxLength={1000}
+                        readOnly={!canLeaveReviewResult}
+                      />
+                      <div className="char-count">
+                        {newReview.text.length}/1000 символов
+                        {newReview.text.length < 10 && (
+                          <span className="char-warning"> (минимум 10 символов)</span>
+                        )}
                       </div>
+                    </div>
+                    {canLeaveReviewResult ? (
                       <button 
                         className="btn-primary-house"
                         onClick={handleSubmitReview}
@@ -826,8 +987,18 @@ const HouseInfo: React.FC = () => {
                           'Отправить отзыв'
                         )}
                       </button>
-                    </div>
-                  )}
+                    ) : (
+                      <button 
+                        className="btn-primary-house"
+                        onClick={() => navigate('/login')}
+                      >
+                        {isAdmin ? 'Администраторы не могут оставлять отзывы' : 
+                         isOwner ? 'Владельцы не могут оставлять отзывы на свое объявление' : 
+                         'Войти для отправки отзыва'}
+                      </button>
+                    )}
+                    
+                  </div>
 
                   {/* Список отзывов */}
                   {loadingReviews ? (

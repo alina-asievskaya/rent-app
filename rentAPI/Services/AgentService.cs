@@ -294,33 +294,17 @@ namespace RentApp.API.Services
                 if (agent == null)
                     return false;
 
-                // Проверяем, не оставлял ли пользователь уже отзыв этому агенту
-                var existingReview = await _context.AgentReviews
-                    .FirstOrDefaultAsync(ar => ar.AgentId == agentId && ar.UserId == userId);
+                // Создаем новый отзыв (без проверки на существующий)
+                var review = new AgentReview
+                {
+                    UserId = userId,
+                    AgentId = agentId,
+                    Rating = createDto.Rating,
+                    Text = createDto.Text,
+                    DataReviews = DateTime.UtcNow.Date
+                };
                 
-                if (existingReview != null)
-                {
-                    // Обновляем существующий отзыв
-                    existingReview.Rating = createDto.Rating;
-                    existingReview.Text = createDto.Text;
-                    existingReview.DataReviews = DateTime.UtcNow.Date;
-                    
-                    _context.AgentReviews.Update(existingReview);
-                }
-                else
-                {
-                    // Создаем новый отзыв
-                    var review = new AgentReview
-                    {
-                        UserId = userId,
-                        AgentId = agentId,
-                        Rating = createDto.Rating,
-                        Text = createDto.Text,
-                        DataReviews = DateTime.UtcNow.Date
-                    };
-                    
-                    await _context.AgentReviews.AddAsync(review);
-                }
+                await _context.AgentReviews.AddAsync(review);
                 
                 // Сохраняем изменения
                 await _context.SaveChangesAsync();

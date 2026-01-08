@@ -152,7 +152,7 @@ const Agents: React.FC = () => {
         const transformedAgents: Agent[] = result.data.agents.map((agent: AgentApiResponse) => ({
           id: agent.id || 0,
           name: agent.fio || "Неизвестный агент",
-          position: agent.position || `Агент по ${agent.specialization || "недвижимости"}`,
+          position: agent.position || `${agent.specialization || "недвижимости"}`,
           avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
           rating: agent.rating || 0,
           reviewsCount: agent.reviewsCount || 0,

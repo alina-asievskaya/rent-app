@@ -151,8 +151,17 @@ namespace RentApp.API.Controllers
 
                 // Получаем ID текущего пользователя из токена
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                var roleClaim = User.FindFirst(ClaimTypes.Role); // Добавляем получение роли
+                
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId) || userId == 0)
                     return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                
+                // Проверяем, не является ли пользователь администратором
+                if (roleClaim != null && roleClaim.Value == "Admin")
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Администраторы не могут оставлять отзывы" 
+                    });
 
                 var result = await _agentService.AddAgentReviewAsync(id, userId, createDto);
                 

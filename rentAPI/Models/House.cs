@@ -40,9 +40,10 @@ namespace RentApp.API.Models
         [MaxLength(50)]
         public string HouseType { get; set; } = "Коттедж";
 
+        // ИЗМЕНЕНИЕ ЗДЕСЬ: заменяем double на decimal
         [Column("rating")]
         [Range(0, 5)]
-        public double Rating { get; set; } = 0; // Новое поле
+        public decimal Rating { get; set; } = 0; // Изменено с double на decimal
 
         // Навигационные свойства
         public User Owner { get; set; } = null!;

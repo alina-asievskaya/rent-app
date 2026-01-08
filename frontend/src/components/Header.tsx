@@ -13,17 +13,10 @@ import {
   faLock,
   faUser as faUserIcon,
   faSignOutAlt,
-  faShieldAlt // Иконка для админа
+  faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import "./Header.css";
-
-interface FavoriteItem {
-  id: number;
-  title: string;
-  price: string;
-  image: string;
-}
 
 interface UserData {
   id: number;
@@ -34,24 +27,38 @@ interface UserData {
   token: string;
 }
 
+// Интерфейс для элемента избранного из API
+interface FavoriteItem {
+  id: number;
+  price: number;
+  area: number;
+  description: string;
+  fullDescription: string;
+  houseType: string;
+  announcementData: string;
+  photos: string[];
+  city: string;
+  street: string;
+  rooms: number;
+  bathrooms: number;
+  floor: number;
+  rating: number;
+  isActive: boolean;
+  // Дополнительные поля, которые могут быть в API
+  year?: number;
+  addedToFavorites?: string;
+}
+
+// Интерфейс для ответа API избранного
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([
-    {
-      id: 1,
-      title: "3-комн. квартира в ЦАО",
-      price: "15,000,000 ₽",
-      image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200&h=150&fit=crop"
-    },
-    {
-      id: 2,
-      title: "2-комн. квартира у моря",
-      price: "120,000 ₽/мес",
-      image: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=200&h=150&fit=crop"
-    }
-  ]);
-  
   const [showFavorites, setShowFavorites] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLoginForm, setIsLoginForm] = useState(true);
@@ -59,6 +66,9 @@ const Header: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isProfilePage, setIsProfilePage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+  const [favoritesList, setFavoritesList] = useState<FavoriteItem[]>([]);
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
 
   // Состояние для формы
   const [formData, setFormData] = useState({
@@ -80,48 +90,196 @@ const Header: React.FC = () => {
     return userStr ? JSON.parse(userStr) : null;
   });
 
+  // Загрузка количества избранного при изменении авторизации
+  useEffect(() => {
+    if (isLoggedIn && !isAdmin) {
+      fetchFavoritesCount();
+    } else {
+      setFavoritesCount(0);
+      setFavoritesList([]);
+    }
+  }, [isLoggedIn]);
+
+  // Загрузка списка избранного при открытии dropdown
+  useEffect(() => {
+    if (showFavorites && isLoggedIn && !isAdmin) {
+      fetchFavoritesList();
+    }
+  }, [showFavorites]);
+
   // Проверяем текущую страницу
   useEffect(() => {
     setIsProfilePage(location.pathname === '/profile');
   }, [location]);
 
-  // Обновляем данные пользователя при изменении localStorage
-  useEffect(() => {
-    const handleStorageChange = () => {
+  // Функция для получения количества избранного
+  const fetchFavoritesCount = async () => {
+    try {
       const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5213/api/favorites/count', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        console.warn(`Ошибка ${response.status} при получении количества избранного`);
+        return;
+      }
+
+      const data: ApiResponse<{ count: number }> = await response.json();
       
-      setIsLoggedIn(!!token);
-      setUserData(userStr ? JSON.parse(userStr) : null);
-    };
+      if (data.success && data.data) {
+        setFavoritesCount(data.data.count);
+        console.log('✅ Количество избранного загружено:', data.data.count);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при получении количества избранного:', error);
+    }
+  };
 
-    // Слушаем изменения в localStorage
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Также проверяем при монтировании
-    handleStorageChange();
+  // Функция для получения списка избранного
+  const fetchFavoritesList = async () => {
+    try {
+      setIsLoadingFavorites(true);
+      const token = localStorage.getItem('token');
+      
+      console.log('🔑 Токен для запроса избранного:', token ? 'есть' : 'нет');
+      
+      if (!token) {
+        console.log('❌ Нет токена, пропускаем запрос');
+        return;
+      }
 
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+      console.log('📡 Загрузка списка избранного...');
+      
+      const response = await fetch('http://localhost:5213/api/favorites/my', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  const toggleFavorites = () => {
+      console.log('📥 Ответ от сервера:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.warn(`Ошибка ${response.status} при получении списка избранного`);
+        return;
+      }
+
+      const data: ApiResponse<FavoriteItem[]> = await response.json();
+      console.log('📦 Данные избранного:', data);
+      
+      if (data.success) {
+        setFavoritesList(data.data || []);
+        setFavoritesCount(data.data?.length || 0);
+        console.log('✅ Список избранного загружен:', data.data?.length || 0, 'элементов');
+      } else {
+        console.log('❌ Ошибка в ответе API:', data.message);
+        setFavoritesList([]);
+        setFavoritesCount(0);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при получении списка избранного:', error);
+      setFavoritesList([]);
+      setFavoritesCount(0);
+    } finally {
+      setIsLoadingFavorites(false);
+    }
+  };
+
+  const toggleFavorites = async () => {
     // Если пользователь не авторизован, показываем модалку входа
     if (!isLoggedIn) {
       openAuthModal(true);
       return;
     }
+
+    // Если администратор - не показываем избранное
+    if (isAdmin) {
+      alert('Администраторы не могут использовать избранное');
+      return;
+    }
+
+    if (!showFavorites) {
+      await fetchFavoritesList();
+    }
     setShowFavorites(!showFavorites);
   };
 
-  const removeFromFavorites = (id: number) => {
-    setFavorites(favorites.filter(item => item.id !== id));
+  const removeFromFavorites = async (houseId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      console.log('Удаление из избранного:', houseId);
+      
+      const response = await fetch(`http://localhost:5213/api/favorites/remove/${houseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data: ApiResponse<{ message: string }> = await response.json();
+        if (data.success) {
+          // Обновляем список избранного
+          setFavoritesList(prev => prev.filter(item => item.id !== houseId));
+          setFavoritesCount(prev => prev - 1);
+          
+          // Закрываем dropdown если избранное пустое
+          if (favoritesCount - 1 === 0) {
+            setShowFavorites(false);
+          }
+          
+          console.log('✅ Удалено из избранного:', houseId);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Ошибка при удалении из избранного:', errorText);
+        alert('Ошибка при удалении из избранного');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при удалении из избранного:', error);
+      alert('Ошибка при удалении из избранного');
+    }
   };
 
-  const clearFavorites = () => {
-    setFavorites([]);
-    setShowFavorites(false);
+  const clearFavorites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      if (!window.confirm('Вы уверены, что хотите очистить всё избранное?')) return;
+
+      const response = await fetch('http://localhost:5213/api/favorites/clear', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data: ApiResponse<{ message: string; removedCount: number }> = await response.json();
+        if (data.success) {
+          setFavoritesList([]);
+          setFavoritesCount(0);
+          setShowFavorites(false);
+          alert('Избранное очищено');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при очистке избранного:', error);
+      alert('Ошибка при очистке избранного');
+    }
   };
 
   const openAuthModal = (isLogin: boolean) => {
@@ -134,6 +292,7 @@ const Header: React.FC = () => {
       confirmPassword: "",
       phone_num: ""
     });
+    setShowFavorites(false); // Закрываем dropdown избранного
   };
 
   const closeAuthModal = () => {
@@ -164,7 +323,7 @@ const Header: React.FC = () => {
         })
       });
       
-      const data = await response.json();
+      const data: ApiResponse<UserData> = await response.json();
       
       if (data.success) {
         localStorage.setItem('token', data.data.token);
@@ -181,12 +340,15 @@ const Header: React.FC = () => {
           phone_num: ""
         });
         
+        // После успешного входа загружаем избранное если пользователь не администратор
+        if (formData.email.toLowerCase() !== 'admin@gmail.com') {
+          await fetchFavoritesCount();
+        }
+        
         // Проверяем, админ ли это
         if (formData.email.toLowerCase() === 'admin@gmail.com') {
-          // Перенаправляем на админ-панель
           navigate('/admin');
         } else {
-          // Обычный пользователь
           navigate('/profile');
         }
       } else {
@@ -231,7 +393,7 @@ const Header: React.FC = () => {
         })
       });
       
-      const data = await response.json();
+      const data: ApiResponse<{ message: string; userId: number }> = await response.json();
       
       if (data.success) {
         // После успешной регистрации автоматически входим
@@ -246,7 +408,7 @@ const Header: React.FC = () => {
           })
         });
         
-        const loginData = await loginResponse.json();
+        const loginData: ApiResponse<UserData> = await loginResponse.json();
         
         if (loginData.success) {
           localStorage.setItem('token', loginData.data.token);
@@ -262,6 +424,9 @@ const Header: React.FC = () => {
             confirmPassword: "",
             phone_num: ""
           });
+          
+          // После успешной регистрации загружаем избранное
+          await fetchFavoritesCount();
           
           // Регистрация всегда создает обычного пользователя, перенаправляем на профиль
           navigate('/profile');
@@ -306,7 +471,9 @@ const Header: React.FC = () => {
     localStorage.removeItem('user');
     setIsLoggedIn(false);
     setUserData(null);
-    setFavorites([]); // Очищаем избранное при выходе
+    setFavoritesCount(0);
+    setFavoritesList([]);
+    setShowFavorites(false);
     navigate('/');
   };
 
@@ -323,6 +490,24 @@ const Header: React.FC = () => {
 
   // Класс для Header в зависимости от страницы
   const headerClass = `header ${isProfilePage ? 'header-fixed' : ''}`;
+
+  // Функция для форматирования цены
+  const formatPrice = (price: number): string => {
+    return `${price.toLocaleString('ru-RU')} Br/мес`;
+  };
+
+  // Функция для получения основного изображения
+  const getMainImage = (photos: string[]): string => {
+    return photos && photos.length > 0 
+      ? photos[0] 
+      : "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=200&h=150&fit=crop";
+  };
+
+  // Функция для форматирования описания
+  const truncateDescription = (description: string, maxLength: number = 30): string => {
+    if (description.length <= maxLength) return description;
+    return description.substring(0, maxLength) + '...';
+  };
 
   return (
     <>
@@ -378,58 +563,91 @@ const Header: React.FC = () => {
                   onClick={toggleFavorites}
                   aria-label="Избранное"
                   title="Избранное"
+                  disabled={isLoadingFavorites}
                 >
-                  <FontAwesomeIcon 
-                    icon={favorites.length > 0 ? faHeartSolid : faHeartOutline} 
-                  />
-                  {favorites.length > 0 && (
-                    <span className="favorites-badge">{favorites.length}</span>
+                  {isLoadingFavorites ? (
+                    <span className="loading-spinner-small"></span>
+                  ) : (
+                    <FontAwesomeIcon 
+                      icon={favoritesCount > 0 ? faHeartSolid : faHeartOutline} 
+                    />
+                  )}
+                  {favoritesCount > 0 && (
+                    <span className="favorites-badge">{favoritesCount}</span>
                   )}
                 </button>
                 
                 {/* Dropdown избранного */}
                 <div className={`favorites-dropdown ${showFavorites ? 'show' : ''}`}>
                   <div className="favorites-dropdown-header">
-                    <h4>Избранное ({favorites.length})</h4>
-                    {favorites.length > 0 && (
+                    <h4>Избранное ({favoritesCount})</h4>
+                    {favoritesCount > 0 && (
                       <button 
                         className="clear-favorites" 
                         onClick={clearFavorites}
+                        disabled={isLoadingFavorites}
                       >
-                        Очистить
+                        {isLoadingFavorites ? 'Очистка...' : 'Очистить'}
                       </button>
                     )}
                   </div>
                   
                   <div className="favorites-items">
-                    {favorites.length === 0 ? (
+                    {isLoadingFavorites ? (
+                      <div className="favorites-loading">
+                        <span className="loading-spinner"></span>
+                        <p>Загрузка избранного...</p>
+                      </div>
+                    ) : favoritesCount === 0 ? (
                       <div className="favorites-empty">
                         <FontAwesomeIcon icon={faHeartOutline} />
                         <p>В избранном пока ничего нет</p>
+                        <p className="favorites-empty-hint">
+                          Нажмите на ♡ в каталоге, чтобы добавить дом в избранное
+                        </p>
                       </div>
                     ) : (
-                      favorites.map(item => (
+                      favoritesList.slice(0, 5).map(item => (
                         <div key={item.id} className="favorites-item">
                           <div className="favorites-item-image">
-                            <img src={item.image} alt={item.title} />
+                            <img 
+                              src={getMainImage(item.photos)} 
+                              alt={truncateDescription(item.description)} 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=200&h=150&fit=crop";
+                              }}
+                            />
                           </div>
                           <div className="favorites-item-content">
-                            <div className="favorites-item-title">{item.title}</div>
-                            <div className="favorites-item-price">{item.price}</div>
+                            <div className="favorites-item-title">
+                              {item.houseType} - {item.rooms} комн.
+                            </div>
+                            <div className="favorites-item-price">
+                              {formatPrice(item.price)}
+                            </div>
+                            <div className="favorites-item-address">
+                              {item.city}, {item.street}
+                            </div>
                           </div>
                           <button 
                             className="favorites-item-remove"
                             onClick={() => removeFromFavorites(item.id)}
                             aria-label="Удалить из избранного"
+                            disabled={isLoadingFavorites}
                           >
                             <FontAwesomeIcon icon={faTimes} />
                           </button>
                         </div>
                       ))
                     )}
+                    {favoritesCount > 5 && !isLoadingFavorites && (
+                      <div className="favorites-more">
+                        <span>... и еще {favoritesCount - 5} домов</span>
+                      </div>
+                    )}
                   </div>
                   
-                  {favorites.length > 0 && (
+                  {favoritesCount > 0 && !isLoadingFavorites && (
                     <div className="favorites-dropdown-footer">
                       <Link 
                         to="/favorites" 
@@ -445,7 +663,7 @@ const Header: React.FC = () => {
               </div>
             )}
 
-            {/* Альтернативная кнопка избранного для неавторизованных пользователей (если нужно показать иконку для привлечения внимания) */}
+            {/* Альтернативная кнопка избранного для неавторизованных пользователей */}
             {!isLoggedIn && (
               <div className="nav-favorites">
                 <button 
@@ -482,9 +700,16 @@ const Header: React.FC = () => {
                 {/* Dropdown меню (для не-админов) */}
                 {!isAdmin && (
                   <div className="user-dropdown">
-                    <Link to="/profile" className="dropdown-item">
+                    <Link to="/profile" className="dropdown-item" onClick={() => setShowFavorites(false)}>
                       <FontAwesomeIcon icon={faUser} />
                       <span>Мой профиль</span>
+                    </Link>
+                    <Link to="/favorites" className="dropdown-item" onClick={() => setShowFavorites(false)}>
+                      <FontAwesomeIcon icon={faHeartOutline} />
+                      <span>Избранное</span>
+                      {favoritesCount > 0 && (
+                        <span className="dropdown-badge">{favoritesCount}</span>
+                      )}
                     </Link>
                     <button 
                       className="dropdown-item logout"
@@ -501,14 +726,16 @@ const Header: React.FC = () => {
                 <button 
                   className="btn-secondary" 
                   onClick={() => openAuthModal(true)}
+                  disabled={isLoading}
                 >
-                  Войти
+                  {isLoading ? 'Загрузка...' : 'Войти'}
                 </button>
                 <button 
                   className="btn-primary"
                   onClick={() => openAuthModal(false)}
+                  disabled={isLoading}
                 >
-                  Регистрация
+                  {isLoading ? 'Загрузка...' : 'Регистрация'}
                 </button>
               </>
             )}
@@ -517,6 +744,7 @@ const Header: React.FC = () => {
             <button 
               className="mobile-menu-btn"
               aria-label="Меню"
+              onClick={() => {/* Логика мобильного меню */}}
             >
               ☰
             </button>

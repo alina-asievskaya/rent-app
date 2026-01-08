@@ -18,6 +18,7 @@ namespace RentApp.API.Data
         public DbSet<Convenience> Conveniences { get; set; }
         public DbSet<Agent> Agents { get; set; } 
         public DbSet<AgentReview> AgentReviews { get; set; }
+        public DbSet<Favorite> Favorites { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -65,6 +66,46 @@ namespace RentApp.API.Data
                     .WithOne(a => a.User)
                     .HasForeignKey<Agent>(a => a.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Конфигурация Favorites
+            modelBuilder.Entity<Favorite>(entity =>
+            {
+                entity.ToTable("Favorites");
+                entity.HasKey(f => f.Id);
+                
+                entity.Property(f => f.Id)
+                    .HasColumnName("id_favorites")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(f => f.UserId)
+                    .HasColumnName("id_user")
+                    .IsRequired();
+                
+                entity.Property(f => f.HouseId)
+                    .HasColumnName("id_house")
+                    .IsRequired();
+                
+                entity.Property(f => f.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                // Внешний ключ к Users
+                entity.HasOne(f => f.User)
+                    .WithMany()
+                    .HasForeignKey(f => f.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Внешний ключ к Houses
+                entity.HasOne(f => f.House)
+                    .WithMany()
+                    .HasForeignKey(f => f.HouseId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Индексы
+                entity.HasIndex(f => f.UserId);
+                entity.HasIndex(f => f.HouseId);
+                entity.HasIndex(f => new { f.UserId, f.HouseId }).IsUnique();
             });
 
             // Конфигурация Agents
@@ -116,54 +157,54 @@ namespace RentApp.API.Data
             });
 
             // Конфигурация AgentReviews
-modelBuilder.Entity<AgentReview>(entity =>
-{
-    entity.ToTable("AgentReviews");
-    entity.HasKey(ar => ar.Id);
-    
-    entity.Property(ar => ar.Id)
-        .HasColumnName("id_rew_agent")
-        .ValueGeneratedOnAdd();
-    
-    entity.Property(ar => ar.UserId)
-        .HasColumnName("id_user")
-        .IsRequired();
-    
-    entity.Property(ar => ar.AgentId)
-        .HasColumnName("id_agent")
-        .IsRequired();
-    
-    entity.Property(ar => ar.Rating)
-        .HasColumnName("rating")
-        .IsRequired();
-    
-    entity.Property(ar => ar.Text)
-        .HasColumnName("text")
-        .IsRequired()
-        .HasMaxLength(2000);
-    
-    entity.Property(ar => ar.DataReviews)
-        .HasColumnName("data_reviews")
-        .HasColumnType("date")
-        .HasDefaultValueSql("GETUTCDATE()");
+            modelBuilder.Entity<AgentReview>(entity =>
+            {
+                entity.ToTable("AgentReviews");
+                entity.HasKey(ar => ar.Id);
+                
+                entity.Property(ar => ar.Id)
+                    .HasColumnName("id_rew_agent")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(ar => ar.UserId)
+                    .HasColumnName("id_user")
+                    .IsRequired();
+                
+                entity.Property(ar => ar.AgentId)
+                    .HasColumnName("id_agent")
+                    .IsRequired();
+                
+                entity.Property(ar => ar.Rating)
+                    .HasColumnName("rating")
+                    .IsRequired();
+                
+                entity.Property(ar => ar.Text)
+                    .HasColumnName("text")
+                    .IsRequired()
+                    .HasMaxLength(2000);
+                
+                entity.Property(ar => ar.DataReviews)
+                    .HasColumnName("data_reviews")
+                    .HasColumnType("date")
+                    .HasDefaultValueSql("GETUTCDATE()");
 
-    // Внешний ключ к Users - измените на Restrict или NoAction
-    entity.HasOne(ar => ar.User)
-        .WithMany()
-        .HasForeignKey(ar => ar.UserId)
-        .OnDelete(DeleteBehavior.Restrict); // ИЗМЕНИЛИ ЗДЕСЬ
-    
-    // Внешний ключ к Agents
-    entity.HasOne(ar => ar.Agent)
-        .WithMany(a => a.Reviews)
-        .HasForeignKey(ar => ar.AgentId)
-        .OnDelete(DeleteBehavior.Cascade);
+                // Внешний ключ к Users
+                entity.HasOne(ar => ar.User)
+                    .WithMany()
+                    .HasForeignKey(ar => ar.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Внешний ключ к Agents
+                entity.HasOne(ar => ar.Agent)
+                    .WithMany(a => a.Reviews)
+                    .HasForeignKey(ar => ar.AgentId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-    // Индексы
-    entity.HasIndex(ar => ar.AgentId);
-    entity.HasIndex(ar => ar.UserId);
-    entity.HasIndex(ar => ar.DataReviews);
-});
+                // Индексы
+                entity.HasIndex(ar => ar.AgentId);
+                entity.HasIndex(ar => ar.UserId);
+                entity.HasIndex(ar => ar.DataReviews);
+            });
 
             // Конфигурация Feedback
             modelBuilder.Entity<Feedback>(entity =>
@@ -245,6 +286,11 @@ modelBuilder.Entity<AgentReview>(entity =>
                     .HasColumnName("house_type")
                     .HasMaxLength(50)
                     .HasDefaultValue("Коттедж");
+                
+                entity.Property(h => h.Rating)
+                    .HasColumnName("rating")
+                    .HasColumnType("decimal(3,2)")
+                    .HasDefaultValue(0.0);
 
                 entity.HasOne(h => h.Owner)
                     .WithMany()

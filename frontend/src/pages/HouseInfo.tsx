@@ -149,6 +149,12 @@ interface UserResponse {
   };
 }
 
+interface FavoriteCheckResponse {
+  success: boolean;
+  isFavorite: boolean;
+  message?: string;
+}
+
 // Тип для иконок
 type IconType = typeof faCheck;
 
@@ -156,6 +162,8 @@ const HouseInfo: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [checkingFavorite, setCheckingFavorite] = useState(true);
+  const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [house, setHouse] = useState<HouseInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -241,6 +249,58 @@ const HouseInfo: React.FC = () => {
 
     checkAuth();
   }, []);
+
+  // Функция для проверки, находится ли дом в избранном
+  const checkIfFavorite = useCallback(async () => {
+    if (!id || !currentUserId) {
+      setIsFavorite(false);
+      setCheckingFavorite(false);
+      return;
+    }
+
+    try {
+      setCheckingFavorite(true);
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setIsFavorite(false);
+        setCheckingFavorite(false);
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5213/api/favorites/check/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data: FavoriteCheckResponse = await response.json();
+        if (data.success) {
+          setIsFavorite(data.isFavorite);
+          console.log(`✅ Проверка избранного: ${data.isFavorite ? 'В избранном' : 'Не в избранном'}`);
+        } else {
+          setIsFavorite(false);
+        }
+      } else {
+        setIsFavorite(false);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при проверке избранного:', error);
+      setIsFavorite(false);
+    } finally {
+      setCheckingFavorite(false);
+    }
+  }, [id, currentUserId]);
+
+  // Проверяем избранное при загрузке компонента и при изменении
+  useEffect(() => {
+    if (id && currentUserId) {
+      checkIfFavorite();
+    }
+  }, [id, currentUserId, checkIfFavorite]);
 
   // Проверка возможности оставить отзыв
   const canLeaveReview = (): boolean => {
@@ -432,6 +492,81 @@ const HouseInfo: React.FC = () => {
   const handleTextareaClickUnauthorized = () => {
     alert('Для оставления отзыва необходимо авторизоваться');
     navigate('/login');
+  };
+
+  // Функция для переключения избранного
+  const toggleFavorite = async () => {
+    // Проверяем авторизацию
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для добавления в избранное необходимо авторизоваться');
+      navigate('/login');
+      return;
+    }
+
+    // Проверяем, что есть ID дома
+    if (!id) {
+      alert('Ошибка: ID дома не найден');
+      return;
+    }
+
+    // Проверяем, что пользователь не администратор
+    if (isAdmin) {
+      alert('Администраторы не могут добавлять в избранное');
+      return;
+    }
+
+    setTogglingFavorite(true);
+    try {
+      if (isFavorite) {
+        // Удаляем из избранного
+        const response = await fetch(`http://localhost:5213/api/favorites/remove/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setIsFavorite(false);
+            console.log('✅ Удалено из избранного:', id);
+          } else {
+            alert(data.message || 'Ошибка при удалении из избранного');
+          }
+        } else {
+          alert('Ошибка при удалении из избранного');
+        }
+      } else {
+        // Добавляем в избранное
+        const response = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setIsFavorite(true);
+            console.log('✅ Добавлено в избранное:', id);
+          } else {
+            alert(data.message || 'Ошибка при добавлении в избранное');
+          }
+        } else {
+          alert('Ошибка при добавлении в избранное');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при изменении избранного:', error);
+      alert('Произошла ошибка. Пожалуйста, попробуйте еще раз.');
+    } finally {
+      setTogglingFavorite(false);
+    }
   };
 
   // Отправка отзыва
@@ -674,10 +809,6 @@ const HouseInfo: React.FC = () => {
     if (conv.sauna) features.push("Сауна");
     
     return features;
-  };
-
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
   };
 
   const handleBack = () => {
@@ -1096,13 +1227,33 @@ const HouseInfo: React.FC = () => {
 
                 {/* Действия */}
                 <div className="action-buttons-house">
-                  <button 
-                    className={`btn-outline-house full-width-house ${isFavorite ? 'active-favorite' : ''}`}
-                    onClick={toggleFavorite}
-                  >
-                    <FontAwesomeIcon icon={isFavorite ? faHeart : faHeartRegular} />
-                    {isFavorite ? 'В избранном' : 'В избранное'}
-                  </button>
+                  {checkingFavorite ? (
+                    <button 
+                      className="btn-outline-house full-width-house"
+                      disabled
+                    >
+                      <FontAwesomeIcon icon={faSpinner} spin />
+                      Проверка...
+                    </button>
+                  ) : (
+                    <button 
+                      className={`btn-outline-house full-width-house ${isFavorite ? 'active-favorite' : ''}`}
+                      onClick={toggleFavorite}
+                      disabled={togglingFavorite || isAdmin}
+                    >
+                      {togglingFavorite ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} spin />
+                          Загрузка...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={isFavorite ? faHeart : faHeartRegular} />
+                          {isFavorite ? 'В избранном' : 'В избранное'}
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

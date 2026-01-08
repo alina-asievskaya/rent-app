@@ -22,7 +22,7 @@ namespace RentApp.API.Controllers
             _context = context;
             _logger = logger;
         }
-        private double CalculateHouseRating(int houseId)
+      private decimal CalculateHouseRating(int houseId)
 {
     var reviews = _context.ReviewHouses
         .Where(r => r.IdHouses == houseId)
@@ -31,7 +31,7 @@ namespace RentApp.API.Controllers
     if (reviews.Count == 0)
         return 0;
     
-    return Math.Round(reviews.Average(r => r.Rating), 1);
+    return Math.Round((decimal)reviews.Average(r => r.Rating), 1); // Приведение к decimal
 }
 
 // Метод для обновления рейтинга дома

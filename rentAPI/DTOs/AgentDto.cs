@@ -5,6 +5,7 @@ namespace RentApp.API.DTOs
     public class AgentDto
     {
         public int Id { get; set; }
+        public int UserId { get; set; }
         
         [Required]
         [MaxLength(100)]
@@ -41,6 +42,9 @@ namespace RentApp.API.DTOs
         
         [MaxLength(200)]
         public string Position { get; set; } = string.Empty;
+        
+        // Добавляем недостающее свойство
+        public bool IsAgent { get; set; } = true;
     }
 
     public class AgentCatalogDto

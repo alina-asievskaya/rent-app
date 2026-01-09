@@ -509,58 +509,61 @@ namespace RentApp.API.Data
 
                 entity.HasIndex(c => c.IdHouse);
             });
-              // Конфигурация Chats
-            modelBuilder.Entity<Chat>(entity =>
-            {
-                entity.ToTable("Chats");
-                entity.HasKey(c => c.Id);
-                
-                entity.Property(c => c.Id)
-                    .HasColumnName("id_chat")
-                    .ValueGeneratedOnAdd();
-                
-                entity.Property(c => c.User1Id)
-                    .HasColumnName("id_user1")
-                    .IsRequired();
-                
-                entity.Property(c => c.User2Id)
-                    .HasColumnName("id_user2")
-                    .IsRequired();
-                
-                entity.Property(c => c.HouseId)
-                    .HasColumnName("id_house")
-                    .IsRequired();
-                
-                entity.Property(c => c.CreatedAt)
-                    .HasColumnName("created_at")
-                    .HasDefaultValueSql("GETUTCDATE()");
+            // Конфигурация Chats
+           // Конфигурация Chats
+modelBuilder.Entity<Chat>(entity =>
+{
+    entity.ToTable("Chats");
+    entity.HasKey(c => c.Id);
+    
+    entity.Property(c => c.Id)
+        .HasColumnName("id_chat")
+        .ValueGeneratedOnAdd();
+    
+    entity.Property(c => c.User1Id)
+        .HasColumnName("id_user1")
+        .IsRequired();
+    
+    entity.Property(c => c.User2Id)
+        .HasColumnName("id_user2")
+        .IsRequired();
+    
+    entity.Property(c => c.HouseId)
+        .HasColumnName("id_house")
+        .IsRequired(false);
+    
+    entity.Property(c => c.CreatedAt)
+        .HasColumnName("created_at")
+        .HasDefaultValueSql("GETUTCDATE()");
 
-                // Внешние ключи
-                entity.HasOne(c => c.User1)
-                    .WithMany()
-                    .HasForeignKey(c => c.User1Id)
-                    .OnDelete(DeleteBehavior.Restrict);
-                
-                entity.HasOne(c => c.User2)
-                    .WithMany()
-                    .HasForeignKey(c => c.User2Id)
-                    .OnDelete(DeleteBehavior.Restrict);
-                
-                entity.HasOne(c => c.House)
-                    .WithMany()
-                    .HasForeignKey(c => c.HouseId)
-                    .OnDelete(DeleteBehavior.Restrict);
+    // Внешние ключи
+    entity.HasOne(c => c.User1)
+        .WithMany()
+        .HasForeignKey(c => c.User1Id)
+        .OnDelete(DeleteBehavior.Restrict);
+    
+    entity.HasOne(c => c.User2)
+        .WithMany()
+        .HasForeignKey(c => c.User2Id)
+        .OnDelete(DeleteBehavior.Restrict);
+    
+    entity.HasOne(c => c.House)
+        .WithMany()
+        .HasForeignKey(c => c.HouseId)
+        .OnDelete(DeleteBehavior.Restrict)
+        .IsRequired(false);
 
-                // Проверка, что пользователи разные
-                entity.HasCheckConstraint("CK_Different_Users", "id_user1 <> id_user2");
+    // Проверка, что пользователи разные
+    entity.HasCheckConstraint("CK_Different_Users", "id_user1 <> id_user2");
 
-                // Индексы
-                entity.HasIndex(c => c.User1Id);
-                entity.HasIndex(c => c.User2Id);
-                entity.HasIndex(c => c.HouseId);
-                entity.HasIndex(c => c.CreatedAt);
-                entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId }).IsUnique();
-            });
+    // Индексы
+    entity.HasIndex(c => c.User1Id);
+    entity.HasIndex(c => c.User2Id);
+    entity.HasIndex(c => c.HouseId);
+    entity.HasIndex(c => c.CreatedAt);
+    // Уникальность по User1Id, User2Id, HouseId, но HouseId может быть null
+    entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId });
+});
 
             // Конфигурация Messages
             modelBuilder.Entity<Message>(entity =>

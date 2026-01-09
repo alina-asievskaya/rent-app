@@ -4,14 +4,15 @@ import {
   faStar,
   faComments,
   faPhone,
-  faEnvelope,
-  faCalendarAlt
+  faCalendarAlt,
+  faComment
 } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
 import './AgentCard.css';
 
 export interface Agent {
   id: number;
+  userId: number; // Добавляем поле userId
   name: string;
   position: string;
   avatar: string;
@@ -36,9 +37,16 @@ export interface Agent {
 interface AgentCardProps {
   agent: Agent;
   viewMode?: 'grid' | 'list';
+  onChatClick?: (agentId: number, e: React.MouseEvent) => void;
+  isCreatingChat?: boolean;
 }
 
-const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
+const AgentCard: React.FC<AgentCardProps> = ({ 
+  agent, 
+  viewMode = 'grid',
+  onChatClick,
+  isCreatingChat = false
+}) => {
   const handleContactClick = (e: React.MouseEvent, type: 'phone' | 'email') => {
     e.preventDefault();
     e.stopPropagation();
@@ -47,6 +55,14 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
       window.location.href = `tel:${agent.contact.phone}`;
     } else {
       window.location.href = `mailto:${agent.contact.email}`;
+    }
+  };
+
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onChatClick) {
+      onChatClick(agent.id, e);
     }
   };
 
@@ -149,11 +165,12 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
               </button>
               <button 
                 className="agentcard-btn agentcard-btn-email"
-                onClick={(e) => handleContactClick(e, 'email')}
-                aria-label="Написать"
+                onClick={handleChatClick}
+                disabled={isCreatingChat}
+                aria-label="Написать в чат"
               >
-                <FontAwesomeIcon icon={faEnvelope} />
-                <span>Написать</span>
+                <FontAwesomeIcon icon={faComment} />
+                <span>Чат</span>
               </button>
             </div>
           </div>
@@ -252,11 +269,12 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, viewMode = 'grid' }) => {
           </button>
           <button 
             className="agentcard-btn agentcard-btn-email"
-            onClick={(e) => handleContactClick(e, 'email')}
-            aria-label="Написать"
+            onClick={handleChatClick}
+            disabled={isCreatingChat}
+            aria-label="Написать в чат"
           >
-            <FontAwesomeIcon icon={faEnvelope} />
-            <span>Написать</span>
+            <FontAwesomeIcon icon={faComment} />
+            <span>Чат</span>
           </button>
         </div>
       </div>

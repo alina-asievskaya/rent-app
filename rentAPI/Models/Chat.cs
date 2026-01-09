@@ -19,9 +19,8 @@ namespace RentApp.API.Models
         [Column("id_user2")]
         public int User2Id { get; set; }
 
-        [Required]
         [Column("id_house")]
-        public int HouseId { get; set; }
+        public int? HouseId { get; set; } // Делаем nullable для чатов с агентами
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -34,7 +33,7 @@ namespace RentApp.API.Models
         public User User2 { get; set; } = null!;
 
         [ForeignKey("HouseId")]
-        public House House { get; set; } = null!;
+        public House? House { get; set; }
 
         public ICollection<Message> Messages { get; set; } = new List<Message>();
 

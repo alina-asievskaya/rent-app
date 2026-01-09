@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using RentApp.API.DTOs;
 using RentApp.API.Services;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using RentApp.API.Data;
 
 namespace RentApp.API.Controllers
 {
@@ -11,11 +13,13 @@ namespace RentApp.API.Controllers
     public class AgentsController : ControllerBase
     {
         private readonly IAgentService _agentService;
+        private readonly AppDbContext _context;
         private readonly ILogger<AgentsController> _logger;
 
-        public AgentsController(IAgentService agentService, ILogger<AgentsController> logger)
+        public AgentsController(IAgentService agentService, AppDbContext context, ILogger<AgentsController> logger)
         {
             _agentService = agentService;
+            _context = context;
             _logger = logger;
         }
 
@@ -151,7 +155,7 @@ namespace RentApp.API.Controllers
 
                 // Получаем ID текущего пользователя из токена
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                var roleClaim = User.FindFirst(ClaimTypes.Role); // Добавляем получение роли
+                var roleClaim = User.FindFirst(ClaimTypes.Role);
                 
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId) || userId == 0)
                     return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
@@ -252,6 +256,42 @@ namespace RentApp.API.Controllers
                     success = false, 
                     message = "Ошибка сервера при обновлении данных",
                     error = ex.Message 
+                });
+            }
+        }
+
+        [HttpGet("{id}/details")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAgentDetails(int id)
+        {
+            try
+            {
+                _logger.LogInformation($"Получение деталей агента с ID: {id}");
+                
+                // Используем сервис для получения деталей
+                var agent = await _agentService.GetAgentDetailsAsync(id);
+
+                if (agent == null)
+                {
+                    return NotFound(new { 
+                        success = false, 
+                        message = "Агент не найден" 
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data = agent
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Ошибка при получении деталей агента {id}");
+                return StatusCode(500, new { 
+                    success = false, 
+                    message = "Внутренняя ошибка сервера",
+                    detailed = ex.Message
                 });
             }
         }

@@ -140,6 +140,7 @@ namespace RentApp.API.Services
             return new AgentDto
             {
                 Id = agent.Id,
+                UserId = agent.UserId,
                 Fio = agent.User?.Fio ?? "Неизвестный агент",
                 Email = agent.User?.Email ?? "",
                 Phone = agent.User?.Phone_num ?? "",
@@ -152,7 +153,8 @@ namespace RentApp.API.Services
                 ReviewsCount = agent.ReviewsCount,
                 Specialties = specialties,
                 Description = description,
-                Position = position
+                Position = position,
+                IsAgent = true
             };
         }
 
@@ -187,6 +189,31 @@ namespace RentApp.API.Services
             }
 
             return MapToDto(agent);
+        }
+
+        // Метод для получения деталей агента (только UserId и основные данные)
+        public async Task<AgentDetailsDto?> GetAgentDetailsAsync(int id)
+        {
+            var agent = await _context.Agents
+                .Include(a => a.User)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (agent == null) return null;
+
+            return new AgentDetailsDto
+            {
+                Id = agent.Id,
+                UserId = agent.UserId, // Это UserId из таблицы Users
+                Fio = agent.User?.Fio ?? "Неизвестный агент",
+                Email = agent.User?.Email ?? "",
+                Phone = agent.User?.Phone_num ?? "",
+                Specialization = agent.Specialization,
+                Experience = agent.Experience,
+                Rating = agent.Rating,
+                Photo = agent.Photo,
+                ReviewsCount = agent.ReviewsCount,
+                IsAgent = true
+            };
         }
 
         public async Task<bool> CreateAgentAsync(CreateAgentDto createDto)

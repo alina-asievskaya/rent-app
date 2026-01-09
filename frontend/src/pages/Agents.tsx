@@ -14,9 +14,11 @@ import {
   faHome,
   faClock,
   faExclamationTriangle,
-  faSyncAlt
+  faSyncAlt,
+
 } from '@fortawesome/free-solid-svg-icons';
 import "./Agents.css";
+import { useNavigate } from "react-router-dom";
 
 // Типы для API ответов
 interface AgentApiResponse {
@@ -34,6 +36,7 @@ interface AgentApiResponse {
   description: string;
   position: string;
   satisfactionRate: number;
+  userId?: number; // Добавляем поле userId
 }
 
 interface ApiResponse {
@@ -57,7 +60,42 @@ interface ApiErrorDetails {
   stackTrace?: string;
 }
 
+// Интерфейсы для чата
+interface ChatItem {
+  id: number;
+  user_id: number;
+  ad_id: number;
+  user_name: string;
+  user_avatar: string;
+  ad_title: string;
+  ad_address: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+  created_at: string;
+  house_price: number;
+  house_photo: string;
+}
+
+interface ChatsResponse {
+  success: boolean;
+  data: ChatItem[];
+  total: number;
+  message?: string;
+}
+
+interface ChatCreateResponse {
+  success: boolean;
+  data: {
+    chat_id: number;
+    is_new: boolean;
+    welcome_message_id?: number;
+  };
+  message?: string;
+}
+
 const Agents: React.FC = () => {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,6 +104,10 @@ const Agents: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [apiDetails, setApiDetails] = useState<ApiErrorDetails | null>(null);
+  const [creatingChatForAgent, setCreatingChatForAgent] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
   // Фильтры
   const [filters, setFilters] = useState({
@@ -85,6 +127,250 @@ const Agents: React.FC = () => {
     { id: 'reviews-desc', label: 'По отзывам' },
     { id: 'name-asc', label: 'По имени (А-Я)' }
   ];
+
+  // Декодирование токена
+  const decodeToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Ошибка при декодировании токена:', error);
+      return null;
+    }
+  };
+
+  // Проверка авторизации
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        try {
+          const payload = decodeToken(token);
+          
+          if (payload) {
+            const userId = payload.userId || payload.sub || payload.nameid || payload.unique_name;
+            
+            if (userId) {
+              setCurrentUserId(parseInt(userId));
+              localStorage.setItem('currentUserId', userId.toString());
+            }
+            
+            const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+            
+            if (Array.isArray(roles)) {
+              setIsAdmin(roles.includes('Admin'));
+            } else if (typeof roles === 'string') {
+              setIsAdmin(roles === 'Admin');
+            } else {
+              setIsAdmin(false);
+            }
+
+            const email = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+            setCurrentUserEmail(email);
+          }
+        } catch (error) {
+          console.error('Ошибка при декодировании токена:', error);
+        }
+      } else {
+        setCurrentUserId(null);
+        setIsAdmin(false);
+        localStorage.removeItem('currentUserId');
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Функция для получения UserId агента
+  const getAgentUserId = async (agentId: number): Promise<number> => {
+    try {
+      const API_URL = 'http://localhost:5213/api';
+      const response = await fetch(`${API_URL}/agents/${agentId}/details`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data && result.data.userId) {
+          console.log(`✅ Получен UserId агента ${agentId}: ${result.data.userId}`);
+          return result.data.userId;
+        }
+      }
+      // Если не удалось получить UserId, используем agentId как fallback
+      console.log(`⚠️ Не удалось получить UserId агента ${agentId}, использую agentId как fallback`);
+      return agentId;
+    } catch (error) {
+      console.error(`❌ Ошибка при получении UserId агента ${agentId}:`, error);
+      return agentId;
+    }
+  };
+
+  // Проверка существующего чата
+  const checkExistingChat = async (agentUserId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5213/api/chats/my-chats', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result: ChatsResponse = await response.json();
+        if (result.success && result.data) {
+          const existingChat = result.data.find((chat: ChatItem) => 
+            chat.user_id === agentUserId && chat.ad_id === 0
+          );
+          
+          if (existingChat) {
+            console.log('✅ Найден существующий чат с агентом:', existingChat.id);
+            return existingChat.id;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка при проверке существующего чата:', error);
+      return null;
+    }
+  };
+
+  // Создание нового чата с агентом
+  const createNewChatWithAgent = async (agentUserId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Токен авторизации не найден');
+        return null;
+      }
+
+      console.log('➕ Создаем новый чат с агентом (UserId):', agentUserId);
+      
+      const response = await fetch('http://localhost:5213/api/chats/create-with-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          agentId: agentUserId, // Отправляем UserId агента
+          initialMessage: "Здравствуйте! Мне нужна консультация по подбору жилья."
+        })
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Ошибка при создании чата';
+        try {
+          const errorData = await response.text();
+          console.error('❌ Ошибка создания чата:', errorData);
+          if (errorData) {
+            const parsed = JSON.parse(errorData);
+            errorMessage = parsed.message || errorData;
+          }
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: ChatCreateResponse = await response.json();
+      if (result.success && result.data) {
+        console.log('🎉 Чат создан:', result.data);
+        return result.data.chat_id;
+      } else {
+        throw new Error(result.message || 'Неизвестная ошибка при создании чата');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при создании чата:', error);
+      throw error;
+    }
+  };
+
+  // Основная функция для открытия/создания чата с агентом
+  const handleOpenChatWithAgent = async (agentId: number, agentUserId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для начала чата необходимо авторизоваться');
+      navigate('/login');
+      return;
+    }
+
+    // Проверяем, не является ли текущий пользователь администратором
+    if (isAdmin) {
+      if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
+        alert('Администратор может писать только в ответ на сообщения пользователей');
+        return;
+      }
+    }
+
+    // Находим агента для проверки его email
+    const agent = agents.find(a => a.id === agentId);
+    if (!agent) {
+      alert('Агент не найден');
+      return;
+    }
+
+    // Проверяем, не является ли агент администратором
+    if (agent.contact.email.toLowerCase() === 'admin@gmail.com') {
+      alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
+      return;
+    }
+
+    setCreatingChatForAgent(agentId);
+    
+    try {
+      console.log('💬 Начинаем процесс создания чата с агентом:', {
+        agentId: agentId,
+        agentUserId: agentUserId,
+        currentUserId: currentUserId,
+        agentName: agent.name
+      });
+
+      // Проверяем, не пытается ли пользователь написать самому себе
+      if (currentUserId && agentUserId === currentUserId) {
+        alert('Вы не можете создать чат с самим собой');
+        return;
+      }
+      
+      // Проверяем существующий чат
+      const existingChatId = await checkExistingChat(agentUserId);
+      
+      if (existingChatId) {
+        console.log('🚀 Переходим в существующий чат:', existingChatId);
+        navigate(`/chat/${existingChatId}`);
+        return;
+      }
+
+      // Создаем новый чат
+      console.log('➕ Создаем новый чат с агентом (UserId):', agentUserId);
+      const newChatId = await createNewChatWithAgent(agentUserId);
+      
+      if (newChatId) {
+        console.log('🚀 Переходим в новый чат:', newChatId);
+        navigate(`/chat/${newChatId}`);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при открытии чата:', error);
+      alert(error instanceof Error ? error.message : 'Не удалось создать чат. Попробуйте позже.');
+    } finally {
+      setCreatingChatForAgent(null);
+    }
+  };
 
   // Загрузка данных агентов из API
   const fetchAgents = useCallback(async () => {
@@ -148,9 +434,29 @@ const Agents: React.FC = () => {
       });
       
       if (result.success && result.data && Array.isArray(result.data.agents)) {
+        // Получаем UserId для каждого агента
+        const agentsWithUserId = await Promise.all(
+          result.data.agents.map(async (agent: AgentApiResponse) => {
+            try {
+              const userId = await getAgentUserId(agent.id);
+              return {
+                ...agent,
+                userId: userId
+              };
+            } catch (error) {
+              console.error(`Ошибка при получении UserId для агента ${agent.id}:`, error);
+              return {
+                ...agent,
+                userId: agent.id // Fallback
+              };
+            }
+          })
+        );
+        
         // Преобразуем данные из API в формат Agent
-        const transformedAgents: Agent[] = result.data.agents.map((agent: AgentApiResponse) => ({
-          id: agent.id || 0,
+        const transformedAgents: Agent[] = agentsWithUserId.map((agent: AgentApiResponse & { userId: number }) => ({
+          id: agent.id,
+          userId: agent.userId, // Сохраняем UserId
           name: agent.fio || "Неизвестный агент",
           position: agent.position || `${agent.specialization || "недвижимости"}`,
           avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
@@ -173,6 +479,7 @@ const Agents: React.FC = () => {
         }));
         
         console.log(`✅ Успешно преобразовано ${transformedAgents.length} агентов`);
+        console.log('📋 Агенты с UserId:', transformedAgents.map(a => ({ id: a.id, userId: a.userId, name: a.name, email: a.contact.email })));
         setAgents(transformedAgents);
         
         // Обновляем список специализаций из API если они есть
@@ -543,7 +850,13 @@ const Agents: React.FC = () => {
               ) : (
                 <div className={`agents-container-agent ${viewMode === "list" ? "list-view-agent" : "grid-view-agent"}`}>
                   {filteredAgents.map(agent => (
-                    <AgentCard key={agent.id} agent={agent} viewMode={viewMode}/>
+                    <AgentCard 
+                      key={agent.id} 
+                      agent={agent} 
+                      viewMode={viewMode}
+                      onChatClick={(agentId, e) => handleOpenChatWithAgent(agentId, agent.userId, e)}
+                      isCreatingChat={creatingChatForAgent === agent.id}
+                    />
                   ))}
                 </div>
               )}

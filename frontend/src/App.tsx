@@ -13,8 +13,8 @@ import CreateAd from './pages/CreateAd';
 import EditHousePage from './pages/EditHousePage';
 import AdminPanel from "./components/AdminPanel";
 import AgentProfile from "./pages/AgentProfile";
+import ChatPage from "./pages/ChatPage";
 
-// Компонент для защиты маршрутов
 const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
@@ -31,15 +31,12 @@ const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNo
   return <>{children}</>;
 };
 
-// Компонент для определения, нужно ли показывать футер
 const AppContent: React.FC = () => {
   const location = useLocation();
   
-  // Страницы, на которых НЕ нужно показывать футер
-  const noFooterPages = ['/profile', '/create-ad', '/admin']; // Добавьте /admin
+  const noFooterPages = ['/profile', '/create-ad', '/admin', '/chat'];
   
-  // Проверяем, находится ли текущий путь в списке страниц без футера
-  const showFooter = !noFooterPages.includes(location.pathname);
+  const showFooter = !noFooterPages.some(page => location.pathname.startsWith(page));
 
   return (
     <div className="app-wrapper">
@@ -52,6 +49,11 @@ const AppContent: React.FC = () => {
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/house/:id" element={<HouseInfo />} />
           <Route path="/agents/:id" element={<AgentProfile />} />
+          <Route path="/chat/:chatId" element={
+            <PrivateRoute>
+              <ChatPage />
+            </PrivateRoute>
+          } />
           <Route path="/profile" element={
             <PrivateRoute>
               <ProfilePage />

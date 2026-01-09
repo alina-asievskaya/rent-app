@@ -33,7 +33,6 @@ import {
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
 
-// Интерфейс для данных с сервера
 interface ApiHouseInfo {
   id: number;
   price: number;
@@ -52,6 +51,8 @@ interface ApiHouseInfo {
     floor?: number;
   };
   owner?: {
+    id?: number;
+    Id?: number;
     fio?: string;
     email?: string;
     phone_num?: string;
@@ -74,7 +75,6 @@ interface ApiHouseInfo {
   };
 }
 
-// Упрощенный интерфейс для компонента
 interface HouseInfo {
   id: number;
   price: number;
@@ -91,6 +91,8 @@ interface HouseInfo {
   bathrooms?: number;
   floor?: number;
   owner?: {
+    id?: number;
+    Id?: number;
     fio?: string;
     email?: string;
     phone_num?: string;
@@ -142,6 +144,7 @@ interface ReviewsResponse {
 interface UserResponse {
   success: boolean;
   data: {
+    id?: number;
     fio?: string;
     email?: string;
     phone_num?: string;
@@ -155,7 +158,41 @@ interface FavoriteCheckResponse {
   message?: string;
 }
 
-// Тип для иконок
+interface OwnerInfoResponse {
+  success: boolean;
+  data: {
+    id: number;
+    fio: string;
+    email: string;
+    phone_num: string;
+    id_agent: boolean;
+  };
+  message?: string;
+}
+
+interface ChatItem {
+  id: number;
+  user_id: number;
+  ad_id: number;
+  user_name: string;
+  user_avatar: string;
+  ad_title: string;
+  ad_address: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+  created_at: string;
+  house_price: number;
+  house_photo: string;
+}
+
+interface ChatsResponse {
+  success: boolean;
+  data: ChatItem[];
+  total: number;
+  message?: string;
+}
+
 type IconType = typeof faCheck;
 
 const HouseInfo: React.FC = () => {
@@ -172,6 +209,7 @@ const HouseInfo: React.FC = () => {
   const [newReview, setNewReview] = useState({ rating: 5, text: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [ownerInfo, setOwnerInfo] = useState<{
+    id?: number;
     fio?: string;
     email?: string;
     phone_num?: string;
@@ -180,8 +218,9 @@ const HouseInfo: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingOwner, setCheckingOwner] = useState(false);
+  const [ownerId, setOwnerId] = useState<number | null>(null);
 
-  // Функция для декодирования токена
   const decodeToken = (token: string) => {
     try {
       const base64Url = token.split('.')[1];
@@ -197,7 +236,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Проверка авторизации и получение данных пользователя
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -205,13 +243,11 @@ const HouseInfo: React.FC = () => {
       
       if (token) {
         try {
-          // Пробуем декодировать токен
           const payload = decodeToken(token);
           
           if (payload) {
             console.log('📋 Payload токена:', payload);
             
-            // Ищем userId в разных возможных полях
             const userId = payload.userId || payload.sub || payload.nameid || payload.unique_name;
             
             if (userId) {
@@ -222,7 +258,6 @@ const HouseInfo: React.FC = () => {
               console.log('❌ User ID не найден в токене');
             }
             
-            // Проверяем, является ли пользователь администратором
             const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
             
             if (Array.isArray(roles)) {
@@ -250,7 +285,6 @@ const HouseInfo: React.FC = () => {
     checkAuth();
   }, []);
 
-  // Функция для проверки, находится ли дом в избранном
   const checkIfFavorite = useCallback(async () => {
     if (!id || !currentUserId) {
       setIsFavorite(false);
@@ -295,14 +329,12 @@ const HouseInfo: React.FC = () => {
     }
   }, [id, currentUserId]);
 
-  // Проверяем избранное при загрузке компонента и при изменении
   useEffect(() => {
     if (id && currentUserId) {
       checkIfFavorite();
     }
   }, [id, currentUserId, checkIfFavorite]);
 
-  // Проверка возможности оставить отзыв
   const canLeaveReview = (): boolean => {
     const token = localStorage.getItem('token');
     
@@ -311,19 +343,16 @@ const HouseInfo: React.FC = () => {
       return false;
     }
     
-    // Администраторы не могут оставлять отзывы
     if (isAdmin) {
       console.log('🚫 Пользователь - администратор, нельзя оставить отзыв');
       return false;
     }
     
-    // Владелец не может оставлять отзывы на свое объявление
     if (isOwner) {
       console.log('🚫 Пользователь - владелец, нельзя оставить отзыв на свое объявление');
       return false;
     }
     
-    // Проверяем, что есть userId
     if (!currentUserId) {
       console.log('❌ Нет User ID - нельзя оставить отзыв');
       return false;
@@ -333,7 +362,6 @@ const HouseInfo: React.FC = () => {
     return true;
   };
 
-  // Загрузка отзывов
   const fetchReviews = useCallback(async () => {
     try {
       setLoadingReviews(true);
@@ -361,8 +389,51 @@ const HouseInfo: React.FC = () => {
     }
   }, [id]);
 
-  // Загрузка информации о владельце
-  const fetchOwnerInfo = useCallback(async (owner: { email?: string; fio?: string; phone_num?: string; avatar?: string }) => {
+  const fetchAlternativeOwnerInfo = useCallback(async () => {
+    if (!id) return null;
+    
+    try {
+      console.log('🔄 Пробуем альтернативный путь получения owner info...');
+      const API_URL = 'http://localhost:5213/api';
+      
+      const response = await fetch(`${API_URL}/houses/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result: ApiResponse = await response.json();
+        if (result.success && result.data) {
+          if (result.data.owner?.id || result.data.owner?.Id) {
+            const ownerIdValue = result.data.owner.id || result.data.owner.Id;
+            console.log('✅ Найден ID владельца в данных дома:', ownerIdValue);
+            setOwnerId(ownerIdValue || null);
+            setOwnerInfo({
+              id: ownerIdValue,
+              fio: result.data.owner.fio,
+              email: result.data.owner.email,
+              phone_num: result.data.owner.phone_num
+            });
+            return {
+              id: ownerIdValue || 0,
+              fio: result.data.owner.fio || '',
+              email: result.data.owner.email || '',
+              phone_num: result.data.owner.phone_num || '',
+              id_agent: false
+            };
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка в альтернативном методе:', error);
+      return null;
+    }
+  }, [id]);
+
+  const fetchOwnerInfo = useCallback(async (owner: { email?: string; fio?: string; phone_num?: string; avatar?: string; id?: number; Id?: number }) => {
     try {
       const API_URL = 'http://localhost:5213/api';
       if (owner.email) {
@@ -377,28 +448,214 @@ const HouseInfo: React.FC = () => {
           const result: UserResponse = await response.json();
           if (result.success && result.data) {
             setOwnerInfo(result.data);
+            if (result.data.id) {
+              setOwnerId(result.data.id);
+            }
           }
         }
       } else {
+        const idToSet = owner.id || owner.Id;
         setOwnerInfo({
+          id: idToSet,
           fio: owner.fio,
           email: owner.email,
           phone_num: owner.phone_num,
           avatar: owner.avatar
         });
+        if (idToSet) {
+          setOwnerId(idToSet);
+        }
       }
     } catch (error) {
       console.error('Ошибка при загрузке информации о владельце:', error);
+      const idToSet = owner.id || owner.Id;
       setOwnerInfo({
+        id: idToSet,
         fio: owner.fio,
         email: owner.email,
         phone_num: owner.phone_num,
         avatar: owner.avatar
       });
+      if (idToSet) {
+        setOwnerId(idToSet);
+      }
     }
   }, []);
 
-  // Преобразование данных из API в формат для компонента
+  const fetchHouseOwnerInfo = useCallback(async () => {
+    if (!id) return null;
+    
+    try {
+      console.log('🔍 Запрос информации о владельце дома...');
+      const API_URL = 'http://localhost:5213/api';
+      
+      const response = await fetch(`${API_URL}/houses/${id}/owner-info`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📡 Статус ответа owner-info:', response.status);
+      
+      if (response.ok) {
+        const result: OwnerInfoResponse = await response.json();
+        if (result.success && result.data) {
+          console.log('✅ Информация о владельце получена:', result.data);
+          setOwnerId(result.data.id);
+          setOwnerInfo({
+            id: result.data.id,
+            fio: result.data.fio,
+            email: result.data.email,
+            phone_num: result.data.phone_num
+          });
+          return result.data;
+        }
+      } else {
+        console.log('❌ Ошибка при получении owner-info:', response.status);
+        return await fetchAlternativeOwnerInfo();
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка при получении информации о владельце:', error);
+      return null;
+    }
+  }, [id, fetchAlternativeOwnerInfo]);
+
+  const checkExistingChat = async (ownerId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5213/api/chats/my-chats', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result: ChatsResponse = await response.json();
+        if (result.success && result.data) {
+          const existingChat = result.data.find((chat: ChatItem) => 
+            chat.user_id === ownerId && chat.ad_id === parseInt(id!)
+          );
+          
+          if (existingChat) {
+            console.log('✅ Найден существующий чат:', existingChat.id);
+            return existingChat.id;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка при проверке существующего чата:', error);
+      return null;
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (!id) {
+      alert('Невозможно начать чат: ID дома не найден');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для начала чата необходимо авторизоваться');
+      navigate('/login');
+      return;
+    }
+
+    if (isOwner) {
+      alert('Вы не можете написать себе по своему объявлению');
+      return;
+    }
+
+    if (isAdmin) {
+      alert('Администратор может писать только в ответ на сообщения пользователей');
+      return;
+    }
+
+    setCheckingOwner(true);
+    try {
+      console.log('💬 Начало создания чата:', {
+        houseId: id,
+        currentUserId,
+        isOwner,
+        isAdmin,
+        ownerId,
+        ownerInfo
+      });
+
+      let finalOwnerId = ownerId;
+      
+      if (!finalOwnerId) {
+        console.log('🔄 Получаем ID владельца с сервера...');
+        const ownerInfoFromServer = await fetchHouseOwnerInfo();
+        if (ownerInfoFromServer) {
+          finalOwnerId = ownerInfoFromServer.id;
+          console.log('✅ Получен ID владельца с сервера:', finalOwnerId);
+          
+          if (ownerInfoFromServer.email?.toLowerCase() === 'admin@gmail.com') {
+            alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
+            setCheckingOwner(false);
+            return;
+          }
+        }
+      }
+
+      if (!finalOwnerId) {
+        console.error('❌ Не удалось определить ID владельца после всех попыток');
+        alert('Не удалось определить владельца объявления. Пожалуйста, попробуйте позже.');
+        return;
+      }
+
+      if (finalOwnerId === currentUserId) {
+        alert('Вы не можете написать себе');
+        return;
+      }
+
+      console.log('🔍 Проверяем существующий чат с владельцем:', finalOwnerId);
+      const existingChatId = await checkExistingChat(finalOwnerId);
+      
+      if (existingChatId) {
+        console.log('🚀 Переходим в существующий чат:', existingChatId);
+        navigate(`/chat/${existingChatId}`);
+        return;
+      }
+
+      console.log('➕ Создаем новый чат с владельцем:', finalOwnerId);
+      const response = await fetch('http://localhost:5213/api/chats/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          otherUserId: finalOwnerId,
+          houseId: parseInt(id)
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        console.log('🎉 Чат создан:', result);
+        navigate(`/chat/${result.data.chat_id}`);
+      } else {
+        console.error('❌ Ошибка создания чата:', result);
+        alert(result.message || 'Ошибка при создании чата');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при создании чата:', error);
+      alert('Не удалось создать чат. Попробуйте позже.');
+    } finally {
+      setCheckingOwner(false);
+    }
+  };
+
   const transformApiDataToHouseInfo = (apiData: ApiHouseInfo): HouseInfo => {
     return {
       id: apiData.id,
@@ -409,7 +666,6 @@ const HouseInfo: React.FC = () => {
       announcementData: apiData.announcementData,
       active: apiData.active,
       photos: apiData.photos,
-      // Распаковываем houseInfo в корень объекта
       region: apiData.houseInfo?.region,
       city: apiData.houseInfo?.city,
       street: apiData.houseInfo?.street,
@@ -421,7 +677,6 @@ const HouseInfo: React.FC = () => {
     };
   };
 
-  // Загрузка данных о доме
   useEffect(() => {
     const fetchHouseData = async () => {
       try {
@@ -442,31 +697,31 @@ const HouseInfo: React.FC = () => {
         const result: ApiResponse = await response.json();
         
         if (result.success && result.data) {
-          // Преобразуем данные из API в формат для компонента
           const transformedData = transformApiDataToHouseInfo(result.data);
           setHouse(transformedData);
           
-          // Загружаем отзывы
           fetchReviews();
           
-          // Загружаем информацию о владельце если есть
           if (result.data.owner) {
             fetchOwnerInfo(result.data.owner);
           }
           
-          // Проверяем, является ли текущий пользователь владельцем
           if (currentUserId) {
-            const responseOwner = await fetch(`${API_URL}/houses/${id}/is-owner`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            if (responseOwner.ok) {
-              const resultOwner = await responseOwner.json();
-              setIsOwner(resultOwner.success && resultOwner.isOwner);
+            try {
+              const responseOwner = await fetch(`${API_URL}/houses/${id}/is-owner`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (responseOwner.ok) {
+                const resultOwner = await responseOwner.json();
+                setIsOwner(resultOwner.success && resultOwner.isOwner);
+              }
+            } catch (error) {
+              console.error('Ошибка при проверке владельца:', error);
             }
           }
         } else {
@@ -482,21 +737,17 @@ const HouseInfo: React.FC = () => {
     fetchHouseData();
   }, [id, fetchReviews, fetchOwnerInfo, currentUserId]);
 
-  // Обработчик клика по звездам для незарегистрированных пользователей
   const handleStarClickUnauthorized = () => {
     alert('Для оценки необходимо авторизоваться');
     navigate('/login');
   };
 
-  // Обработчик клика по textarea для незарегистрированных пользователей
   const handleTextareaClickUnauthorized = () => {
     alert('Для оставления отзыва необходимо авторизоваться');
     navigate('/login');
   };
 
-  // Функция для переключения избранного
   const toggleFavorite = async () => {
-    // Проверяем авторизацию
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Для добавления в избранное необходимо авторизоваться');
@@ -504,13 +755,11 @@ const HouseInfo: React.FC = () => {
       return;
     }
 
-    // Проверяем, что есть ID дома
     if (!id) {
       alert('Ошибка: ID дома не найден');
       return;
     }
 
-    // Проверяем, что пользователь не администратор
     if (isAdmin) {
       alert('Администраторы не могут добавлять в избранное');
       return;
@@ -519,7 +768,6 @@ const HouseInfo: React.FC = () => {
     setTogglingFavorite(true);
     try {
       if (isFavorite) {
-        // Удаляем из избранного
         const response = await fetch(`http://localhost:5213/api/favorites/remove/${id}`, {
           method: 'DELETE',
           headers: {
@@ -540,7 +788,6 @@ const HouseInfo: React.FC = () => {
           alert('Ошибка при удалении из избранного');
         }
       } else {
-        // Добавляем в избранное
         const response = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
           method: 'POST',
           headers: {
@@ -569,7 +816,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Отправка отзыва
   const handleSubmitReview = async () => {
     console.log('🔄 handleSubmitReview called');
     console.log('📊 Current state:', {
@@ -586,7 +832,6 @@ const HouseInfo: React.FC = () => {
       return;
     }
 
-    // Проверяем авторизацию
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Для отправки отзыва необходимо авторизоваться');
@@ -594,19 +839,16 @@ const HouseInfo: React.FC = () => {
       return;
     }
 
-    // Проверяем, что пользователь не администратор
     if (isAdmin) {
       alert('Администраторы не могут оставлять отзывы');
       return;
     }
 
-    // Проверяем, что пользователь не владелец
     if (isOwner) {
       alert('Владелец не может оставлять отзыв на свое объявление');
       return;
     }
 
-    // Проверяем, что есть userId
     if (!currentUserId) {
       alert('Ошибка: не удалось определить пользователя. Пожалуйста, войдите снова.');
       localStorage.removeItem('token');
@@ -614,7 +856,6 @@ const HouseInfo: React.FC = () => {
       return;
     }
 
-    // Проверки текста отзыва
     if (newReview.text.trim().length < 10) {
       alert('Текст отзыва должен содержать минимум 10 символов');
       return;
@@ -666,7 +907,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Ответ владельца на отзыв
   const handleReplyToReview = async (reviewId: number) => {
     const replyText = prompt('Введите ваш ответ на отзыв:');
     if (!replyText || !replyText.trim()) return;
@@ -708,10 +948,8 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Функция для форматирования даты публикации
   const formatAnnouncementDate = (dateString: string) => {
     try {
-      // Пытаемся разобрать дату в формате yyyy-MM-dd
       const [year, month, day] = dateString.split('-').map(Number);
       if (year && month && day) {
         const date = new Date(year, month - 1, day);
@@ -730,13 +968,10 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Функция для форматирования даты отзыва (исправленная)
   const formatReviewDate = (dateString: string) => {
     try {
-      // Проверяем разные форматы даты
       if (!dateString) return 'Дата не указана';
       
-      // Если дата уже в формате ISO (содержит T)
       if (dateString.includes('T')) {
         const date = new Date(dateString);
         if (!isNaN(date.getTime())) {
@@ -748,7 +983,6 @@ const HouseInfo: React.FC = () => {
         }
       }
       
-      // Если дата в формате yyyy-MM-dd
       if (dateString.includes('-')) {
         const [year, month, day] = dateString.split('-').map(Number);
         if (year && month && day) {
@@ -771,7 +1005,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Функция для получения иконки по названию особенности
   const getFeatureIcon = (feature: string): IconType => {
     const iconMap: Record<string, IconType> = {
       "Кондиционер": faSnowflake,
@@ -789,7 +1022,6 @@ const HouseInfo: React.FC = () => {
     return iconMap[feature] || faCheck;
   };
 
-  // Функция для получения списка особенностей из convenience
   const getFeaturesList = () => {
     if (!house?.convenience) return [];
     
@@ -837,7 +1069,6 @@ const HouseInfo: React.FC = () => {
     return stars;
   };
 
-  // Функция для звонка
   const handleCall = () => {
     if (ownerInfo?.phone_num) {
       window.location.href = `tel:${ownerInfo.phone_num}`;
@@ -846,12 +1077,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Функция для отправки сообщения
-  const handleMessage = () => {
-    alert('Функция чата будет доступна в ближайшее время');
-  };
-
-  // Получаем результат проверки
   const canLeaveReviewResult = canLeaveReview();
   
   console.log('🔐 canLeaveReview check:', {
@@ -903,13 +1128,11 @@ const HouseInfo: React.FC = () => {
       
       <div className="house-info-page">
         <div className="container-house">
-          {/* Кнопка назад */}
           <button className="back-button-house" onClick={handleBack}>
             <FontAwesomeIcon icon={faChevronLeft} />
             Назад
           </button>
 
-          {/* Галерея */}
           <section className="gallery-section-house">
             <div className="gallery-house">
               <div className="main-image-house">
@@ -939,12 +1162,9 @@ const HouseInfo: React.FC = () => {
             </div>
           </section>
 
-          {/* Основная информация */}
           <section className="property-info-section-house">
             <div className="property-layout-house">
-              {/* Основной контент */}
               <div className="main-content-house">
-                {/* Заголовок */}
                 <div className="property-header-house">
                   <h1>{info}</h1>
                   <p className="property-address-house">
@@ -956,7 +1176,6 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Основные характеристики */}
                 <div className="key-features-house">
                   <div className="feature-item-house">
                     <FontAwesomeIcon icon={faRulerCombined} />
@@ -997,7 +1216,6 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Описание */}
                 <div className="description-section-house">
                   <h3>Описание дома</h3>
                   {house.description ? (
@@ -1007,7 +1225,6 @@ const HouseInfo: React.FC = () => {
                   )}
                 </div>
 
-                {/* Особенности */}
                 {features.length > 0 && (
                   <div className="features-section-house">
                     <h3>Особенности дома</h3>
@@ -1022,7 +1239,6 @@ const HouseInfo: React.FC = () => {
                   </div>
                 )}
 
-                {/* Инфраструктура */}
                 {house.convenience?.transport || house.convenience?.education || house.convenience?.shops ? (
                   <div className="location-section-house">
                     <h3>Инфраструктура поблизости</h3>
@@ -1060,11 +1276,9 @@ const HouseInfo: React.FC = () => {
                   </div>
                 ) : null}
 
-                {/* Отзывы */}
                 <div className="reviews-section-house">
                   <h3>Отзывы о доме</h3>
                   
-                  {/* Форма для добавления отзыва */}
                   <div className="review-form-house">
                     <h4>Оставить отзыв</h4>
                     <div className="rating-input-house">
@@ -1131,7 +1345,6 @@ const HouseInfo: React.FC = () => {
                     
                   </div>
 
-                  {/* Список отзывов */}
                   {loadingReviews ? (
                     <div className="loading-reviews">
                       <FontAwesomeIcon icon={faSpinner} spin />
@@ -1156,7 +1369,6 @@ const HouseInfo: React.FC = () => {
                           </div>
                           <p className="review-text-content">{review.text}</p>
                           
-                          {/* Ответ владельца */}
                           {review.owner_reply && (
                             <div className="owner-reply-house">
                               <div className="owner-reply-header">
@@ -1167,7 +1379,6 @@ const HouseInfo: React.FC = () => {
                             </div>
                           )}
                           
-                          {/* Кнопка ответа для владельца */}
                           {isOwner && !review.owner_reply && (
                             <button 
                               className="reply-button-house"
@@ -1186,9 +1397,7 @@ const HouseInfo: React.FC = () => {
                 </div>
               </div>
 
-              {/* Боковая панель */}
               <div className="sidebar-house">
-                {/* Карточка владельца */}
                 <div className="contact-card-house">
                   <div className="owner-info-house">
                     <div className="owner-avatar-house">
@@ -1201,6 +1410,9 @@ const HouseInfo: React.FC = () => {
                     <div className="owner-details-house">
                       <h4>Владелец: {ownerInfo?.fio || house.owner?.fio || 'Не указан'}</h4>
                       <p>Владелец недвижимости</p>
+                      {ownerInfo?.email === 'admin@gmail.com' && (
+                        <p className="admin-badge-house">(Администратор)</p>
+                      )}
                     </div>
                   </div>
                   <div className="contact-actions-house">
@@ -1210,13 +1422,27 @@ const HouseInfo: React.FC = () => {
                         Позвонить владельцу
                       </button>
                     )}
-                    <button className="btn-secondary-house full-width-house" onClick={handleMessage}>
-                      <FontAwesomeIcon icon={faComment} />
-                      Написать сообщение
-                    </button>
+                    
+                    {!isOwner && ownerInfo?.email !== 'admin@gmail.com' && (
+                      <button 
+                        className="btn-primary-house full-width-house chat-button"
+                        onClick={handleStartChat}
+                        style={{ marginTop: '10px' }}
+                        disabled={checkingOwner}
+                      >
+                        <FontAwesomeIcon icon={faComment} />
+                        {checkingOwner ? ' Загрузка...' : ' Написать владельцу'}
+                      </button>
+                    )}
+                    
+                    {ownerInfo?.email === 'admin@gmail.com' && (
+                      <div className="admin-chat-notice">
+                        <p><strong>Это объявление администратора.</strong></p>
+                        <p>Для связи используйте форму обратной связи в профиле.</p>
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Информация о публикации */}
                   <div className="contact-meta-house">
                     <div className="meta-item-house">
                       <FontAwesomeIcon icon={faCalendarAlt} />
@@ -1225,7 +1451,6 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Действия */}
                 <div className="action-buttons-house">
                   {checkingFavorite ? (
                     <button 

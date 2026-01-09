@@ -29,7 +29,9 @@ import {
   faTree,
   faSwimmingPool,
   faHotTub,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faComment,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -79,6 +81,7 @@ interface Property {
   ownerName?: string;
   ownerEmail?: string;
   announcementData?: string;
+  ownerId?: number; // Добавляем ownerId для чата
 }
 
 interface ApiResponse {
@@ -87,6 +90,53 @@ interface ApiResponse {
   total?: number;
   message?: string;
   error?: string;
+}
+
+interface OwnerInfoResponse {
+  success: boolean;
+  data: {
+    id: number;
+    fio: string;
+    email: string;
+    phone_num: string;
+    id_agent: boolean;
+  };
+  message?: string;
+}
+
+interface ChatCreateResponse {
+  success: boolean;
+  data: {
+    chat_id: number;
+    is_new: boolean;
+    welcome_message_id?: number;
+  };
+  message?: string;
+}
+
+// Интерфейс для элемента чата
+interface ChatItem {
+  id: number;
+  user_id: number;
+  ad_id: number;
+  user_name: string;
+  user_avatar: string;
+  ad_title: string;
+  ad_address: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+  created_at: string;
+  house_price: number;
+  house_photo: string;
+}
+
+// Интерфейс для ответа списка чатов
+interface ChatsResponse {
+  success: boolean;
+  data: ChatItem[];
+  total: number;
+  message?: string;
 }
 
 const Catalog: React.FC = () => {
@@ -99,6 +149,7 @@ const Catalog: React.FC = () => {
   const [sortBy, setSortBy] = useState('price-asc');
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [apiError, setApiError] = useState<string | null>(null);
+  const [creatingChatForProperty, setCreatingChatForProperty] = useState<number | null>(null);
 
   // Состояние фильтров
   const [filters, setFilters] = useState<FilterOptions>({
@@ -152,6 +203,177 @@ const Catalog: React.FC = () => {
     { id: 'popular', label: 'Популярные', icon: faFire }
   ];
 
+  // Функция для получения информации о владельце дома
+  const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
+    try {
+      console.log('🔍 Получение информации о владельце дома:', houseId);
+      const response = await fetch(`http://localhost:5213/api/houses/${houseId}/owner-info`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result: OwnerInfoResponse = await response.json();
+        if (result.success && result.data) {
+          console.log('✅ Информация о владельце получена:', result.data);
+          
+          // Проверяем, не является ли владелец администратором
+          if (result.data.email?.toLowerCase() === 'admin@gmail.com') {
+            alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
+            return null;
+          }
+          
+          return result.data.id;
+        }
+      } else {
+        console.log('❌ Ошибка при получении owner-info:', response.status);
+        // Попробуем получить ID владельца из данных дома
+        const property = properties.find(p => p.id === houseId);
+        if (property?.ownerId) {
+          return property.ownerId;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка при получении информации о владельце:', error);
+      return null;
+    }
+  };
+
+  // Функция для проверки существующего чата
+  const checkExistingChat = async (ownerId: number, houseId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5213/api/chats/my-chats', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result: ChatsResponse = await response.json();
+        if (result.success && result.data) {
+          const existingChat = result.data.find((chat: ChatItem) => 
+            chat.user_id === ownerId && chat.ad_id === houseId
+          );
+          
+          if (existingChat) {
+            console.log('✅ Найден существующий чат:', existingChat.id);
+            return existingChat.id;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка при проверке существующего чата:', error);
+      return null;
+    }
+  };
+
+  // Функция для создания нового чата
+  const createNewChat = async (ownerId: number, houseId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5213/api/chats/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          otherUserId: ownerId,
+          houseId: houseId,
+          initialMessage: "Здравствуйте! Меня интересует ваше объявление."
+        })
+      });
+
+      if (response.ok) {
+        const result: ChatCreateResponse = await response.json();
+        if (result.success && result.data) {
+          console.log('🎉 Чат создан:', result.data);
+          return result.data.chat_id;
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Ошибка создания чата:', errorData);
+        alert(errorData.message || 'Ошибка при создании чата');
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Ошибка при создании чата:', error);
+      alert('Не удалось создать чат. Попробуйте позже.');
+      return null;
+    }
+  };
+
+  // Основная функция для открытия/создания чата
+  const handleOpenChat = async (propertyId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для начала чата необходимо авторизоваться');
+      navigate('/login');
+      return;
+    }
+
+    // Проверяем, не является ли текущий пользователь администратором
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+      if (userEmail?.toLowerCase() === 'admin@gmail.com') {
+        alert('Администратор может писать только в ответ на сообщения пользователей');
+        return;
+      }
+    } catch (error) {
+      console.error('Ошибка при декодировании токена:', error);
+    }
+
+    setCreatingChatForProperty(propertyId);
+    
+    try {
+      console.log('💬 Начинаем процесс создания чата для дома:', propertyId);
+      
+      // 1. Получаем ID владельца
+      const ownerId = await getHouseOwnerInfo(propertyId);
+      if (!ownerId) {
+        alert('Не удалось определить владельца объявления');
+        return;
+      }
+
+      // 2. Проверяем существующий чат
+      const existingChatId = await checkExistingChat(ownerId, propertyId);
+      
+      if (existingChatId) {
+        console.log('🚀 Переходим в существующий чат:', existingChatId);
+        navigate(`/chat/${existingChatId}`);
+        return;
+      }
+
+      // 3. Создаем новый чат
+      console.log('➕ Создаем новый чат с владельцем:', ownerId);
+      const newChatId = await createNewChat(ownerId, propertyId);
+      
+      if (newChatId) {
+        console.log('🚀 Переходим в новый чат:', newChatId);
+        navigate(`/chat/${newChatId}`);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при открытии чата:', error);
+      alert('Произошла ошибка при открытии чата. Попробуйте позже.');
+    } finally {
+      setCreatingChatForProperty(null);
+    }
+  };
+
   // Функция для загрузки данных из API
   const fetchProperties = async () => {
     try {
@@ -172,7 +394,6 @@ const Catalog: React.FC = () => {
       console.log('Статус ответа:', response.status, response.statusText);
       
       if (!response.ok) {
-        // Попробуем получить больше информации об ошибке
         let errorText = response.statusText;
         try {
           const errorData = await response.text();
@@ -207,6 +428,9 @@ const Catalog: React.FC = () => {
           const info = house.info || 
             `${house.rooms || house.beds || 1}-комн. ${house.houseType?.toLowerCase() || 'дом'}, ${house.area || 0} м²`;
           
+          // Получаем ownerId из данных или устанавливаем временное значение
+          const ownerId = house.ownerId || house.id || 0;
+          
           return {
             id: house.id || 0,
             badge: house.badge || "Аренда",
@@ -235,7 +459,8 @@ const Catalog: React.FC = () => {
             photos: house.photos,
             ownerName: house.ownerName,
             ownerEmail: house.ownerEmail,
-            announcementData: house.announcementData
+            announcementData: house.announcementData,
+            ownerId: ownerId
           };
         });
         
@@ -275,7 +500,8 @@ const Catalog: React.FC = () => {
           year: 2022,
           rating: 4.8,
           description: "Светлая квартира с современным ремонтом, мебелью и техникой. Рядом метро и парк.",
-          features: ["Мебель", "Интернет", "Парковка"]
+          features: ["Мебель", "Интернет", "Парковка"],
+          ownerId: 2
         },
         {
           id: 2,
@@ -290,7 +516,8 @@ const Catalog: React.FC = () => {
           year: 2021,
           rating: 4.5,
           description: "Уютная квартира в новом доме. Идеально для одного человека или пары.",
-          features: ["Мебель", "Кондиционер"]
+          features: ["Мебель", "Кондиционер"],
+          ownerId: 3
         }
       ];
       setProperties(mockProperties);
@@ -327,39 +554,39 @@ const Catalog: React.FC = () => {
 
   // Функция для загрузки избранного пользователя
   const loadUserFavorites = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.log('Пользователь не авторизован, избранное не загружено');
-      return;
-    }
-
-    console.log('Загрузка избранного пользователя...');
-    
-    const response = await fetch('http://localhost:5213/api/favorites/my-favorites-ids', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('Пользователь не авторизован, избранное не загружено');
+        return;
       }
-    });
 
-    if (!response.ok) {
-      console.warn('Ошибка при загрузке избранного:', response.status);
-      return;
-    }
+      console.log('Загрузка избранного пользователя...');
+      
+      const response = await fetch('http://localhost:5213/api/favorites/my-favorites-ids', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-    const data = await response.json();
-    if (data.success && data.data) {
-      // Явно указываем тип для элементов Set
-      const favoriteIds = new Set<number>(data.data);
-      console.log('Загружены ID избранных домов:', favoriteIds);
-      setFavorites(favoriteIds);
+      if (!response.ok) {
+        console.warn('Ошибка при загрузке избранного:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const favoriteIds = new Set<number>(data.data);
+        console.log('Загружены ID избранных домов:', favoriteIds);
+        setFavorites(favoriteIds);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке избранного:', error);
     }
-  } catch (error) {
-    console.error('Ошибка при загрузке избранного:', error);
-  }
-};
+  };
+
   // Функция для получения иконки по названию особенности
   const getFeatureIcon = (feature: string) => {
     const iconMap: Record<string, IconProp> = {
@@ -924,7 +1151,6 @@ const Catalog: React.FC = () => {
                           src={property.imageUrl} 
                           alt={property.address} 
                           onError={(e) => {
-                            // Fallback изображение если основное не загрузилось
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop";
                           }}
                         />
@@ -998,18 +1224,20 @@ const Catalog: React.FC = () => {
                           </button>
                           <button 
                             className="btn-secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (property.ownerEmail) {
-                                window.location.href = `mailto:${property.ownerEmail}?subject=Вопрос по объявлению ${property.id}`;
-                              } else if (property.id === 1 || property.id === 2) {
-                                // Для демо-данных
-                                alert('Это демо-объявление. В реальном приложении здесь будет email владельца.');
-                              }
-                            }}
-                            disabled={!property.ownerEmail && property.id > 2}
+                            onClick={(e) => handleOpenChat(property.id, e)}
+                            disabled={creatingChatForProperty === property.id}
                           >
-                            {property.ownerEmail ? 'Написать владельцу' : 'Контакты недоступны'}
+                            {creatingChatForProperty === property.id ? (
+                              <>
+                                <FontAwesomeIcon icon={faSpinner} spin style={{ marginRight: '8px' }} />
+                                Открытие чата...
+                              </>
+                            ) : (
+                              <>
+                                <FontAwesomeIcon icon={faComment} style={{ marginRight: '8px' }} />
+                                Написать владельцу
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>

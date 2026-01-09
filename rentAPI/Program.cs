@@ -135,6 +135,10 @@ builder.Services.AddLogging(logging =>
     logging.AddDebug();
 });
 
+// Register Chat controller
+builder.Services.AddControllers()
+    .AddApplicationPart(typeof(RentApp.API.Controllers.ChatsController).Assembly);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -240,6 +244,29 @@ try
             Console.WriteLine("Database ensured created successfully.");
         }
         
+        // Проверяем существование таблиц для чатов
+        try
+        {
+            // Проверяем существование таблицы Chats
+            var chatTableExists = await dbContext.Database.ExecuteSqlRawAsync(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Chats'") > 0;
+            
+            if (!chatTableExists)
+            {
+                Console.WriteLine("Chat tables do not exist. Creating chat tables...");
+                
+                Console.WriteLine("Chat tables created successfully.");
+            }
+            else
+            {
+                Console.WriteLine("Chat tables already exist.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating chat tables: {ex.Message}");
+        }
+        
         // Проверяем существование администратора
         var adminExists = await dbContext.Users.AnyAsync(u => u.Email == "admin@gmail.com");
         if (!adminExists)
@@ -271,6 +298,14 @@ try
         // Проверяем наличие агентов
         var agentCount = await dbContext.Agents.CountAsync();
         Console.WriteLine($"Total agents in database: {agentCount}");
+        
+        // Проверяем наличие чатов
+        var chatCount = await dbContext.Chats.CountAsync();
+        Console.WriteLine($"Total chats in database: {chatCount}");
+        
+        // Проверяем наличие сообщений
+        var messageCount = await dbContext.Messages.CountAsync();
+        Console.WriteLine($"Total messages in database: {messageCount}");
     }
     else
     {
@@ -310,7 +345,51 @@ app.MapGet("/", () =>
         {
             Catalog = "GET /api/agents/catalog",
             GetById = "GET /api/agents/{id}",
-            Specialties = "GET /api/agents/specialties"
+            Specialties = "GET /api/agents/specialties",
+            Reviews = "GET /api/agents/{id}/reviews"
+        },
+        Houses = new
+        {
+            Catalog = "GET /api/houses/catalog",
+            GetById = "GET /api/houses/{id}",
+            MyHouses = "GET /api/houses/my-houses",
+            Create = "POST /api/houses",
+            Update = "PUT /api/houses/{id}",
+            Delete = "DELETE /api/houses/{id}",
+            Reviews = new
+            {
+                Get = "GET /api/houses/{id}/reviews",
+                Post = "POST /api/houses/{id}/reviews",
+                Reply = "POST /api/houses/reviews/{id}/reply"
+            },
+            OwnerInfo = "GET /api/houses/{id}/owner-info" // Добавлен новый endpoint
+        },
+        Chats = new
+        {
+            MyChats = "GET /api/chats/my-chats",
+            GetChat = "GET /api/chats/{id}",
+            GetMessages = "GET /api/chats/{id}/messages",
+            CreateChat = "POST /api/chats/create",
+            SendMessage = "POST /api/chats/{id}/send",
+            MarkRead = "POST /api/chats/{id}/mark-read",
+            MarkAllRead = "POST /api/chats/mark-all-read",
+            UnreadCount = "GET /api/chats/unread-count",
+            DeleteChat = "DELETE /api/chats/{id}",
+            GetChatInfo = "GET /api/chats/{id}/info"
+        },
+        Favorites = new
+        {
+            MyFavorites = "GET /api/favorites/my-favorites",
+            MyFavoritesIds = "GET /api/favorites/my-favorites-ids",
+            Add = "POST /api/favorites/add/{id}",
+            Remove = "DELETE /api/favorites/remove/{id}",
+            Check = "GET /api/favorites/check/{id}"
+        },
+        Support = new
+        {
+            CreateFeedback = "POST /api/support",
+            MyFeedback = "GET /api/support/my-feedback",
+            DeleteFeedback = "DELETE /api/support/{id}"
         }
     };
     
@@ -318,7 +397,29 @@ app.MapGet("/", () =>
 });
 
 // Простой health check
-app.MapGet("/health", () => Results.Ok(new { status = "OK", timestamp = DateTime.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new { 
+    status = "OK", 
+    timestamp = DateTime.UtcNow,
+    services = new[] { "Auth", "Houses", "Agents", "Chats", "Favorites", "Support" }
+}));
+
+// Health check для чатов
+app.MapGet("/api/chats/health", () => 
+{
+    return Results.Ok(new 
+    { 
+        status = "Chats service is running", 
+        timestamp = DateTime.UtcNow,
+        version = "1.0.0",
+        endpoints = new[] {
+            "GET /api/chats/my-chats",
+            "GET /api/chats/{id}",
+            "POST /api/chats/create",
+            "POST /api/chats/{id}/send",
+            "GET /api/chats/unread-count"
+        }
+    });
+});
 
 Console.WriteLine("=== Application Starting ===");
 Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
@@ -328,6 +429,20 @@ Console.WriteLine("- Swagger UI: /swagger");
 Console.WriteLine("- Health Check: /health");
 Console.WriteLine("- API Base: /api");
 Console.WriteLine("- Agents Catalog: GET /api/agents/catalog");
-Console.WriteLine("=========================");
+Console.WriteLine("- Houses Catalog: GET /api/houses/catalog");
+Console.WriteLine("- Chats: GET /api/chats/my-chats");
+Console.WriteLine("- Favorites: GET /api/favorites/my-favorites");
+Console.WriteLine("=== Chat Endpoints ===");
+Console.WriteLine("GET  /api/chats/my-chats           - Получить все чаты пользователя");
+Console.WriteLine("GET  /api/chats/{id}               - Получить конкретный чат");
+Console.WriteLine("GET  /api/chats/{id}/messages      - Получить сообщения чата");
+Console.WriteLine("POST /api/chats/create             - Создать или получить чат");
+Console.WriteLine("POST /api/chats/{id}/send          - Отправить сообщение");
+Console.WriteLine("POST /api/chats/{id}/mark-read     - Пометить сообщения как прочитанные");
+Console.WriteLine("POST /api/chats/mark-all-read      - Пометить все чаты как прочитанные");
+Console.WriteLine("GET  /api/chats/unread-count       - Получить количество непрочитанных");
+Console.WriteLine("GET  /api/chats/{id}/info          - Получить информацию о чате");
+Console.WriteLine("DELETE /api/chats/{id}             - Удалить чат");
+Console.WriteLine("===================================");
 
 app.Run();

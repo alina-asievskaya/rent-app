@@ -471,7 +471,37 @@ public async Task<IActionResult> GetHouseReviews(int id)
         });
     }
 }
+            // HousesController.cs - добавьте этот метод
+[HttpGet("{houseId}/owner-info")]
+[AllowAnonymous] // Разрешаем доступ без авторизации
+public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
+{
+    try
+    {
+        var house = await _context.Houses
+            .Include(h => h.Owner)
+            .FirstOrDefaultAsync(h => h.Id == houseId);
 
+        if (house == null)
+            return NotFound(new { success = false, message = "Дом не найден" });
+
+        var ownerInfo = new
+        {
+            id = house.IdOwner, // Используем IdOwner из House
+            fio = house.Owner.Fio,
+            email = house.Owner.Email,
+            phone_num = house.Owner.Phone_num,
+            id_agent = house.Owner.Id_agent
+        };
+
+        return Ok(new { success = true, data = ownerInfo });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Ошибка при получении информации о владельце дома {houseId}");
+        return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+    }
+}
     
 
             [HttpGet("users/by-email/{email}")]

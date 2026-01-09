@@ -19,6 +19,8 @@ namespace RentApp.API.Data
         public DbSet<Agent> Agents { get; set; } 
         public DbSet<AgentReview> AgentReviews { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<Chat> Chats { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -507,6 +509,170 @@ namespace RentApp.API.Data
 
                 entity.HasIndex(c => c.IdHouse);
             });
+              // Конфигурация Chats
+            modelBuilder.Entity<Chat>(entity =>
+            {
+                entity.ToTable("Chats");
+                entity.HasKey(c => c.Id);
+                
+                entity.Property(c => c.Id)
+                    .HasColumnName("id_chat")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(c => c.User1Id)
+                    .HasColumnName("id_user1")
+                    .IsRequired();
+                
+                entity.Property(c => c.User2Id)
+                    .HasColumnName("id_user2")
+                    .IsRequired();
+                
+                entity.Property(c => c.HouseId)
+                    .HasColumnName("id_house")
+                    .IsRequired();
+                
+                entity.Property(c => c.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                // Внешние ключи
+                entity.HasOne(c => c.User1)
+                    .WithMany()
+                    .HasForeignKey(c => c.User1Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(c => c.User2)
+                    .WithMany()
+                    .HasForeignKey(c => c.User2Id)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(c => c.House)
+                    .WithMany()
+                    .HasForeignKey(c => c.HouseId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Проверка, что пользователи разные
+                entity.HasCheckConstraint("CK_Different_Users", "id_user1 <> id_user2");
+
+                // Индексы
+                entity.HasIndex(c => c.User1Id);
+                entity.HasIndex(c => c.User2Id);
+                entity.HasIndex(c => c.HouseId);
+                entity.HasIndex(c => c.CreatedAt);
+                entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId }).IsUnique();
+            });
+
+            // Конфигурация Messages
+            modelBuilder.Entity<Message>(entity =>
+            {
+                entity.ToTable("Messages");
+                entity.HasKey(m => m.Id);
+                
+                entity.Property(m => m.Id)
+                    .HasColumnName("id_message")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(m => m.ChatId)
+                    .HasColumnName("id_chat")
+                    .IsRequired();
+                
+                entity.Property(m => m.SenderId)
+                    .HasColumnName("id_sender")
+                    .IsRequired();
+                
+                entity.Property(m => m.Text)
+                    .HasColumnName("message")
+                    .IsRequired()
+                    .HasMaxLength(2000);
+                
+                entity.Property(m => m.IsRead)
+                    .HasColumnName("is_read")
+                    .HasDefaultValue(false);
+                
+                entity.Property(m => m.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                // Внешние ключи
+                entity.HasOne(m => m.Chat)
+                    .WithMany(c => c.Messages)
+                    .HasForeignKey(m => m.ChatId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.HasOne(m => m.Sender)
+                    .WithMany()
+                    .HasForeignKey(m => m.SenderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Проверка, что сообщение не пустое
+                entity.HasCheckConstraint("CK_Message_NotEmpty", "LEN(TRIM([message])) > 0");
+
+                // Индексы
+                entity.HasIndex(m => m.ChatId);
+                entity.HasIndex(m => m.SenderId);
+                entity.HasIndex(m => m.CreatedAt);
+                entity.HasIndex(m => m.IsRead);
+                entity.HasIndex(m => new { m.ChatId, m.IsRead, m.CreatedAt });
+            });
+
+            // Конфигурация Users (обновленная для связи с Chat)
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("Users");
+                entity.HasKey(u => u.Id);
+                
+                entity.Property(u => u.Id)
+                    .HasColumnName("id_user")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(u => u.Email)
+                    .HasColumnName("email")
+                    .IsRequired()
+                    .HasMaxLength(50);
+                
+                entity.Property(u => u.Fio)
+                    .HasColumnName("fio")
+                    .IsRequired();
+                
+                entity.Property(u => u.Password)
+                    .HasColumnName("password")
+                    .IsRequired()
+                    .HasMaxLength(255);
+                
+                entity.Property(u => u.Phone_num)
+                    .HasColumnName("phone_num")
+                    .IsRequired()
+                    .HasMaxLength(20);
+                
+                entity.Property(u => u.Id_agent)
+                    .HasColumnName("id_agent")
+                    .HasDefaultValue(false);
+
+                // Уникальные индексы
+                entity.HasIndex(u => u.Email).IsUnique();
+                entity.HasIndex(u => u.Phone_num).IsUnique();
+
+                // Связь с Agent
+                entity.HasOne(u => u.AgentInfo)
+                    .WithOne(a => a.User)
+                    .HasForeignKey<Agent>(a => a.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Связи для чата (неявные - через внешние ключи в Chat)
+                entity.HasMany<User>()
+                    .WithMany()
+                    .UsingEntity<Chat>(
+                        j => j.HasOne(c => c.User2)
+                            .WithMany()
+                            .HasForeignKey(c => c.User2Id)
+                            .OnDelete(DeleteBehavior.Restrict),
+                           j => j.HasOne(c => c.User1)
+                            .WithMany()
+                            .HasForeignKey(c => c.User1Id)
+                            .OnDelete(DeleteBehavior.Restrict)
+                    );
+            });
+
         }
     }
 }

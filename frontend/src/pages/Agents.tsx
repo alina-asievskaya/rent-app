@@ -15,7 +15,6 @@ import {
   faClock,
   faExclamationTriangle,
   faSyncAlt,
-
 } from '@fortawesome/free-solid-svg-icons';
 import "./Agents.css";
 import { useNavigate } from "react-router-dom";
@@ -99,6 +98,7 @@ const Agents: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearchQuery, setActiveSearchQuery] = useState(""); // Активный поисковый запрос
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('rating-desc');
   const [showFilters, setShowFilters] = useState(false);
@@ -313,7 +313,7 @@ const Agents: React.FC = () => {
     // Проверяем, не является ли текущий пользователь администратором
     if (isAdmin) {
       if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
-        alert('Администратор может писать только в ответ на сообщения пользователей');
+        alert('Администратор не может писать сообщения');
         return;
       }
     }
@@ -373,7 +373,7 @@ const Agents: React.FC = () => {
   };
 
   // Загрузка данных агентов из API
-  const fetchAgents = useCallback(async () => {
+  const fetchAgents = useCallback(async (search: string = activeSearchQuery) => {
     try {
       setLoading(true);
       setApiError(null);
@@ -381,7 +381,7 @@ const Agents: React.FC = () => {
       
       // Формируем параметры запроса
       const params = new URLSearchParams();
-      if (searchQuery) params.append('search', searchQuery);
+      if (search) params.append('search', search);
       if (filters.specialty && filters.specialty !== "Все") params.append('specialty', filters.specialty);
       if (filters.experience && filters.experience !== "Любой") params.append('experience', filters.experience);
       if (filters.rating && filters.rating !== "Любой") params.append('rating', filters.rating);
@@ -515,19 +515,42 @@ const Agents: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, filters, sortBy]);
+  }, [filters, sortBy, activeSearchQuery]);
 
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
 
+  // Функция для выполнения поиска
+  const handleSearch = () => {
+    if (searchQuery.trim() !== activeSearchQuery) {
+      setActiveSearchQuery(searchQuery.trim()); // Устанавливаем активный запрос
+      // fetchAgents будет вызван автоматически благодаря useEffect
+    }
+  };
+
+  // Обработчик нажатия Enter в поле поиска
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+ 
+
+  // Обработчик очистки поиска
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setActiveSearchQuery('');
+  };
+
   // Фильтрация + поиск + сортировка через useMemo
   const filteredAgents = useMemo(() => {
     let result = [...agents];
 
-    // Поиск
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    // Поиск на клиенте (вдобавок к серверному поиску)
+    if (activeSearchQuery) {
+      const q = activeSearchQuery.toLowerCase();
       result = result.filter(agent =>
         agent.name.toLowerCase().includes(q) ||
         agent.position.toLowerCase().includes(q) ||
@@ -582,7 +605,7 @@ const Agents: React.FC = () => {
     });
 
     return result;
-  }, [agents, searchQuery, filters, sortBy]);
+  }, [agents, activeSearchQuery, filters, sortBy]);
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -595,6 +618,7 @@ const Agents: React.FC = () => {
       rating: ''
     });
     setSearchQuery('');
+    setActiveSearchQuery('');
   };
 
   if (loading) {
@@ -657,7 +681,7 @@ const Agents: React.FC = () => {
                   
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button 
-                      onClick={fetchAgents}
+                      onClick={() => fetchAgents()}
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: '#28a745',
@@ -693,15 +717,62 @@ const Agents: React.FC = () => {
               )}
 
               <div className="agents-search-agent">
-                <div className="search-box-agent">
+                <div className="search-box-agent" style={{ position: 'relative' }}>
                   <FontAwesomeIcon icon={faSearch} className="search-icon-agent" />
                   <input
                     type="text"
                     placeholder="Поиск агента по имени или специализации..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
                   />
+                  {searchQuery && (
+                    <button 
+                      onClick={handleClearSearch}
+                      style={{
+                        position: 'absolute',
+                        right: '40px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#78909c',
+                        cursor: 'pointer',
+                        padding: '0.25rem'
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                  
                 </div>
+                {activeSearchQuery && (
+                  <div style={{ 
+                    marginTop: '0.5rem', 
+                    fontSize: '0.9rem', 
+                    color: '#546e7a',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>
+                      Поиск: <strong>{activeSearchQuery}</strong>
+                    </span>
+                    <button 
+                      onClick={handleClearSearch}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#78909c',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Очистить поиск
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -804,13 +875,13 @@ const Agents: React.FC = () => {
                 <div className="controls-right-agent">
                   <div className="view-toggle-agent">
                     <button
-                      className={`view-btn-agent ${viewMode === "grid" ? "active" : ""}`}
+                      className={`view-btn-agent ${viewMode === "grid" ? "active" : ''}`}
                       onClick={() => setViewMode("grid")}
                     >
                       ▦
                     </button>
                     <button
-                      className={`view-btn-agent ${viewMode === "list" ? "active" : ""}`}
+                      className={`view-btn-agent ${viewMode === "list" ? "active" : ''}`}
                       onClick={() => setViewMode("list")}
                     >
                       ☰
@@ -819,6 +890,11 @@ const Agents: React.FC = () => {
 
                   <div className="results-count-agent">
                     Найдено: <strong>{filteredAgents.length}</strong> агентов
+                    {activeSearchQuery && (
+                      <span style={{ marginLeft: '1rem', fontSize: '0.85rem', color: '#78909c' }}>
+                        по запросу "{activeSearchQuery}"
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -829,21 +905,22 @@ const Agents: React.FC = () => {
                   <FontAwesomeIcon icon={faSearch} size="3x"/>
                   <h3>{apiError ? "Не удалось загрузить данные" : "Агенты не найдены"}</h3>
                   <p>
-                    {apiError 
-                      ? "Проверьте подключение к серверу и попробуйте позже" 
-                      : "Попробуйте изменить параметры поиска"}
+                    {activeSearchQuery 
+                      ? `По запросу "${activeSearchQuery}" ничего не найдено`
+                      : apiError 
+                        ? "Проверьте подключение к серверу и попробуйте позже" 
+                        : "Попробуйте изменить параметры поиска"}
                   </p>
                   <button className="btn-primary" onClick={resetFilters}>
                     Сбросить фильтры
                   </button>
-                  {apiError && (
+                  {activeSearchQuery && (
                     <button 
                       className="btn-secondary" 
-                      onClick={fetchAgents}
+                      onClick={handleClearSearch}
                       style={{ marginTop: '10px' }}
                     >
-                      <FontAwesomeIcon icon={faSyncAlt} style={{ marginRight: '5px' }} />
-                      Повторить попытку
+                      Очистить поиск
                     </button>
                   )}
                 </div>

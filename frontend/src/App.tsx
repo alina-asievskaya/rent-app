@@ -14,6 +14,9 @@ import EditHousePage from './pages/EditHousePage';
 import AdminPanel from "./components/AdminPanel";
 import AgentProfile from "./pages/AgentProfile";
 import ChatPage from "./pages/ChatPage";
+import ScrollToTop from "./components/ScrollToTop"; // Добавьте этот импорт
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import UserAgreement from './pages/UserAgreement';
 
 const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const token = localStorage.getItem('token');
@@ -40,6 +43,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="app-wrapper">
+      <ScrollToTop /> {/* Добавьте этот компонент здесь */}
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -49,6 +53,8 @@ const AppContent: React.FC = () => {
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/house/:id" element={<HouseInfo />} />
           <Route path="/agents/:id" element={<AgentProfile />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+  <Route path="/user-agreement" element={<UserAgreement />} />
           <Route path="/chat/:chatId" element={
             <PrivateRoute>
               <ChatPage />

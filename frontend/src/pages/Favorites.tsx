@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -11,22 +11,21 @@ import {
   faStar,
   faTrash,
   faShare,
-  faEnvelope,
+
   faCalendar,
   faSearch,
   faFilter,
   faEye,
   faSortAmountDown,
- 
   faChevronDown,
   faCheckCircle,
   faSpinner,
- 
+  faComment,
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutlineRegular } from '@fortawesome/free-regular-svg-icons';
 import "./Favorites.css";
 
-// Интерфейс для данных из API
+// Интерфейсы для данных из API
 interface FavoriteItem {
   id: number;
   price: number;
@@ -45,6 +44,7 @@ interface FavoriteItem {
   isActive: boolean;
   year?: number;
   addedToFavorites?: string;
+  ownerId?: number;
 }
 
 interface ApiResponse<T> {
@@ -53,18 +53,265 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+// Интерфейсы для чата
+interface ChatItem {
+  id: number;
+  user_id: number;
+  ad_id: number;
+  user_name: string;
+  user_avatar: string;
+  ad_title: string;
+  ad_address: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+  created_at: string;
+  house_price: number;
+  house_photo: string;
+}
+
+interface ChatsResponse {
+  success: boolean;
+  data: ChatItem[];
+  total: number;
+  message?: string;
+}
+
+interface ChatCreateResponse {
+  success: boolean;
+  data: {
+    chat_id: number;
+    is_new: boolean;
+    welcome_message_id?: number;
+  };
+  message?: string;
+}
+
+interface OwnerInfoResponse {
+  success: boolean;
+  data: {
+    id: number;
+    fio: string;
+    email: string;
+    phone_num: string;
+    id_agent: boolean;
+  };
+  message?: string;
+}
+
 const Favorites: React.FC = () => {
+  const navigate = useNavigate();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState('date-desc');
   const [isRemoving, setIsRemoving] = useState(false);
+  const [creatingChatForProperty, setCreatingChatForProperty] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
-  // Загрузка избранного при загрузке страницы
+  // Декодирование токена
+  const decodeToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Ошибка при декодировании токена:', error);
+      return null;
+    }
+  };
+
+  // Проверка авторизации и ролей
   useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        try {
+          const payload = decodeToken(token);
+          
+          if (payload) {
+            const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+            const email = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+            
+            setCurrentUserEmail(email);
+
+            if (Array.isArray(roles)) {
+              setIsAdmin(roles.includes('Admin'));
+            } else if (typeof roles === 'string') {
+              setIsAdmin(roles === 'Admin');
+            } else if (email?.toLowerCase() === 'admin@gmail.com') {
+              setIsAdmin(true);
+            } else {
+              setIsAdmin(false);
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при декодировании токена:', error);
+        }
+      }
+    };
+
+    checkAuth();
     fetchFavorites();
   }, []);
 
+  // Функция для получения информации о владельце дома
+  const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
+    try {
+      const response = await fetch(`http://localhost:5213/api/houses/${houseId}/owner-info`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result: OwnerInfoResponse = await response.json();
+        if (result.success && result.data) {
+          if (result.data.email?.toLowerCase() === 'admin@gmail.com') {
+            alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
+            return null;
+          }
+          return result.data.id;
+        }
+      } else {
+        const property = favorites.find(p => p.id === houseId);
+        if (property?.ownerId) {
+          return property.ownerId;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Ошибка при получении информации о владельце:', error);
+      return null;
+    }
+  };
+
+  // Функция для проверки существующего чата
+  const checkExistingChat = async (ownerId: number, houseId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5213/api/chats/my-chats', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result: ChatsResponse = await response.json();
+        if (result.success && result.data) {
+          const existingChat = result.data.find((chat: ChatItem) => 
+            chat.user_id === ownerId && chat.ad_id === houseId
+          );
+          
+          if (existingChat) {
+            return existingChat.id;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Ошибка при проверке существующего чата:', error);
+      return null;
+    }
+  };
+
+  // Функция для создания нового чата
+  const createNewChat = async (ownerId: number, houseId: number): Promise<number | null> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('http://localhost:5213/api/chats/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          otherUserId: ownerId,
+          houseId: houseId,
+          initialMessage: "Здравствуйте! Меня интересует ваше объявление из моего избранного."
+        })
+      });
+
+      if (response.ok) {
+        const result: ChatCreateResponse = await response.json();
+        if (result.success && result.data) {
+          return result.data.chat_id;
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Ошибка создания чата:', errorData);
+        alert(errorData.message || 'Ошибка при создании чата');
+      }
+      return null;
+    } catch (error) {
+      console.error('Ошибка при создании чата:', error);
+      alert('Не удалось создать чат. Попробуйте позже.');
+      return null;
+    }
+  };
+
+  // Основная функция для открытия/создания чата
+  const handleOpenChat = async (propertyId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для начала чата необходимо авторизоваться');
+      navigate('/login');
+      return;
+    }
+
+    // Проверяем, не является ли пользователь администратором
+    if (isAdmin) {
+      if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
+        alert('Администратор может писать только в ответ на сообщения пользователей');
+        return;
+      }
+    }
+
+    setCreatingChatForProperty(propertyId);
+    
+    try {
+      const ownerId = await getHouseOwnerInfo(propertyId);
+      if (!ownerId) {
+        alert('Не удалось определить владельца объявления');
+        return;
+      }
+
+      const existingChatId = await checkExistingChat(ownerId, propertyId);
+      
+      if (existingChatId) {
+        navigate(`/chat/${existingChatId}`);
+        return;
+      }
+
+      const newChatId = await createNewChat(ownerId, propertyId);
+      
+      if (newChatId) {
+        navigate(`/chat/${newChatId}`);
+      }
+    } catch (error) {
+      console.error('Ошибка при открытии чата:', error);
+      alert('Произошла ошибка при открытии чата. Попробуйте позже.');
+    } finally {
+      setCreatingChatForProperty(null);
+    }
+  };
+
+  // Загрузка избранного при загрузке страницы
   const fetchFavorites = async () => {
     try {
       setLoading(true);
@@ -557,9 +804,27 @@ const Favorites: React.FC = () => {
                     >
                       Подробнее
                     </Link>
-                    <button className="btn-secondary-favorit">
-                      <FontAwesomeIcon icon={faEnvelope} />
-                      Написать
+                    <button 
+                      className="btn-secondary-favorit"
+                      onClick={(e) => handleOpenChat(property.id, e)}
+                      disabled={creatingChatForProperty === property.id || isAdmin}
+                    >
+                      {creatingChatForProperty === property.id ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} spin style={{ marginRight: '8px' }} />
+                          Открытие чата...
+                        </>
+                      ) : isAdmin ? (
+                        <>
+                          <FontAwesomeIcon icon={faComment} style={{ marginRight: '8px' }} />
+                          Админам запрещено
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faComment} style={{ marginRight: '8px' }} />
+                          Написать владельцу
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

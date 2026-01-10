@@ -1,118 +1,241 @@
-
+import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
+import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 // Импорт Font Awesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSearch,
-  faBed,
-  faBath,
-  faRulerCombined,
-  faMapMarkerAlt,
   faArrowRight,
   faBuilding,
-  faUsers,
-  faCheckCircle,
-  faHeadset,
-  faStar,
-  faChevronRight,
+  faSpinner,
   faShieldAlt,
-  faCalendarCheck,
+  faCheckCircle,
+  faClock,
   faHome,
-  faHeart,
-  faCouch
+  faWarehouse,
+  faMountain,
+  faSwimmingPool,
+  faHeart as faHeartSolid
 } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
+
+// Интерфейсы для данных из API
+interface House {
+  id: number;
+  price: number;
+  houseType: string;
+  photos: string[];
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
 
 const Home: React.FC = () => {
- 
+  const navigate = useNavigate();
+  const [featuredProperties, setFeaturedProperties] = useState<House[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
-  const properties = [
-    {
-      badge: "Популярное",
-      type: "featured" as const,
-      imageUrl: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop",
-      price: "850 BYN/мес",
-      address: "Минский район, Логойск",
-      info: "Современный двухэтажный дом",
-      beds: 2,
-      baths: 1,
-      area: 65,
-      rating: 4.8,
-      features: ["С мебелью", "Кондиционер", "Балкон"]
-    },
-    {
-      badge: "Новое",
-      type: "new" as const,
-      imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop",
-      price: "650 BYN/мес",
-      address: "Гомель, Советский район",
-      info: "Уютная 1-комн. квартира",
-      beds: 1,
-      baths: 1,
-      area: 45,
-      rating: 4.5,
-      features: ["Ремонт 2023", "Паркинг", "Лифт"]
-    },
-    {
-      badge: "Премиум",
-      type: "premium" as const,
-      imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
-      price: "1,200 BYN/мес",
-      address: "Минск, Ленинский район",
-      info: "Просторная 3-комн. квартира",
-      beds: 3,
-      baths: 2,
-      area: 85,
-      rating: 4.9,
-      features: ["С видом", "Камин", "Два балкона"]
-    },
-    {
-      badge: "Выгодное",
-      type: "discount" as const,
-      imageUrl: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop",
-      price: "950 BYN/мес",
-      address: "Брест, Московский район",
-      info: "Светлая 4-комн. квартира",
-      beds: 4,
-      baths: 2,
-      area: 120,
-      rating: 4.7,
-      features: ["С террасой", "Кабинет", "Гардеробная"]
-    },
-  ];
+  // Загрузка избранного пользователя
+  const loadUserFavorites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
 
+      const response = await fetch('http://localhost:5213/api/favorites/my-favorites-ids', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          const favoriteIds = new Set<number>(data.data);
+          setFavorites(favoriteIds);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке избранного:', error);
+    }
+  };
+
+  // Загрузка данных из API каталога
+  const loadPropertiesFromApi = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Пробуем получить данные из основного эндпоинта домов
+      const response = await fetch('http://localhost:5213/api/houses', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result: ApiResponse<House[]> = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          // Берем первые 3 дома для отображения
+          const properties = result.data.slice(0, 3);
+          setFeaturedProperties(properties);
+        } else {
+          setFeaturedProperties([]);
+        }
+      } else {
+        setFeaturedProperties([]);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке данных:', error);
+      setError('Не удалось загрузить данные с сервера');
+      setFeaturedProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Загрузка данных при монтировании
+  useEffect(() => {
+    const initData = async () => {
+      await loadPropertiesFromApi();
+      await loadUserFavorites();
+    };
+
+    initData();
+  }, []);
+
+  // Категории с иконками
   const categories = [
-    { icon: faHome, label: "Виллы", count: "10+" },
-    { icon: faBuilding, label: "Особняки", count: "20+" },
-    { icon: faCouch, label: "Меблированные", count: "45+" },
-    { icon: faHome, label: "Коттеджи", count: "45+" },
+    { icon: faHome, label: "Коттеджи", color: "#3B82F6" },
+    { icon: faWarehouse, label: "Виллы", color: "#10B981" },
+    { icon: faWarehouse, label: "Особняки", color: "#8B5CF6" },
+    { icon: faHome, label: "Таунхаусы", color: "#F59E0B" },
+    { icon: faMountain, label: "Усадьбы", color: "#EC4899" },
+    { icon: faSwimmingPool, label: "Резиденции", color: "#06B6D4" }
   ];
 
+  // Преимущества
   const benefits = [
     {
       icon: faShieldAlt,
-      title: "Безопасные сделки",
-      description: "Все договоры проверяются юристами"
-    },
-    {
-      icon: faCalendarCheck,
-      title: "Быстрое заселение",
-      description: "Средний срок оформления - 3 дня"
+      title: "Безопасность",
+      description: "Все сделки под защитой"
     },
     {
       icon: faCheckCircle,
-      title: "Проверенные объекты",
-      description: "Каждое жилье проходит верификацию"
+      title: "Проверка",
+      description: "Каждый объект проверен"
+    },
+    {
+      icon: faClock,
+      title: "Скорость",
+      description: "Быстрое оформление"
     }
   ];
 
-  const stats = [
-    { number: "5,000+", label: "Активных предложений", icon: faBuilding },
-    { number: "98%", label: "Довольных клиентов", icon: faUsers },
-    { number: "24/7", label: "Поддержка", icon: faHeadset },
-    { number: "15 мин", label: "Среднее время ответа", icon: faCheckCircle },
-  ];
+  // Обработчики
+  const handleSearchClick = () => {
+    navigate("/catalog");
+  };
+
+  const handleListProperty = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate("/profile?tab=add-property");
+    } else {
+      alert("Для размещения объявления необходимо войти в систему");
+      navigate("/login");
+    }
+  };
+
+  const handleViewAllProperties = () => {
+    navigate("/catalog");
+  };
+
+  const handlePropertyClick = (propertyId: number) => {
+    navigate(`/house/${propertyId}`);
+  };
+
+  const handleCategoryClick = (category: string) => {
+    navigate(`/catalog?type=${encodeURIComponent(category)}`);
+  };
+
+  const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert("Для добавления в избранное необходимо войти в систему");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+      
+      if (userEmail?.toLowerCase() === 'admin@gmail.com') {
+        alert('Администраторы не могут добавлять дома в избранное');
+        return;
+      }
+
+      const isCurrentlyFavorite = favorites.has(id);
+
+      if (isCurrentlyFavorite) {
+        // Удаляем из избранного
+        const deleteResponse = await fetch(`http://localhost:5213/api/favorites/remove/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (deleteResponse.ok) {
+          setFavorites(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+        }
+      } else {
+        // Добавляем в избранное
+        const addResponse = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (addResponse.ok) {
+          setFavorites(prev => {
+            const newSet = new Set(prev);
+            newSet.add(id);
+            return newSet;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при обновлении избранного:', error);
+      alert('Произошла ошибка');
+    }
+  };
+
+  // Функция для форматирования цены
+  const formatPrice = (price: number): string => {
+    return `${price.toLocaleString('ru-RU')} Br/мес`;
+  };
 
   return (
     <>
@@ -120,145 +243,174 @@ const Home: React.FC = () => {
 
       {/* Hero Section */}
       <section className="hero-modern">
-        <div className="hero-overlay"></div>
         <div className="container">
           <div className="hero-content-modern">
             <div className="hero-text-modern">
               <h1 className="hero-title-modern">
-                <span className="gradient-text">Найди свой идеальный дом</span>
-                <br />в несколько кликов
+                <span className="gradient-text">Элитная недвижимость</span>
+                <br />для аренды в Беларуси
               </h1>
               <p className="hero-subtitle-modern">
-                Самый удобный способ аренды жилья в Беларуси. 
-                Более 5,000 проверенных вариантов для комфортной жизни.
+                Находите и снимайте лучшие коттеджи, виллы и особняки.
+                Эксклюзивные предложения премиум-класса.
               </p>
               <div className="hero-actions-modern">
-                <button className="btn-primary-modern">
+                <button className="btn-primary-modern" onClick={handleSearchClick}>
                   <FontAwesomeIcon icon={faSearch} />
-                  Начать поиск
+                  Найти элитное жилье
                 </button>
-                <button className="btn-secondary-modern">
+                <button className="btn-secondary-modern" onClick={handleListProperty}>
                   <FontAwesomeIcon icon={faBuilding} />
-                  Сдать жилье
+                  Сдать недвижимость
                 </button>
-              </div>
-            </div>
-            <div className="hero-image-modern">
-              <div className="floating-card-modern">
-                <div className="card-content-modern">
-                  <div className="card-badge-modern">Топ выбор</div>
-                  <img 
-                    src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop" 
-                    alt="Лучшее предложение" 
-                  />
-                  <div className="card-info-modern">
-                    <h4>Минский район, Логойск</h4>
-                    <p>1850 BYN/мес • 2-этажный дом</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Категории */}
       <section className="categories-section">
         <div className="container">
-          <h2 className="section-title-modern">Категории жилья</h2>
-          <p className="section-subtitle-modern">
-            Выберите тип жилья, который подходит именно вам
-          </p>
+          <h2 className="section-title-modern">Типы элитного жилья</h2>
           
           <div className="categories-grid-modern">
             {categories.map((category, index) => (
-              <div key={index} className="category-card-modern">
-                <div className="category-icon-modern">
+              <div 
+                key={index} 
+                className="category-card-modern"
+                onClick={() => handleCategoryClick(category.label)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="category-icon-modern" style={{ color: category.color }}>
                   <FontAwesomeIcon icon={category.icon} />
                 </div>
-                <h3>{category.label}</h3>
-                <p>{category.count} предложений</p>
+                <div>
+                  <h3>{category.label}</h3>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Featured Properties */}
+      {/* Последние предложения */}
       <section className="featured-section-modern">
         <div className="container">
           <div className="section-header-modern">
             <div>
-              <h2 className="section-title-modern">Популярные предложения</h2>
-              <p className="section-subtitle-modern">
-                Самые востребованные варианты этой недели
-              </p>
+              <h2 className="section-title-modern">
+                Премиум предложения
+              </h2>
             </div>
-            <button className="view-all-btn-modern">
+            <button className="view-all-btn-modern" onClick={handleViewAllProperties}>
               Все предложения
               <FontAwesomeIcon icon={faArrowRight} />
             </button>
           </div>
           
-          <div className="properties-grid-modern">
-            {properties.map((property, index) => (
-              <div key={index} className="property-card-modern">
-                <div className={`property-badge-modern ${property.type}`}>
-                  {property.badge}
-                </div>
-                <div className="property-image-modern">
-                  <img src={property.imageUrl} alt={property.address} />
-                  <button className="favorite-btn-modern">
-                    <FontAwesomeIcon icon={faHeart} />
-                  </button>
-                </div>
-                <div className="property-content-modern">
-                  <div className="property-price-modern">
-                    <span className="price-modern">{property.price}</span>
-                    <div className="rating-modern">
-                      <FontAwesomeIcon icon={faStar} />
-                      <span>{property.rating}</span>
+          {loading ? (
+            <div className="loading-properties">
+              <FontAwesomeIcon icon={faSpinner} spin size="2x" />
+              <p>Загрузка предложений...</p>
+            </div>
+          ) : error ? (
+            <div className="error-message" style={{
+              padding: '2rem',
+              textAlign: 'center',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              borderRadius: '0.5rem',
+              color: '#DC2626',
+              margin: '2rem 0'
+            }}>
+              <h3 style={{ marginBottom: '0.5rem' }}>Ошибка загрузки</h3>
+              <p>{error}</p>
+              <button 
+                onClick={loadPropertiesFromApi}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#DC2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Попробовать снова
+              </button>
+            </div>
+          ) : featuredProperties.length > 0 ? (
+            <div className="properties-grid-modern">
+              {featuredProperties.map((property) => (
+                <div 
+                  key={property.id} 
+                  className="property-card-modern"
+                  onClick={() => handlePropertyClick(property.id)}
+                >
+                  <div className="property-image-modern">
+                    <img 
+                      src={property.photos && property.photos.length > 0 
+                        ? property.photos[0] 
+                        : "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop"
+                      } 
+                      alt={property.houseType} 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop";
+                      }}
+                    />
+                    <button 
+                      className="favorite-btn-modern"
+                      onClick={(e) => handleFavoriteClick(property.id, e)}
+                      title={favorites.has(property.id) ? "Удалить из избранного" : "Добавить в избранное"}
+                    >
+                      <FontAwesomeIcon 
+                        icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} 
+                        style={{ 
+                          color: favorites.has(property.id) ? '#EF4444' : '#FFFFFF',
+                          fontSize: '1.2rem'
+                        }}
+                      />
+                    </button>
+                  </div>
+                  
+                  <div className="property-content-modern">
+                    <div className="property-price-modern">
+                      <span className="price-modern">{formatPrice(property.price)}</span>
                     </div>
+                    
+                    <h3 className="property-title-modern">
+                      {property.houseType || "Элитная недвижимость"}
+                    </h3>
+                    
+                    <button className="property-btn-modern">
+                      Подробнее
+                      <FontAwesomeIcon icon={faArrowRight} />
+                    </button>
                   </div>
-                  <h3 className="property-title-modern">{property.info}</h3>
-                  <div className="property-address-modern">
-                    <FontAwesomeIcon icon={faMapMarkerAlt} />
-                    {property.address}
-                  </div>
-                  <div className="property-features-modern">
-                    <span className="feature-modern">
-                      <FontAwesomeIcon icon={faBed} /> {property.beds}
-                    </span>
-                    <span className="feature-modern">
-                      <FontAwesomeIcon icon={faBath} /> {property.baths}
-                    </span>
-                    <span className="feature-modern">
-                      <FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²
-                    </span>
-                  </div>
-                  <div className="property-tags-modern">
-                    {property.features.map((feature, idx) => (
-                      <span key={idx} className="tag-modern">{feature}</span>
-                    ))}
-                  </div>
-                  <button className="property-btn-modern">
-                    Подробнее
-                    <FontAwesomeIcon icon={faChevronRight} />
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="no-properties" style={{
+              padding: '3rem',
+              textAlign: 'center',
+              backgroundColor: '#F3F4F6',
+              borderRadius: '0.5rem',
+              color: '#6B7280'
+            }}>
+              <h3>Нет доступных объявлений</h3>
+              <p>На данный момент нет активных предложений.</p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* Преимущества */}
       <section className="benefits-section">
         <div className="container">
-          <h2 className="section-title-modern">Почему выбирают нас</h2>
-          <p className="section-subtitle-modern">
-            Мы делаем аренду жилья простой и безопасной
-          </p>
+          <h2 className="section-title-modern">Почему PrimeHouse для элитной недвижимости?</h2>
           
           <div className="benefits-grid-modern">
             {benefits.map((benefit, index) => (
@@ -270,48 +422,6 @@ const Home: React.FC = () => {
                 <p>{benefit.description}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="stats-section-modern">
-        <div className="container">
-          <div className="stats-grid-modern">
-            {stats.map((stat, index) => (
-              <div key={index} className="stat-item-modern">
-                <div className="stat-icon-modern">
-                  <FontAwesomeIcon icon={stat.icon} />
-                </div>
-                <div className="stat-content-modern">
-                  <div className="stat-number-modern">{stat.number}</div>
-                  <div className="stat-label-modern">{stat.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="newsletter-section">
-        <div className="container">
-          <div className="newsletter-content-modern">
-            <div className="newsletter-text-modern">
-              <h2>Получайте лучшие предложения первыми</h2>
-              <p>Подпишитесь на рассылку и узнавайте о новых объектах</p>
-            </div>
-            <div className="newsletter-form-modern">
-              <input 
-                type="email" 
-                placeholder="Ваш email" 
-                className="email-input-modern"
-              />
-              <button className="subscribe-btn-modern">
-                Подписаться
-                <FontAwesomeIcon icon={faChevronRight} />
-              </button>
-            </div>
           </div>
         </div>
       </section>

@@ -1,14 +1,12 @@
-/* Footer - Modern Real Estate Footer */
+/* Footer - Clean Version with Icon */
 .footer {
     background: linear-gradient(135deg, 
-        rgb(var(--neutral-900)) 0%,
+        rgb(15, 23, 42) 0%,
         rgb(15, 23, 42) 100%
     );
     color: white;
-    padding: 80px 0 30px;
+    padding: 60px 0 25px;
     position: relative;
-    overflow: hidden;
-    margin-bottom: auto;
 }
 
 .footer::before {
@@ -17,115 +15,103 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 4px;
+    height: 3px;
     background: linear-gradient(90deg, 
-        rgb(var(--primary-600)) 0%,
-        rgb(var(--accent-green)) 50%,
-        rgb(var(--primary-400)) 100%
+        #3498db 0%,
+        #2ecc71 50%,
+        #3498db 100%
     );
 }
 
 .footer-content {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr 1fr;
-    gap: 3rem;
-    margin-bottom: 4rem;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2.5rem;
+    margin-bottom: 3rem;
 }
 
 /* Логотип и описание */
 .footer-logo-section {
-    padding-right: 2rem;
+    padding-right: 1rem;
 }
 
 .footer-logo {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     text-decoration: none;
 }
 
 .footer-logo-icon {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     background: linear-gradient(135deg, 
-        rgb(var(--primary-600)) 0%,
-        rgb(var(--primary-400)) 100%
+        #3498db 0%,
+        #2ecc71 100%
     );
-    border-radius: 12px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    box-shadow: var(--shadow);
+    flex-shrink: 0;
 }
 
 .footer-logo-text {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: white;
 }
 
 .footer-logo-text span {
-    color: rgb(var(--primary-400));
+    color: #3498db;
 }
 
 .footer-description {
     color: rgba(255, 255, 255, 0.7);
-    font-size: 0.95rem;
-    line-height: 1.6;
-    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    margin-left: 0.75rem;
 }
 
 /* Социальные сети */
 .social-links {
     display: flex;
     gap: 0.75rem;
-    margin-top: 1.5rem;
+    margin-left: 0.75rem;
 }
 
 .social-link {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    border-radius: 10px;
     color: white;
     text-decoration: none;
     transition: all 0.3s;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .social-link:hover {
-    background: rgb(var(--primary-600));
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.social-link.vk:hover {
-    background: #4c75a3;
-}
-
-.social-link.telegram:hover {
-    background: #2aabee;
-}
-
-.social-link.whatsapp:hover {
-    background: #25d366;
+    background: #3498db;
+    transform: translateY(-2px);
 }
 
 /* Секции навигации */
 .footer-section h4 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     color: white;
     position: relative;
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
 }
 
 .footer-section h4::after {
@@ -133,61 +119,53 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    width: 40px;
-    height: 3px;
-    background: rgb(var(--primary-500));
-    border-radius: 2px;
+    width: 30px;
+    height: 2px;
+    background: #3498db;
 }
 
 .footer-links {
     list-style: none;
+    padding: 0;
 }
 
 .footer-links li {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.6rem;
 }
 
 .footer-links a {
     color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .footer-links a:hover {
-    color: white;
-    padding-left: 0.5rem;
-}
-
-.footer-links a i {
-    font-size: 0.9rem;
-    opacity: 0.7;
-    width: 20px;
+    color: #3498db;
+    padding-left: 0.3rem;
 }
 
 /* Контакты */
 .contact-info {
     list-style: none;
+    padding: 0;
 }
 
 .contact-info li {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.8rem;
     color: rgba(255, 255, 255, 0.7);
-    font-size: 0.95rem;
-    line-height: 1.5;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .contact-info i {
-    color: rgb(var(--primary-400));
-    font-size: 1rem;
-    margin-top: 0.25rem;
-    min-width: 20px;
+    color: #3498db;
+    font-size: 0.9rem;
+    margin-top: 0.15rem;
+    min-width: 18px;
 }
 
 .contact-info a {
@@ -197,15 +175,13 @@
 }
 
 .contact-info a:hover {
-    color: rgb(var(--primary-400));
+    color: #3498db;
 }
-
 
 /* Нижняя часть футера */
 .footer-bottom {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 2rem;
-    padding-bottom: 1rem;
+    padding-top: 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -215,18 +191,18 @@
 
 .copyright {
     color: rgba(255, 255, 255, 0.5);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .footer-bottom-links {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .footer-bottom-links a {
     color: rgba(255, 255, 255, 0.5);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: color 0.3s;
 }
 
@@ -234,11 +210,11 @@
     color: white;
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
+/* Адаптивность */
+@media (max-width: 992px) {
     .footer-content {
         grid-template-columns: 1fr 1fr;
-        gap: 3rem 2rem;
+        gap: 2rem;
     }
     
     .footer-logo-section {
@@ -248,75 +224,48 @@
 
 @media (max-width: 768px) {
     .footer {
-        padding: 60px 0 20px;
+        padding: 50px 0 20px;
     }
     
     .footer-content {
         grid-template-columns: 1fr;
-        gap: 2.5rem;
+        gap: 2rem;
     }
     
     .footer-logo-section {
         grid-column: span 1;
+        padding-right: 0;
     }
     
     .footer-bottom {
         flex-direction: column;
         text-align: center;
-        gap: 1rem;
-    }
-    
-    .footer-bottom-links {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 1.5rem;
-    }
-    
-    .newsletter-form {
-        flex-direction: column;
+        gap: 0.8rem;
     }
 }
 
 @media (max-width: 480px) {
     .footer-section h4 {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
     
-    .social-links {
+    .footer-logo {
         gap: 0.5rem;
     }
     
-    .social-link {
-        width: 40px;
-        height: 40px;
+    .footer-logo-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+    
+    .footer-logo-text {
+        font-size: 1.4rem;
     }
 }
 
-/* Убедитесь, что у контейнера нет лишних отступов */
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
-}
-
-/* Если используется flexbox для всей структуры */
-.main-wrapper {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-.main-content {
-    flex: 1;
-}
-
-/* Альтернативное решение - если проблема в body */
-body {
-    margin: 0;
-    padding: 0;
-}
-
-/* Убедитесь, что футер всегда внизу */
-.footer {
-    margin-top: auto;
 }

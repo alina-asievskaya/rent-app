@@ -1,5 +1,6 @@
 import React from "react";
 import Header from "../components/Header";
+import { useNavigate } from "react-router-dom";
 import "./AboutPage.css";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -26,6 +27,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 const AboutPage: React.FC = () => {
+  const navigate = useNavigate();
+
   const teamMembers = [
     {
       id: 1,
@@ -88,24 +91,58 @@ const AboutPage: React.FC = () => {
     {
       icon: faWater,
       title: "Дома у воды",
-      description: "Собственные пляжи и виды на озеро"
+      description: "Собственные пляжи и виды на озеро",
+      link: "/catalog?type=Дома у воды"
     },
     {
       icon: faTree,
       title: "Лесные усадьбы",
-      description: "Уединение среди вековых деревьев"
+      description: "Уединение среди вековых деревьев",
+      link: "/catalog?type=Лесные усадьбы"
     },
     {
       icon: faMountain,
       title: "Загородные виллы",
-      description: "Просторные дома с панорамными видами"
+      description: "Просторные дома с панорамными видами",
+      link: "/catalog?type=Загородные виллы"
     },
     {
       icon: faCampground,
       title: "Эко-домики",
-      description: "Экологичный отдых в гармонии с природой"
+      description: "Экологичный отдых в гармонии с природой",
+      link: "/catalog?type=Эко-домики"
     }
   ];
+
+  const handleSearchClick = () => {
+    navigate("/catalog");
+  };
+
+  const handleConsultationClick = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate("/profile?tab=consultation");
+    } else {
+      alert("Для записи на консультацию необходимо войти в систему");
+      navigate("/login");
+    }
+  };
+
+  const handleWhatsAppClick = () => {
+    const phoneNumber = "+375291234567";
+    const message = "Здравствуйте! Мне нужна консультация по подбору жилья.";
+    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleRouteClick = () => {
+    const url = "https://yandex.ru/maps/157/minsk/?ll=27.561831,53.902284&mode=routes&rtext=~53.902284,27.561831&rtt=auto&z=16";
+    window.open(url, '_blank');
+  };
+
+  const handleEmailClick = () => {
+    window.location.href = "mailto:info@primehouse.by";
+  };
 
   return (
     <>
@@ -169,7 +206,7 @@ const AboutPage: React.FC = () => {
               </div>
 
               <div className="hero-cta-buttons-aboutpage">
-                <button className="btn btn-primary btn-lg">
+                <button className="btn btn-primary btn-lg" onClick={handleSearchClick}>
                   <FontAwesomeIcon icon={faSearch} /> Найти дом для отдыха
                 </button>
               </div>
@@ -233,12 +270,21 @@ const AboutPage: React.FC = () => {
           
           <div className="types-grid-aboutpage">
             {propertyTypes.map((type, index) => (
-              <div key={index} className="type-card-aboutpage">
+              <div 
+                key={index} 
+                className="type-card-aboutpage"
+                onClick={() => navigate(type.link)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="type-icon-aboutpage">
                   <FontAwesomeIcon icon={type.icon} />
                 </div>
                 <h3>{type.title}</h3>
                 <p>{type.description}</p>
+                <button className="type-link-aboutpage">
+                  Смотреть предложения
+                  
+                </button>
               </div>
             ))}
           </div>
@@ -261,7 +307,10 @@ const AboutPage: React.FC = () => {
                 <div className="team-image-aboutpage">
                   <img src={member.image} alt={member.name} />
                   <div className="team-overlay-aboutpage">
-                    <a href={`mailto:${member.email}`}>
+                    <a href={`mailto:${member.email}`} onClick={(e) => {
+                      e.preventDefault();
+                      window.location.href = `mailto:${member.email}`;
+                    }}>
                       <FontAwesomeIcon icon={faEnvelope} />
                     </a>
                   </div>
@@ -328,10 +377,16 @@ const AboutPage: React.FC = () => {
                   <div>
                     <h4>Единый номер</h4>
                     <p className="detail-phone">
-                      <a href="tel:+375291234567">+375 (29) 123-45-67</a>
+                      <a href="tel:+375291234567" onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = 'tel:+375291234567';
+                      }}>+375 (29) 123-45-67</a>
                     </p>
                     <p className="detail-email">
-                      <a href="mailto:info@primehouse.by">info@primehouse.by</a>
+                      <a href="mailto:info@primehouse.by" onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = 'mailto:info@primehouse.by';
+                      }}>info@primehouse.by</a>
                     </p>
                     <p className="detail-whatsapp">💬 WhatsApp: +375 (29) 123-45-67</p>
                   </div>
@@ -373,10 +428,10 @@ const AboutPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="cta-buttons">
-                  <button className="btn btn-primary btn-lg">
+                  <button className="btn btn-primary btn-lg" onClick={handleConsultationClick}>
                     <FontAwesomeIcon icon={faPhone} /> Записаться на консультацию
                   </button>
-                  <button className="btn btn-outline btn-lg">
+                  <button className="btn btn-outline btn-lg" onClick={handleWhatsAppClick}>
                     <FontAwesomeIcon icon={faEnvelope} /> Написать в WhatsApp
                   </button>
                 </div>
@@ -410,14 +465,16 @@ const AboutPage: React.FC = () => {
                 
                 <div className="map-actions">
                   <a 
-                    href="https://yandex.ru/maps/157/minsk/?ll=27.561831,53.902284&mode=routes&rtext=~53.902284,27.561831&rtt=auto&z=16"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="#"
                     className="btn btn-outline map-action-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleRouteClick();
+                    }}
                   >
                     <FontAwesomeIcon icon={faDirections} /> Проложить маршрут
                   </a>
-                  <button className="btn btn-outline map-action-btn">
+                  <button className="btn btn-outline map-action-btn" onClick={handleEmailClick}>
                     <FontAwesomeIcon icon={faMapMarkerAlt} /> Сохранить адрес
                   </button>
                 </div>

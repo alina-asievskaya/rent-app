@@ -69,6 +69,13 @@ const Header: React.FC = () => {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [favoritesList, setFavoritesList] = useState<FavoriteItem[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
+  
+  // Состояние для всплывающих сообщений
+  const [toasts, setToasts] = useState<Array<{
+    id: number;
+    text: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>>([]);
 
   // Состояние для формы
   const [formData, setFormData] = useState({
@@ -89,6 +96,22 @@ const Header: React.FC = () => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   });
+
+  // Функция для показа всплывающего сообщения
+  const showToast = (text: string, type: 'success' | 'error' | 'info' | 'warning') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, text, type }]);
+    
+    // Автоматическое удаление через 5 секунд
+    setTimeout(() => {
+      removeToast(id);
+    }, 5000);
+  };
+
+  // Функция для удаления всплывающего сообщения
+  const removeToast = (id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   // Загрузка количества избранного при изменении авторизации
   useEffect(() => {
@@ -135,10 +158,10 @@ const Header: React.FC = () => {
       
       if (data.success && data.data) {
         setFavoritesCount(data.data.count);
-        console.log('✅ Количество избранного загружено:', data.data.count);
+        console.log('Количество избранного загружено:', data.data.count);
       }
     } catch (error) {
-      console.error('❌ Ошибка при получении количества избранного:', error);
+      console.error('Ошибка при получении количества избранного:', error);
     }
   };
 
@@ -148,14 +171,14 @@ const Header: React.FC = () => {
       setIsLoadingFavorites(true);
       const token = localStorage.getItem('token');
       
-      console.log('🔑 Токен для запроса избранного:', token ? 'есть' : 'нет');
+      console.log('Токен для запроса избранного:', token ? 'есть' : 'нет');
       
       if (!token) {
-        console.log('❌ Нет токена, пропускаем запрос');
+        console.log('Нет токена, пропускаем запрос');
         return;
       }
 
-      console.log('📡 Загрузка списка избранного...');
+      console.log('Загрузка списка избранного...');
       
       const response = await fetch('http://localhost:5213/api/favorites/my', {
         method: 'GET',
@@ -165,7 +188,7 @@ const Header: React.FC = () => {
         }
       });
 
-      console.log('📥 Ответ от сервера:', response.status, response.statusText);
+      console.log('Ответ от сервера:', response.status, response.statusText);
       
       if (!response.ok) {
         console.warn(`Ошибка ${response.status} при получении списка избранного`);
@@ -173,19 +196,19 @@ const Header: React.FC = () => {
       }
 
       const data: ApiResponse<FavoriteItem[]> = await response.json();
-      console.log('📦 Данные избранного:', data);
+      console.log('Данные избранного:', data);
       
       if (data.success) {
         setFavoritesList(data.data || []);
         setFavoritesCount(data.data?.length || 0);
-        console.log('✅ Список избранного загружен:', data.data?.length || 0, 'элементов');
+        console.log('Список избранного загружен:', data.data?.length || 0, 'элементов');
       } else {
-        console.log('❌ Ошибка в ответе API:', data.message);
+        console.log('Ошибка в ответе API:', data.message);
         setFavoritesList([]);
         setFavoritesCount(0);
       }
     } catch (error) {
-      console.error('❌ Ошибка при получении списка избранного:', error);
+      console.error('Ошибка при получении списка избранного:', error);
       setFavoritesList([]);
       setFavoritesCount(0);
     } finally {
@@ -202,7 +225,7 @@ const Header: React.FC = () => {
 
     // Если администратор - не показываем избранное
     if (isAdmin) {
-      alert('Администраторы не могут использовать избранное');
+      showToast('Администраторы не могут использовать избранное', 'info');
       return;
     }
 
@@ -239,16 +262,17 @@ const Header: React.FC = () => {
             setShowFavorites(false);
           }
           
-          console.log('✅ Удалено из избранного:', houseId);
+          showToast('Удалено из избранного', 'success');
+          console.log('Удалено из избранного:', houseId);
         }
       } else {
         const errorText = await response.text();
-        console.error('❌ Ошибка при удалении из избранного:', errorText);
-        alert('Ошибка при удалении из избранного');
+        console.error('Ошибка при удалении из избранного:', errorText);
+        showToast('Ошибка при удалении из избранного', 'error');
       }
     } catch (error) {
-      console.error('❌ Ошибка при удалении из избранного:', error);
-      alert('Ошибка при удалении из избранного');
+      console.error('Ошибка при удалении из избранного:', error);
+      showToast('Ошибка при удалении из избранного', 'error');
     }
   };
 
@@ -273,12 +297,12 @@ const Header: React.FC = () => {
           setFavoritesList([]);
           setFavoritesCount(0);
           setShowFavorites(false);
-          alert('Избранное очищено');
+          showToast('Избранное очищено', 'success');
         }
       }
     } catch (error) {
-      console.error('❌ Ошибка при очистке избранного:', error);
-      alert('Ошибка при очистке избранного');
+      console.error('Ошибка при очистке избранного:', error);
+      showToast('Ошибка при очистке избранного', 'error');
     }
   };
 
@@ -348,15 +372,25 @@ const Header: React.FC = () => {
         // Проверяем, админ ли это
         if (formData.email.toLowerCase() === 'admin@gmail.com') {
           navigate('/admin');
+          showToast('Вход выполнен успешно. Добро пожаловать в административную панель!', 'success');
         } else {
           navigate('/profile');
+          showToast('Вход выполнен успешно!', 'success');
         }
       } else {
-        alert(data.message || 'Ошибка входа');
+        // Обработка различных ошибок
+        if (data.message?.toLowerCase().includes('неверный email или пароль') || 
+            data.message?.toLowerCase().includes('invalid credentials')) {
+          showToast('Неверный email или пароль', 'error');
+        } else if (data.message?.toLowerCase().includes('пользователь не найден')) {
+          showToast('Пользователь не найден', 'error');
+        } else {
+          showToast(data.message || 'Ошибка входа', 'error');
+        }
       }
     } catch (error) {
       console.error('Ошибка при входе:', error);
-      alert('Ошибка соединения с сервером');
+      showToast('Ошибка соединения с сервером', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -366,14 +400,21 @@ const Header: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    if (formData.password !== formData.confirmPassword) {
-      alert("Пароли не совпадают!");
+    // Валидация формы
+    if (!formData.fio.trim()) {
+      showToast("Введите имя и фамилию!", "warning");
       setIsLoading(false);
       return;
     }
 
-    if (!formData.fio.trim()) {
-      alert("Введите имя и фамилию!");
+    if (formData.password !== formData.confirmPassword) {
+      showToast("Пароли не совпадают!", "error");
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      showToast("Пароль должен содержать минимум 6 символов!", "warning");
       setIsLoading(false);
       return;
     }
@@ -430,15 +471,27 @@ const Header: React.FC = () => {
           
           // Регистрация всегда создает обычного пользователя, перенаправляем на профиль
           navigate('/profile');
+          showToast('Регистрация прошла успешно! Добро пожаловать!', 'success');
         } else {
-          alert("Регистрация прошла успешно, но не удалось автоматически войти. Пожалуйста, войдите вручную.");
+          showToast("Регистрация прошла успешно, но не удалось автоматически войти. Пожалуйста, войдите вручную.", "info");
         }
       } else {
-        alert(data.message || 'Ошибка регистрации');
+        // Обработка различных ошибок регистрации
+        if (data.message?.toLowerCase().includes('уже существует') || 
+            data.message?.toLowerCase().includes('already exists')) {
+          showToast('Пользователь с таким email уже существует', 'error');
+        } else if (data.message?.toLowerCase().includes('неверный формат email')) {
+          showToast('Неверный формат email', 'error');
+        } else if (data.message?.toLowerCase().includes('пароль') || 
+                   data.message?.toLowerCase().includes('password')) {
+          showToast('Ошибка в пароле: ' + data.message, 'error');
+        } else {
+          showToast(data.message || 'Ошибка регистрации', 'error');
+        }
       }
     } catch (error) {
       console.error('Ошибка при регистрации:', error);
-      alert('Ошибка соединения с сервером');
+      showToast('Ошибка соединения с сервером', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -475,6 +528,7 @@ const Header: React.FC = () => {
     setFavoritesList([]);
     setShowFavorites(false);
     navigate('/');
+    showToast('Вы вышли из системы', 'info');
   };
 
   const isActive = (path: string) => {
@@ -751,6 +805,36 @@ const Header: React.FC = () => {
           </div>
         </nav>
       </header>
+
+      {/* Всплывающие сообщения */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id} 
+            className={`toast toast-${toast.type}`}
+            onClick={() => removeToast(toast.id)}
+          >
+            <div className="toast-icon">
+              {toast.type === 'success' && <i className="fas fa-check-circle"></i>}
+              {toast.type === 'error' && <i className="fas fa-exclamation-circle"></i>}
+              {toast.type === 'warning' && <i className="fas fa-exclamation-triangle"></i>}
+              {toast.type === 'info' && <i className="fas fa-info-circle"></i>}
+            </div>
+            <div className="toast-content">
+              <div className="toast-message">{toast.text}</div>
+            </div>
+            <button 
+              className="toast-close" 
+              onClick={(e) => {
+                e.stopPropagation();
+                removeToast(toast.id);
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+        ))}
+      </div>
 
       {/* Модальное окно авторизации/регистрации */}
       {showAuthModal && (

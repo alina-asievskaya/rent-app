@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import ConfirmationModal from '../components/ConfirmationModal';
 import './AdminPanel.css';
 
 interface User {
@@ -59,7 +60,13 @@ const AdminPanel: React.FC = () => {
     activeUsers: 0,
     totalFeedback: 0
   });
-  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'}>({text: '', type: 'success'});
+  
+  // Состояния для всплывающих сообщений
+  const [toasts, setToasts] = useState<Array<{
+    id: number;
+    text: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>>([]);
 
   const [agentForm, setAgentForm] = useState({
     email: '',
@@ -73,11 +80,57 @@ const AdminPanel: React.FC = () => {
     photoFile: null as File | null
   });
 
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'danger',
+    onConfirm: () => {}
+  });
+
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   const API_BASE_URL = 'http://localhost:5213';
+
+  // Функция для показа всплывающего сообщения
+  const showToast = (text: string, type: 'success' | 'error' | 'info' | 'warning') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, text, type }]);
+    
+    // Автоматическое удаление через 5 секунд
+    setTimeout(() => {
+      removeToast(id);
+    }, 5000);
+  };
+
+  // Функция для удаления всплывающего сообщения
+  const removeToast = (id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Функция для показа модального окна подтверждения
+  const showConfirmation = (title: string, message: string, type: 'danger' | 'warning' | 'info', onConfirm: () => void) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm
+    });
+  };
+
+  // Функция для закрытия модального окна
+  const closeConfirmation = () => {
+    setConfirmationModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   // Функция для загрузки фото в Cloudinary
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
@@ -100,6 +153,7 @@ const AdminPanel: React.FC = () => {
       return data.secure_url || null;
     } catch (error) {
       console.error('Ошибка загрузки в Cloudinary:', error);
+      showToast('Ошибка загрузки фото в облако', 'error');
       return null;
     }
   };
@@ -116,7 +170,7 @@ const AdminPanel: React.FC = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          handleLogout();
+          handleLogoutConfirmation();
           return;
         }
         throw new Error(`Stats fetch failed: ${response.status}`);
@@ -128,7 +182,7 @@ const AdminPanel: React.FC = () => {
       }
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
-      setMessage({text: 'Ошибка загрузки статистики', type: 'error'});
+      showToast('Ошибка загрузки статистики', 'error');
     }
   }, [token, API_BASE_URL]);
 
@@ -164,7 +218,7 @@ const AdminPanel: React.FC = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          handleLogout();
+          handleLogoutConfirmation();
           return;
         }
         throw new Error(`Data fetch failed: ${response.status}`);
@@ -176,7 +230,7 @@ const AdminPanel: React.FC = () => {
       if (activeTab === 'feedback') setFeedback(data.data);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
-      setMessage({text: 'Ошибка загрузки данных', type: 'error'});
+      showToast('Ошибка загрузки данных', 'error');
     } finally {
       setLoading(false);
     }
@@ -197,89 +251,126 @@ const AdminPanel: React.FC = () => {
     }
   }, [activeTab, fetchData, token, user?.email]);
 
-  // Функция выхода
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/');
+  // Функция для подтверждения выхода
+  const handleLogoutConfirmation = () => {
+    showConfirmation(
+      'Выход из системы',
+      'Вы уверены, что хотите выйти из административной панели?',
+      'warning',
+      () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/');
+      }
+    );
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этого пользователя?')) return;
+  const handleDeleteUser = (userId: number, userEmail: string, userFio: string) => {
+    showConfirmation(
+      'Удаление пользователя',
+      `Вы собираетесь удалить пользователя:\n\n${userFio}\n${userEmail}\n\nВы уверены что хотите удалить пользователя?`,
+      'danger',
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Delete user failed: ${response.status}: ${errorText}`);
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            setUsers(users.filter(user => user.id !== userId));
+            showToast('Пользователь успешно удален', 'success');
+            fetchStats();
+          } else {
+            showToast(data.message || 'Ошибка при удалении пользователя', 'error');
+          }
+        } catch (error) {
+          console.error('Ошибка удаления пользователя:', error);
+          showToast('Ошибка при удалении пользователя', 'error');
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Delete user failed: ${response.status}`);
       }
-
-      setUsers(users.filter(user => user.id !== userId));
-      setMessage({text: 'Пользователь успешно удален', type: 'success'});
-      fetchStats();
-      setTimeout(() => setMessage({text: '', type: 'success'}), 3000);
-    } catch (error) {
-      console.error('Ошибка удаления пользователя:', error);
-      setMessage({text: 'Ошибка при удалении пользователя', type: 'error'});
-    }
+    );
   };
 
-  const handleDeleteAgent = async (agentId: number) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этого агента?')) return;
+  const handleDeleteAgent = (agentId: number, agentName: string) => {
+    showConfirmation(
+      'Удаление агента',
+      `Вы собираетесь удалить агента:\n\n${agentName}\n\nВы уверены что хотите удалить агента?`,
+      'danger',
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/admin/agents/${agentId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/agents/${agentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Delete agent failed: ${response.status}: ${errorText}`);
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            setAgents(agents.filter(agent => agent.id !== agentId));
+            showToast('Агент успешно удален', 'success');
+            fetchStats();
+          } else {
+            showToast(data.message || 'Ошибка при удалении агента', 'error');
+          }
+        } catch (error) {
+          console.error('Ошибка удаления агента:', error);
+          showToast('Ошибка при удалении агента', 'error');
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Delete agent failed: ${response.status}`);
       }
-
-      setAgents(agents.filter(agent => agent.id !== agentId));
-      setMessage({text: 'Агент успешно удален', type: 'success'});
-      fetchStats();
-      setTimeout(() => setMessage({text: '', type: 'success'}), 3000);
-    } catch (error) {
-      console.error('Ошибка удаления агента:', error);
-      setMessage({text: 'Ошибка при удалении агента', type: 'error'});
-    }
+    );
   };
 
-  const handleDeleteFeedback = async (feedbackId: number) => {
-    if (!window.confirm('Вы уверены, что хотите удалить это обращение?')) return;
+  const handleDeleteFeedback = (feedbackId: number, feedbackTopic: string) => {
+    showConfirmation(
+      'Удаление обращения',
+      `Вы собираетесь удалить обращение:\n\n${feedbackTopic}\n\nВы уверены что хотите удалить обращение?`,
+      'danger',
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/admin/feedback/${feedbackId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/feedback/${feedbackId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Delete feedback failed: ${response.status}: ${errorText}`);
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            setFeedback(feedback.filter(f => f.id !== feedbackId));
+            showToast('Обращение успешно удалено', 'success');
+            fetchStats();
+          } else {
+            showToast(data.message || 'Ошибка при удалении обращения', 'error');
+          }
+        } catch (error) {
+          console.error('Ошибка удаления обращения:', error);
+          showToast('Ошибка при удалении обращения', 'error');
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Delete feedback failed: ${response.status}`);
       }
-
-      setFeedback(feedback.filter(f => f.id !== feedbackId));
-      setMessage({text: 'Обращение успешно удалено', type: 'success'});
-      fetchStats();
-      setTimeout(() => setMessage({text: '', type: 'success'}), 3000);
-    } catch (error) {
-      console.error('Ошибка удаления обращения:', error);
-      setMessage({text: 'Ошибка при удалении обращения', type: 'error'});
-    }
+    );
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -288,13 +379,13 @@ const AdminPanel: React.FC = () => {
       const photoUrl = await uploadToCloudinary(file);
       if (photoUrl) {
         setAgentForm(prev => ({ ...prev, photo: photoUrl }));
-        setMessage({text: 'Фото успешно загружено', type: 'success'});
+        showToast('Фото успешно загружено', 'success');
       } else {
-        setMessage({text: 'Ошибка загрузки фото', type: 'error'});
+        showToast('Ошибка загрузки фото', 'error');
       }
     } catch (error) {
       console.error('Ошибка загрузки фото:', error);
-      setMessage({text: 'Ошибка загрузки фото', type: 'error'});
+      showToast('Ошибка загрузки фото', 'error');
     } finally {
       setUploadingPhoto(false);
     }
@@ -303,6 +394,17 @@ const AdminPanel: React.FC = () => {
   const handleCreateAgent = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Валидация формы
+    if (!agentForm.email || !agentForm.fio || !agentForm.password || !agentForm.phone_num || !agentForm.specialization) {
+      showToast('Заполните все обязательные поля', 'warning');
+      return;
+    }
+
+    if (agentForm.password.length < 6) {
+      showToast('Пароль должен содержать минимум 6 символов', 'warning');
+      return;
+    }
+
     // Если есть файл для загрузки, сначала загружаем его
     let finalPhotoUrl = agentForm.photo;
     if (agentForm.photoFile) {
@@ -310,13 +412,13 @@ const AdminPanel: React.FC = () => {
       try {
         const photoUrl = await uploadToCloudinary(agentForm.photoFile);
         if (!photoUrl) {
-          setMessage({text: 'Ошибка загрузки фото', type: 'error'});
+          showToast('Ошибка загрузки фото', 'error');
           setUploadingPhoto(false);
           return;
         }
         finalPhotoUrl = photoUrl;
       } catch {
-        setMessage({text: 'Ошибка загрузки фото', type: 'error'});
+        showToast('Ошибка загрузки фото', 'error');
         setUploadingPhoto(false);
         return;
       }
@@ -341,17 +443,10 @@ const AdminPanel: React.FC = () => {
         })
       });
 
-      // Проверяем статус ответа
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Ошибка сервера:', errorText);
-        throw new Error(`Create agent failed: ${response.status}`);
-      }
-
       const data = await response.json();
       
       if (data.success) {
-        setMessage({text: 'Агент успешно создан', type: 'success'});
+        showToast('Агент успешно создан', 'success');
         setAgentForm({
           email: '',
           fio: '',
@@ -364,13 +459,19 @@ const AdminPanel: React.FC = () => {
           photoFile: null
         });
         fetchData();
-        setTimeout(() => setMessage({text: '', type: 'success'}), 3000);
       } else {
-        setMessage({text: `Ошибка: ${data.message}`, type: 'error'});
+        // Обработка различных ошибок
+        if (data.message?.includes('already exists') || data.message?.includes('уже существует')) {
+          showToast('Пользователь с таким email уже существует', 'error');
+        } else if (data.message?.includes('password') || data.message?.includes('пароль')) {
+          showToast('Ошибка в пароле: ' + data.message, 'error');
+        } else {
+          showToast(`Ошибка: ${data.message || 'Неизвестная ошибка'}`, 'error');
+        }
       }
     } catch (error) {
       console.error('Ошибка создания агента:', error);
-      setMessage({text: 'Ошибка при создании агента', type: 'error'});
+      showToast('Ошибка при создании агента', 'error');
     } finally {
       setUploadingPhoto(false);
     }
@@ -384,15 +485,34 @@ const AdminPanel: React.FC = () => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      handlePhotoUpload(files[0]);
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('Файл слишком большой (максимум 5MB)', 'error');
+          return;
+        }
+        setAgentForm(prev => ({ ...prev, photoFile: file }));
+        handlePhotoUpload(file);
+      } else {
+        showToast('Пожалуйста, выберите изображение', 'error');
+      }
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setAgentForm(prev => ({ ...prev, photoFile: files[0] }));
-      handlePhotoUpload(files[0]);
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('Файл слишком большой (максимум 5MB)', 'error');
+          return;
+        }
+        setAgentForm(prev => ({ ...prev, photoFile: file }));
+        handlePhotoUpload(file);
+      } else {
+        showToast('Пожалуйста, выберите изображение', 'error');
+      }
     }
   };
 
@@ -412,6 +532,51 @@ const AdminPanel: React.FC = () => {
     <div className="adminpage-wrapper">
       <Header />
       
+      {/* Всплывающие сообщения */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id} 
+            className={`toast toast-${toast.type}`}
+            onClick={() => removeToast(toast.id)}
+          >
+            <div className="toast-icon">
+              {toast.type === 'success' && <i className="fas fa-check-circle"></i>}
+              {toast.type === 'error' && <i className="fas fa-exclamation-circle"></i>}
+              {toast.type === 'warning' && <i className="fas fa-exclamation-triangle"></i>}
+              {toast.type === 'info' && <i className="fas fa-info-circle"></i>}
+            </div>
+            <div className="toast-content">
+              <div className="toast-message">{toast.text}</div>
+            </div>
+            <button 
+              className="toast-close" 
+              onClick={(e) => {
+                e.stopPropagation();
+                removeToast(toast.id);
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Модальное окно подтверждения */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        onConfirm={() => {
+          confirmationModal.onConfirm();
+          closeConfirmation();
+        }}
+        onCancel={closeConfirmation}
+        confirmText={confirmationModal.type === 'danger' ? 'Удалить' : 'Подтвердить'}
+        cancelText="Отмена"
+      />
+
       <div className="adminpage-container">
         <div className="adminpage-sidebar">
           <div className="adminpage-avatar">
@@ -471,7 +636,7 @@ const AdminPanel: React.FC = () => {
             
             <button 
               className="adminpage-nav-item adminpage-nav-logout"
-              onClick={handleLogout}
+              onClick={handleLogoutConfirmation}
             >
               <i className="adminpage-nav-icon adminpage-logout-icon"></i>
               <span>Выйти</span>
@@ -480,18 +645,6 @@ const AdminPanel: React.FC = () => {
         </div>
 
         <div className="adminpage-content">
-          {message.text && (
-            <div className={`adminpage-message ${message.type}`}>
-              <div className="adminpage-message-content">
-                <i className={`adminpage-message-icon ${message.type === 'success' ? 'adminpage-success-icon' : 'adminpage-error-icon'}`}></i>
-                {message.text}
-              </div>
-              <button className="adminpage-message-close" onClick={() => setMessage({text: '', type: 'success'})}>
-                &times;
-              </button>
-            </div>
-          )}
-
           {activeTab === 'stats' && (
             <div className="adminpage-tab">
               <div className="adminpage-header">
@@ -646,7 +799,7 @@ const AdminPanel: React.FC = () => {
                               <div className="adminpage-table-actions">
                                 <button 
                                   className="adminpage-action-btn adminpage-action-danger"
-                                  onClick={() => handleDeleteUser(user.id)}
+                                  onClick={() => handleDeleteUser(user.id, user.email, user.fio)}
                                   title="Удалить пользователя"
                                 >
                                   <i className="fas fa-trash"></i>
@@ -709,7 +862,7 @@ const AdminPanel: React.FC = () => {
                           value={agentForm.email}
                           onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
                           required
-                          placeholder="agent@example.com"
+                          placeholder="Email агента"
                         />
                       </div>
                       <div className="adminpage-form-group">
@@ -733,7 +886,7 @@ const AdminPanel: React.FC = () => {
                           value={agentForm.fio}
                           onChange={(e) => setAgentForm({...agentForm, fio: e.target.value})}
                           required
-                          placeholder="Иванов Иван Иванович"
+                          placeholder="Фамилия и имя агента"
                         />
                       </div>
                       <div className="adminpage-form-group">
@@ -756,7 +909,7 @@ const AdminPanel: React.FC = () => {
                           value={agentForm.specialization}
                           onChange={(e) => setAgentForm({...agentForm, specialization: e.target.value})}
                           required
-                          placeholder="Недвижимость бизнес-класса"
+                          placeholder="Специализация"
                         />
                       </div>
                       <div className="adminpage-form-group">
@@ -774,7 +927,7 @@ const AdminPanel: React.FC = () => {
 
                     <div className="adminpage-form-row">
                       <div className="adminpage-form-group">
-                        <label>Рейтинг (0-5)</label>
+                        <label>Рейтинг</label>
                         <input
                           type="number"
                           step="0.1"
@@ -907,7 +1060,7 @@ const AdminPanel: React.FC = () => {
                           <div className="adminpage-agent-actions">
                             <button 
                               className="adminpage-action-btn adminpage-action-danger"
-                              onClick={() => handleDeleteAgent(agent.id)}
+                              onClick={() => handleDeleteAgent(agent.id, agent.user.fio)}
                             >
                               <i className="fas fa-trash"></i> Удалить
                             </button>
@@ -984,7 +1137,7 @@ const AdminPanel: React.FC = () => {
                             <span className="adminpage-feedback-date">{formatDate(item.createdAt)}</span>
                             <button 
                               className="adminpage-action-btn adminpage-action-danger"
-                              onClick={() => handleDeleteFeedback(item.id)}
+                              onClick={() => handleDeleteFeedback(item.id, item.topic)}
                               title="Удалить обращение"
                             >
                               <i className="fas fa-trash"></i>

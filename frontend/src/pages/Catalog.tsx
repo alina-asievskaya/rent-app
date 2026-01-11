@@ -154,7 +154,7 @@ const Catalog: React.FC = () => {
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage] = useState<number>(8); // 8 объявлений на странице
+  const [itemsPerPage] = useState<number>(6); // 8 объявлений на странице
 
   // Состояние фильтров
   const [filters, setFilters] = useState<FilterOptions>({

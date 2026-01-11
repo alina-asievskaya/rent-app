@@ -388,7 +388,7 @@ const AgentProfile: React.FC = () => {
     // Проверяем, не является ли текущий пользователь администратором
     if (isAdmin) {
       if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
-        alert('Администратор может писать только в ответ на сообщения пользователей');
+        alert('Администратор не может писать сообщения');
         return;
       }
     }

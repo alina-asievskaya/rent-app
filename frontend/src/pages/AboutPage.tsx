@@ -1,226 +1,191 @@
 import React from "react";
 import Header from "../components/Header";
-import { useNavigate } from "react-router-dom";
 import "./AboutPage.css";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCrown,
   faUsers,
-  faCheckCircle,
   faHeart,
   faShieldAlt,
   faMapMarkerAlt,
-  faEnvelope,
-  faStar,
-  faLeaf,
+  // faLeaf,
   faHome,
-  faWater,
-  faTree,
-  faSearch,
-  faAward,
   faPhone,
   faClock,
-  faDirections,
-  faMountain,
-  faCampground,
+  faUserTie,
+  faHistory,
+  faBuilding,
+  faGraduationCap,
+
+  faGlobe,
+
+  faKey,
+  faBuilding as faBuildingOffice
 } from '@fortawesome/free-solid-svg-icons';
 
 const AboutPage: React.FC = () => {
-  const navigate = useNavigate();
+ 
 
-  const teamMembers = [
+  const familyTeam = [
     {
       id: 1,
       name: "Дмитрий Медов",
-      role: "Основатель",
+      role: "Основатель компании",
       image: "https://i.pinimg.com/736x/47/b4/08/47b408d514b99960bd5041e7f9153e3f.jpg",
-      bio: "Владелец нескольких эко-усадеб. 10 лет в сфере загородной недвижимости.",
-      email: "alex@domabel.by"
+      description: "Инженер-строитель по образованию. 15 лет опыта в строительстве и недвижимости.",
+      isFounder: true,
+      connection: "Основатель семейного дела"
     },
     {
       id: 2,
       name: "Анна Медова",
-      role: "Директор по подбору",
+      role: "Директор по подбору объектов",
       image: "https://i.pinimg.com/736x/87/ab/fa/87abfa0103a3bb7e801b7e90bc58260a.jpg",
-      bio: "Эксперт по загородной недвижимости. Лично проверяет каждый дом.",
-      email: "elena@domabel.by"
+      description: "Экономист, специалист по загородной недвижимости. 10 лет опыта в недвижимости.",
+      isSpouse: true,
+      connection: "Супруга основателя"
     },
     {
       id: 3,
-      name: "Иван Лесной",
-      role: "Гид по эко-туризму",
+      name: "Михаил Богдашевич",
+      role: "Директор по развитию",
       image: "https://i.pinimg.com/736x/96/fb/a5/96fba5ba9dbbc8b6f67dc282c050a568.jpg",
-      bio: "Знает каждую тропинку в белорусских лесах. Организует уникальные маршруты.",
-      email: "victor@domabel.by"
+      description: "Брат Анны. Выпускник БГУ по специальности 'Туризм и гостеприимство'.",
+      isRelative: true,
+      connection: "Брат Анны"
     },
     {
       id: 4,
       name: "Ольга Богдашевич",
-      role: "Консьерж-сервис",
+      role: "Менеджер по клиентскому сервису",
       image: "https://img.freepik.com/premium-photo/portrait-young-woman-standing-against-white-background_1048944-8425580.jpg?semt=ais_hybrid&w=740",
-      bio: "Ваш персональный помощник в отдыхе.",
-      email: "concierge@domabel.by"
+      description: "Однокурсница Михаила. Специалист по туризму и гостеприимству.",
+      isPartner: true,
+      connection: "Девушка Михаила"
     }
   ];
 
-  const values = [
+  // Новые статистики для геро-секции
+ 
+
+  const companyStory = [
     {
-      icon: faCrown,
-      title: "Эксклюзивность",
-      description: "Только уникальные дома с характером и историей"
+      year: "2010",
+      title: "Начало",
+      description: "Дмитрий и Анна Медовы начали с аренды собственной загородной усадьбы."
     },
     {
-      icon: faLeaf,
-      title: "Единение с природой",
-      description: "Дома в гармонии с окружающей средой"
+      year: "2012",
+      title: "Первая команда",
+      description: "К команде присоединился брат Анны - Михаил, специалист по туризму."
     },
     {
-      icon: faHeart,
-      title: "Забота о деталях",
-      description: "Всё продумано для вашего комфорта"
+      year: "2014",
+      title: "Расширение",
+      description: "Ольга, однокурсница Михаила, стала частью команды как эксперт по сервису."
     },
     {
-      icon: faShieldAlt,
-      title: "Надежность",
-      description: "Каждый дом проверен лично нашей командой"
+      year: "2024",
+      title: "PrimeHouse сегодня",
+      description: "Более 200 элитных объектов и 125 довольных семей."
     }
   ];
 
-  const propertyTypes = [
+  
+
+  
+
+  const contactInfo = [
     {
-      icon: faWater,
-      title: "Дома у воды",
-      description: "Собственные пляжи и виды на озеро",
-      link: "/catalog?type=Дома у воды"
+      icon: faMapMarkerAlt,
+      title: "Главный офис",
+      details: [
+        "проспект Победителей 98",
+        "город Минск"
+      ]
     },
     {
-      icon: faTree,
-      title: "Лесные усадьбы",
-      description: "Уединение среди вековых деревьев",
-      link: "/catalog?type=Лесные усадьбы"
+      icon: faPhone,
+      title: "Контакты",
+      details: [
+        "+375 (29) 584-99-96",
+        "info@primehouse.by"
+      ],
     },
     {
-      icon: faMountain,
-      title: "Загородные виллы",
-      description: "Просторные дома с панорамными видами",
-      link: "/catalog?type=Загородные виллы"
-    },
-    {
-      icon: faCampground,
-      title: "Эко-домики",
-      description: "Экологичный отдых в гармонии с природой",
-      link: "/catalog?type=Эко-домики"
+      icon: faClock,
+      title: "Время работы",
+      details: [
+        "Пн-Пт: 9:00-20:00",
+        "Суббота: 10:00-18:00",
+        "Воскресенье: 10:00-16:00"
+      ]
     }
   ];
 
-  const handleSearchClick = () => {
-    navigate("/catalog");
-  };
-
-  const handleConsultationClick = () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      navigate("/profile?tab=consultation");
-    } else {
-      alert("Для записи на консультацию необходимо войти в систему");
-      navigate("/login");
-    }
-  };
-
-  const handleWhatsAppClick = () => {
-    const phoneNumber = "+375291234567";
-    const message = "Здравствуйте! Мне нужна консультация по подбору жилья.";
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-  };
-
-  const handleRouteClick = () => {
-    const url = "https://yandex.ru/maps/157/minsk/?ll=27.561831,53.902284&mode=routes&rtext=~53.902284,27.561831&rtt=auto&z=16";
-    window.open(url, '_blank');
-  };
-
-  const handleEmailClick = () => {
-    window.location.href = "mailto:info@primehouse.by";
-  };
-
+ 
   return (
     <>
       <Header />
 
-      {/* Hero Section */}
       <section className="about-hero-aboutpage">
         <div className="container">
           <div className="hero-content-aboutpage">
             <div className="hero-text-aboutpage">
               <div className="hero-badge-aboutpage">
                 <FontAwesomeIcon icon={faCrown} />
-                <span>Ваш гид в мире загородной недвижимости</span>
+                <span>История нашей семьи</span>
               </div>
               <h1>
                 <span className="text-primary-aboutpage">PrimeHouse</span> — 
-                находите и снимайте дом мечты
+                семейная история успеха
               </h1>
               <p className="hero-description-aboutpage">
-                Мы объединяем тысячи предложений по аренде загородных домов в Беларуси. 
-                Здесь вы найдёте как уютный домик для уикенда, так и просторную усадьбу для жизни на год.
+                Мы - специализированное агентство по подбору элитной недвижимости в Беларуси. 
+                С 2010 года мы помогаем клиентам находить идеальные дома для аренды и отдыха, 
+                сотрудничая только с проверенными агентами.
               </p>
               
-              <div className="hero-stats-aboutpage">
-                <div className="stat-card-aboutpage">
-                  <div className="stat-icon-aboutpage">
-                    <FontAwesomeIcon icon={faHome} />
-                  </div>
-                  <div className="stat-content-aboutpage">
-                    <h3>200+</h3>
-                    <p>Активных объявлений</p>
-                  </div>
-                </div>
-                <div className="stat-card-aboutpage">
-                  <div className="stat-icon-aboutpage">
-                    <FontAwesomeIcon icon={faUsers} />
-                  </div>
-                  <div className="stat-content-aboutpage">
-                    <h3>125+</h3>
-                    <p>Довольных клиентов</p>
-                  </div>
-                </div>
-                <div className="stat-card-aboutpage">
-                  <div className="stat-icon-aboutpage">
-                    <FontAwesomeIcon icon={faStar} />
-                  </div>
-                  <div className="stat-content-aboutpage">
-                    <h3>98.9%</h3>
-                    <p>Положительных отзывов</p>
-                  </div>
-                </div>
-                <div className="stat-card-aboutpage">
-                  <div className="stat-icon-aboutpage">
-                    <FontAwesomeIcon icon={faShieldAlt} />
-                  </div>
-                  <div className="stat-content-aboutpage">
-                    <h3>100%</h3>
-                    <p>Проверенные контакты</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hero-cta-buttons-aboutpage">
-                <button className="btn btn-primary btn-lg" onClick={handleSearchClick}>
-                  <FontAwesomeIcon icon={faSearch} /> Найти дом для отдыха
-                </button>
-              </div>
+              
             </div>
             
-            <div className="hero-image-aboutpage">
-              <div className="image-container-aboutpage">
-                <img 
-                  src="https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=600&h=800&fit=crop" 
-                  alt="Загородный дом" 
-                />
-                <div className="image-badge-aboutpage">
-                  <FontAwesomeIcon icon={faAward} />
-                  <span>Аренда от владельцев и агентств</span>
+            <div className="hero-stats-section-aboutpage">
+              <div className="stats-header">
+                <FontAwesomeIcon icon={faKey} />
+                <h2>Наша специализация</h2>
+              </div>
+              <div className="stats-grid-aboutpage">
+                <div className="stats-card-aboutpage">
+                  <div className="stats-icon-wrapper">
+                    <FontAwesomeIcon icon={faHome} />
+                  </div>
+                  <h3>Экспертный подбор</h3>
+                  <p>Работаем только с профессиональными агентами по недвижимости</p>
+                </div>
+                
+                <div className="stats-card-aboutpage">
+                  <div className="stats-icon-wrapper">
+                    <FontAwesomeIcon icon={faBuildingOffice} />
+                  </div>
+                  <h3>Проверка объектов</h3>
+                  <p>Каждый объект лично проверяется нашими специалистами</p>
+                </div>
+                
+                <div className="stats-card-aboutpage">
+                  <div className="stats-icon-wrapper">
+                    <FontAwesomeIcon icon={faUsers} />
+                  </div>
+                  <h3>Персональный подход</h3>
+                  <p>Индивидуальный подбор домов под ваши требования</p>
+                </div>
+                
+                <div className="stats-card-aboutpage">
+                  <div className="stats-icon-wrapper">
+                    <FontAwesomeIcon icon={faShieldAlt} />
+                  </div>
+                  <h3>Безопасность сделок</h3>
+                  <p>Полное юридическое сопровождение и гарантии</p>
                 </div>
               </div>
             </div>
@@ -234,263 +199,182 @@ const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="about-values-aboutpage">
+      {/* Остальные секции остаются без изменений */}
+      <section className="story-section-aboutpage">
         <div className="container">
           <div className="section-header-aboutpage center">
-            <h2>Наши ценности</h2>
+            <div className="story-badge">
+              <FontAwesomeIcon icon={faHistory} />
+              <span>Наша история</span>
+            </div>
+            <h2>Как всё начиналось</h2>
             <p className="section-subtitle-aboutpage">
-              Принципы, которые делают наш сервис уникальным
+              Путь от маленькой семейной идеи до лидера рынка
             </p>
           </div>
           
-          <div className="values-grid-aboutpage">
-            {values.map((value, index) => (
-              <div key={index} className="value-card-aboutpage">
-                <div className="value-icon-aboutpage">
-                  <FontAwesomeIcon icon={value.icon} />
+          <div className="story-timeline">
+            {companyStory.map((story, index) => (
+              <div key={index} className="story-point">
+                <div className="story-year">{story.year}</div>
+                <div className="story-content">
+                  <h3>{story.title}</h3>
+                  <p>{story.description}</p>
                 </div>
-                <h3>{value.title}</h3>
-                <p>{value.description}</p>
+                {index < companyStory.length - 1 && (
+                  <div className="timeline-line"></div>
+                )}
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </section>      
 
-      {/* Property Types */}
-      <section className="types-section-aboutpage">
-        <div className="container">
-          <div className="section-header-aboutpage center">
-            <h2>Что мы предлагаем</h2>
-            <p className="section-subtitle-aboutpage">
-              Только лучшие варианты для вашего отдыха
-            </p>
-          </div>
-          
-          <div className="types-grid-aboutpage">
-            {propertyTypes.map((type, index) => (
-              <div 
-                key={index} 
-                className="type-card-aboutpage"
-                onClick={() => navigate(type.link)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="type-icon-aboutpage">
-                  <FontAwesomeIcon icon={type.icon} />
-                </div>
-                <h3>{type.title}</h3>
-                <p>{type.description}</p>
-                <button className="type-link-aboutpage">
-                  Смотреть предложения
-                  
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Team Section */}
       <section className="team-section-aboutpage">
         <div className="container">
           <div className="section-header-aboutpage center">
-            <h2>Наша команда</h2>
+            <div className="family-badge">
+              <FontAwesomeIcon icon={faHeart} />
+              <span>Семейное древо PrimeHouse</span>
+            </div>
+            <h2>Наша команда - наша семья</h2>
             <p className="section-subtitle-aboutpage">
-              Эксперты, которые помогут найти дом мечты
+              Мы не просто коллеги, мы - одна семья
             </p>
           </div>
           
-          <div className="team-grid-aboutpage">
-            {teamMembers.map((member) => (
-              <div key={member.id} className="team-card-aboutpage">
-                <div className="team-image-aboutpage">
-                  <img src={member.image} alt={member.name} />
-                  <div className="team-overlay-aboutpage">
-                    <a href={`mailto:${member.email}`} onClick={(e) => {
-                      e.preventDefault();
-                      window.location.href = `mailto:${member.email}`;
-                    }}>
-                      <FontAwesomeIcon icon={faEnvelope} />
-                    </a>
+          <div className="family-tree">
+            
+            <div className="founders-row">
+              <div className="founder-card">
+                <div className="founder-avatar">
+                  <img src={familyTeam[0].image} alt={familyTeam[0].name} />
+                  <div className="avatar-ring"></div>
+                </div>
+                <div className="founder-info">
+                  <div className="founder-connection">
+                    <FontAwesomeIcon icon={faUserTie} />
+                    <span>{familyTeam[0].connection}</span>
                   </div>
-                </div>
-                <div className="team-info-aboutpage">
-                  <h3>{member.name}</h3>
-                  <p className="team-role-aboutpage">{member.role}</p>
-                  <p className="team-bio-aboutpage">{member.bio}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Улучшенная Office Section */}
-      <section className="office-section-aboutpage">
-        <div className="container">
-          <div className="office-content-aboutpage">
-            <div className="office-info">
-              <div className="section-header-aboutpage">
-                <h2>Нужна помощь в подборе?</h2>
-                <p className="section-subtitle-aboutpage">
-                  Наши эксперты бесплатно помогут вам:
-                </p>
-              </div>
-              
-              <div className="office-features-aboutpage">
-                <div className="feature-aboutpage">
-                  <FontAwesomeIcon icon={faCheckCircle} />
-                  <span>Найти дом по вашим критериям</span>
-                </div>
-                <div className="feature-aboutpage">
-                  <FontAwesomeIcon icon={faCheckCircle} />
-                  <span>Организовать просмотр</span>
-                </div>
-                <div className="feature-aboutpage">
-                  <FontAwesomeIcon icon={faCheckCircle} />
-                  <span>Проверить документы и договор</span>
-                </div>
-                <div className="feature-aboutpage">
-                  <FontAwesomeIcon icon={faCheckCircle} />
-                  <span>Согласовать выгодные условия</span>
+                  <h3>{familyTeam[0].name}</h3>
+                  <p className="founder-role">{familyTeam[0].role}</p>
+                  <p className="founder-description">{familyTeam[0].description}</p>
                 </div>
               </div>
               
-              <div className="office-details-aboutpage">
-                <div className="detail-item-aboutpage">
-                  <div className="detail-icon-wrapper">
-                    <FontAwesomeIcon icon={faMapMarkerAlt} />
-                  </div>
-                  <div>
-                    <h4>Главный офис</h4>
-                    <p className="detail-address">г. Минск, ул. Ландера, 2</p>
-                    <p className="detail-building">БЦ "Плаза", 5 этаж, офис 502</p>
-                    <p className="detail-note">🚇 5 минут от метро "Пушкинская"</p>
-                  </div>
+              <div className="couple-connection">
+                <div className="heart-pulse">
+                  <FontAwesomeIcon icon={faHeart} />
                 </div>
-                
-                <div className="detail-item-aboutpage">
-                  <div className="detail-icon-wrapper">
-                    <FontAwesomeIcon icon={faPhone} />
-                  </div>
-                  <div>
-                    <h4>Единый номер</h4>
-                    <p className="detail-phone">
-                      <a href="tel:+375291234567" onClick={(e) => {
-                        e.preventDefault();
-                        window.location.href = 'tel:+375291234567';
-                      }}>+375 (29) 123-45-67</a>
-                    </p>
-                    <p className="detail-email">
-                      <a href="mailto:info@primehouse.by" onClick={(e) => {
-                        e.preventDefault();
-                        window.location.href = 'mailto:info@primehouse.by';
-                      }}>info@primehouse.by</a>
-                    </p>
-                    <p className="detail-whatsapp">💬 WhatsApp: +375 (29) 123-45-67</p>
-                  </div>
-                </div>
-                
-                <div className="detail-item-aboutpage">
-                  <div className="detail-icon-wrapper">
-                    <FontAwesomeIcon icon={faClock} />
-                  </div>
-                  <div>
-                    <h4>Время работы</h4>
-                    <div className="working-hours">
-                      <div className="hours-item">
-                        <span>Пн-Пт:</span>
-                        <strong>9:00-20:00</strong>
-                      </div>
-                      <div className="hours-item">
-                        <span>Суббота:</span>
-                        <strong>10:00-18:00</strong>
-                      </div>
-                      <div className="hours-item">
-                        <span>Воскресенье:</span>
-                        <strong>10:00-16:00</strong>
-                      </div>
-                    </div>
-                    <p className="detail-note">📅 Консультации по предварительной записи</p>
-                  </div>
-                </div>
+                <div className="connection-text">С 2008 года вместе</div>
               </div>
               
-              <div className="office-cta-aboutpage">
-                <div className="cta-content">
-                  <div className="cta-icon">
-                    <FontAwesomeIcon icon={faCheckCircle} />
-                  </div>
-                  <div className="cta-text">
-                    <h4>Первая консультация — бесплатно</h4>
-                    <p>Приходите к нам в офис и получите индивидуальный подбор домов</p>
-                  </div>
+              <div className="founder-card">
+                <div className="founder-avatar">
+                  <img src={familyTeam[1].image} alt={familyTeam[1].name} />
+                  <div className="avatar-ring"></div>
                 </div>
-                <div className="cta-buttons">
-                  <button className="btn btn-primary btn-lg" onClick={handleConsultationClick}>
-                    <FontAwesomeIcon icon={faPhone} /> Записаться на консультацию
-                  </button>
-                  <button className="btn btn-outline btn-lg" onClick={handleWhatsAppClick}>
-                    <FontAwesomeIcon icon={faEnvelope} /> Написать в WhatsApp
-                  </button>
+                <div className="founder-info">
+                  <div className="founder-connection">
+                    <FontAwesomeIcon icon={faHeart} />
+                    <span>{familyTeam[1].connection}</span>
+                  </div>
+                  <h3>{familyTeam[1].name}</h3>
+                  <p className="founder-role">{familyTeam[1].role}</p>
+                  <p className="founder-description">{familyTeam[1].description}</p>
                 </div>
               </div>
             </div>
             
-            <div className="office-map-aboutpage">
-              <div className="map-container-aboutpage">
-                {/* Яндекс Карта */}
-                <div className="yandex-map-wrapper">
-                  <iframe
-                    title="Yandex Map - PrimeHouse Office"
-                    src="https://yandex.ru/map-widget/v1/?um=constructor%3A70cbe8c4d3b8be8d6f6b2f3b3c8e7a7e1&source=constructor&ll=27.561831,53.902284&z=16"
-                    width="100%"
-                    height="400"
-                    frameBorder="0"
-                    style={{ border: 0, borderRadius: 'var(--radius-xl)' }}
-                    allowFullScreen
-                  />
-                  <div className="map-overlay-info">
-                    <div className="map-marker-animated">
-                      <FontAwesomeIcon icon={faMapMarkerAlt} />
-                    </div>
-                    <div className="map-info-content">
-                      <h5>PrimeHouse Office</h5>
-                      <p>Минск, ул. Ландера, 2</p>
-                      <small>БЦ "Плаза", 5 этаж</small>
-                    </div>
+            
+            
+            <div className="relatives-row">
+              <div className="relative-card">
+                <div className="relative-avatar">
+                  <img src={familyTeam[2].image} alt={familyTeam[2].name} />
+                  <div className="avatar-badge">
+                    <FontAwesomeIcon icon={faGraduationCap} />
                   </div>
                 </div>
-                
-                <div className="map-actions">
-                  <a 
-                    href="#"
-                    className="btn btn-outline map-action-btn"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleRouteClick();
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faDirections} /> Проложить маршрут
-                  </a>
-                  <button className="btn btn-outline map-action-btn" onClick={handleEmailClick}>
-                    <FontAwesomeIcon icon={faMapMarkerAlt} /> Сохранить адрес
-                  </button>
+                <div className="relative-info">
+                  <div className="relative-connection">
+                    <FontAwesomeIcon icon={faUsers} />
+                    <span>{familyTeam[2].connection}</span>
+                  </div>
+                  <h4>{familyTeam[2].name}</h4>
+                  <p className="relative-role">{familyTeam[2].role}</p>
+                  <p className="relative-description">{familyTeam[2].description}</p>
                 </div>
               </div>
               
-              <div className="visit-info-card">
-                <div className="visit-icon">
-                  <FontAwesomeIcon icon={faHome} />
+              <div className="partner-connection">
+                <div className="study-icon">
+                  <FontAwesomeIcon icon={faBuilding} />
                 </div>
-                <div className="visit-content">
-                  <h4>Приезжайте в офис!</h4>
-                  <p>Изучите каталог вместе с экспертом за чашкой кофе</p>
-                  <p className="visit-bonus">🎁 При первой консультации — каталог лучших домов в подарок</p>
+                <div className="connection-text">Однокурсники в БГУ</div>
+              </div>
+              
+              <div className="relative-card">
+                <div className="relative-avatar">
+                  <img src={familyTeam[3].image} alt={familyTeam[3].name} />
+                  <div className="avatar-badge">
+                    <FontAwesomeIcon icon={faGlobe} />
+                  </div>
+                </div>
+                <div className="relative-info">
+                  <div className="relative-connection">
+                    <FontAwesomeIcon icon={faHeart} />
+                    <span>{familyTeam[3].connection}</span>
+                  </div>
+                  <h4>{familyTeam[3].name}</h4>
+                  <p className="relative-role">{familyTeam[3].role}</p>
+                  <p className="relative-description">{familyTeam[3].description}</p>
                 </div>
               </div>
             </div>
+          </div>
+          
+          <div className="team-story">
+            <h3>Наша история в деталях</h3>
+            <p>
+              Всё началось с простой идеи - сделать отдых в загородных домах доступным и комфортным. 
+              Дмитрий, инженер-строитель по образованию, и Анна, экономист, начали с аренды собственной усадьбы. 
+              Увидев потенциал бизнеса, они пригласили брата Анны - Михаила, который учился на туризм в БГУ. 
+              Михаил познакомился с Ольгой в университете, и теперь она помогает нам создавать незабываемый сервис для наших гостей.
+            </p>
+            <p>
+              Сегодня мы - одна большая семья, где каждый знает свою роль и вносит вклад в общее дело. 
+              Наш секрет успеха прост: мы относимся к клиентам так же тепло, как относимся друг к другу.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="contact-section-aboutpage">
+        <div className="container">
+          <div className="section-header-aboutpage center">
+            <h2>Свяжитесь с нами</h2>
+            <p className="section-subtitle-aboutpage">
+              Мы всегда рады помочь вам найти идеальный дом
+            </p>
+          </div>
+          
+          <div className="contact-grid">
+            {contactInfo.map((contact, index) => (
+              <div key={index} className="contact-card">
+                <div className="contact-icon">
+                  <FontAwesomeIcon icon={contact.icon} />
+                </div>
+                <h3>{contact.title}</h3>
+                <div className="contact-details">
+                  {contact.details.map((detail, i) => (
+                    <p key={i} className="contact-detail">
+                      {detail}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

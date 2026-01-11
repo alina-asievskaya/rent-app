@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <i className="fas fa-map-marker-alt"></i>
-                г. Минск, пр. Победителей, 89
+                г. Минск, пр. Победителей, 98
               </li>
             </ul>
           </div>

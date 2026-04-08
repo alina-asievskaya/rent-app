@@ -452,31 +452,47 @@ const Agents: React.FC = () => {
             }
           })
         );
-        
-        // Преобразуем данные из API в формат Agent
-        const transformedAgents: Agent[] = agentsWithUserId.map((agent: AgentApiResponse & { userId: number }) => ({
-          id: agent.id,
-          userId: agent.userId, // Сохраняем UserId
-          name: agent.fio || "Неизвестный агент",
-          position: agent.position || `${agent.specialization || "недвижимости"}`,
-          avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-          rating: agent.rating || 0,
-          reviewsCount: agent.reviewsCount || 0,
-          experience: agent.experience || 0,
-          propertiesManaged: agent.propertiesManaged || 0,
-          description: agent.description || `Специализируюсь на ${agent.specialization || "недвижимости"}. Опыт работы ${agent.experience || 0} лет.`,
-          satisfactionRate: agent.satisfactionRate || 90,
-          contact: {
-            phone: agent.phone || "+375 (29) 000-00-00",
-            email: agent.email || "agent@example.com"
-          },
-          specialties: agent.specialties || [agent.specialization || "Недвижимость"],
-          stats: {
-            avgResponseTime: "15 мин",
-            dealSuccessRate: 95,
-            avgDaysToRent: 7
+
+        // Функция для очистки текста позиции
+        const cleanPositionText = (text: string): string => {
+          // Удаляем "Агент по", "Агент", "по" в разных комбинациях
+          const cleaned = text
+            .replace(/^Агент\s+(по\s+)?/i, '') // Удаляет "Агент по " или "Агент "
+            .replace(/^\s+по\s+/i, '') // Удаляет "по " в начале, если осталось
+            .trim();
+          
+          // Если после очистки строка пустая, возвращаем значение по умолчанию
+          if (!cleaned) {
+            return "Специалист по недвижимости";
           }
-        }));
+          
+          // Делаем первую букву заглавной
+          return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+        };
+        // Преобразуем данные из API в формат Agent
+          const transformedAgents: Agent[] = agentsWithUserId.map((agent: AgentApiResponse & { userId: number }) => ({
+            id: agent.id,
+            userId: agent.userId, // Сохраняем UserId
+            name: agent.fio || "Неизвестный агент",
+            position: cleanPositionText(agent.position || agent.specialization || "Специалист по недвижимости"),
+            avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+            rating: agent.rating || 0,
+            reviewsCount: agent.reviewsCount || 0,
+            experience: agent.experience || 0,
+            propertiesManaged: agent.propertiesManaged || 0,
+            description: agent.description || `Специализируюсь на ${agent.specialization || "недвижимости"}. Опыт работы ${agent.experience || 0} лет.`,
+            satisfactionRate: agent.satisfactionRate || 90,
+            contact: {
+              phone: agent.phone || "+375 (29) 000-00-00",
+              email: agent.email || "agent@example.com"
+            },
+            specialties: agent.specialties || [agent.specialization || "Недвижимость"],
+            stats: {
+              avgResponseTime: "15 мин",
+              dealSuccessRate: 95,
+              avgDaysToRent: 7
+            }
+          }));
         
         console.log(`✅ Успешно преобразовано ${transformedAgents.length} агентов`);
         console.log('📋 Агенты с UserId:', transformedAgents.map(a => ({ id: a.id, userId: a.userId, name: a.name, email: a.contact.email })));

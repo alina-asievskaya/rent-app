@@ -374,6 +374,23 @@ const AgentProfile: React.FC = () => {
     }
   };
 
+  // Функция для очистки текста позиции
+const cleanPositionText = (text: string): string => {
+  // Удаляем "Агент по", "Агент", "по" в разных комбинациях
+  const cleaned = text
+    .replace(/^Агент\s+(по\s+)?/i, '') // Удаляет "Агент по " или "Агент "
+    .replace(/^\s+по\s+/i, '') // Удаляет "по " в начале, если осталось
+    .trim();
+  
+  // Если после очистки строка пустая, возвращаем значение по умолчанию
+  if (!cleaned) {
+    return "Специалист по недвижимости";
+  }
+  
+  // Делаем первую букву заглавной
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+};
+
   // Основная функция для открытия/создания чата с агентом
   const handleOpenChatWithAgent = async () => {
     if (!id || !agent) return;
@@ -478,7 +495,8 @@ const AgentProfile: React.FC = () => {
             const agentWithUserId: AgentProfileData = {
               ...agentResult.data,
               userId: userId,
-              isAgent: true
+              isAgent: true,
+              position: cleanPositionText(agentResult.data.position || agentResult.data.specialization || "Специалист по недвижимости")
             };
             
             console.log('✅ Агент с UserId:', agentWithUserId);

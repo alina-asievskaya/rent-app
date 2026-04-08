@@ -28,7 +28,11 @@ import {
   faHotTub,
   faSpinner,
   faUser,
-  faReply
+  faReply,
+  faTimes,
+  faChevronRight,
+  faChevronLeft as faChevronLeftDouble,
+  faExpand
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
@@ -220,6 +224,12 @@ const HouseInfo: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingOwner, setCheckingOwner] = useState(false);
   const [ownerId, setOwnerId] = useState<number | null>(null);
+  
+  // Новые состояния для галереи
+  const [showAllThumbnails, setShowAllThumbnails] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [thumbnailScrollPosition, setThumbnailScrollPosition] = useState(0);
 
   const decodeToken = (token: string) => {
     try {
@@ -1077,6 +1087,41 @@ const HouseInfo: React.FC = () => {
     }
   };
 
+  // Новые функции для управления галереей
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  const nextImage = () => {
+    const images = house?.photos || [];
+    if (images.length > 0) {
+      setLightboxIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }
+  };
+
+  const prevImage = () => {
+    const images = house?.photos || [];
+    if (images.length > 0) {
+      setLightboxIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+    }
+  };
+
+  const handleThumbnailScroll = (direction: 'up' | 'down') => {
+    const thumbnailContainer = document.querySelector('.thumbnail-container');
+    if (thumbnailContainer) {
+      const scrollAmount = direction === 'down' ? 100 : -100;
+      thumbnailContainer.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+      setThumbnailScrollPosition(thumbnailContainer.scrollTop);
+    }
+  };
+
   const canLeaveReviewResult = canLeaveReview();
   
   console.log('🔐 canLeaveReview check:', {
@@ -1115,12 +1160,13 @@ const HouseInfo: React.FC = () => {
   }
 
   const features = getFeaturesList();
-  const mainImage = house.photos?.[0] || "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop";
-  const images = house.photos && house.photos.length > 0 ? house.photos : [mainImage];
-  const address = house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указан';
+  const images = house.photos && house.photos.length > 0 ? house.photos : ["https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop"];
+  const address = house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указана';
   const info = `${house.houseType || 'Дом'}, ${house.area} м²`;
   const formattedPrice = `${house.price?.toLocaleString('ru-RU')} BYN/мес`;
   const announcementDate = formatAnnouncementDate(house.announcementData);
+  const hasManyPhotos = images.length > 5;
+  const displayedThumbnails = showAllThumbnails ? images : images.slice(0, 5);
 
   return (
     <>
@@ -1135,32 +1181,107 @@ const HouseInfo: React.FC = () => {
 
           <section className="gallery-section-house">
             <div className="gallery-house">
-              <div className="main-image-house">
+              <div className="main-image-house" onClick={() => openLightbox(activeImage)}>
                 <img src={images[activeImage]} alt={`Дом ${activeImage + 1}`} />
                 <div className="image-badges-house">
                   <span className="property-badge-house available-house">
                     Аренда
                   </span>
+                  <button 
+                    className="expand-button-house"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openLightbox(activeImage);
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faExpand} />
+                  </button>
                 </div>
               </div>
-              <div className="thumbnails-house">
-                {images.slice(0, 5).map((img, index) => (
-                  <div 
-                    key={index} 
-                    className={`thumbnail-house ${index === activeImage ? 'active-house' : ''}`}
-                    onClick={() => setActiveImage(index)}
-                  >
-                    <img src={img} alt={`Миниатюра ${index + 1}`} />
+              
+              <div className="thumbnail-sidebar-house">
+                <div className="thumbnail-controls">
+                  {thumbnailScrollPosition > 0 && (
+                    <button 
+                      className="thumbnail-scroll-btn scroll-up"
+                      onClick={() => handleThumbnailScroll('up')}
+                    >
+                      <FontAwesomeIcon icon={faChevronLeftDouble} />
+                    </button>
+                  )}
+                  
+                  <div className="thumbnail-container">
+                    {displayedThumbnails.map((img, index) => (
+                      <div 
+                        key={index} 
+                        className={`thumbnail-house ${index === activeImage ? 'active-house' : ''}`}
+                        onClick={() => setActiveImage(index)}
+                      >
+                        <img src={img} alt={`Миниатюра ${index + 1}`} />
+                      </div>
+                    ))}
+                    
+                    {hasManyPhotos && !showAllThumbnails && (
+                      <button 
+                        className="more-photos-house"
+                        onClick={() => setShowAllThumbnails(true)}
+                      >
+                        +{images.length - 5} фото
+                      </button>
+                    )}
                   </div>
-                ))}
-                {images.length > 5 && (
-                  <button className="more-photos-house">
-                    +{images.length - 5} фото
-                  </button>
-                )}
+                  
+                  {thumbnailScrollPosition < 100 && (
+                    <button 
+                      className="thumbnail-scroll-btn scroll-down"
+                      onClick={() => handleThumbnailScroll('down')}
+                    >
+                      <FontAwesomeIcon icon={faChevronLeftDouble} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </section>
+
+          {/* Лайтбокс */}
+          {lightboxOpen && (
+            <div className="lightbox-overlay" onClick={closeLightbox}>
+              <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+                <button className="lightbox-close" onClick={closeLightbox}>
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+                
+                <div className="lightbox-main-image">
+                  <img src={images[lightboxIndex]} alt={`Дом ${lightboxIndex + 1}`} />
+                  
+                  <button className="lightbox-nav prev" onClick={prevImage}>
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                  </button>
+                  
+                  <button className="lightbox-nav next" onClick={nextImage}>
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
+                  
+                  <div className="lightbox-image-info">
+                    <span>{lightboxIndex + 1} / {images.length}</span>
+                  </div>
+                </div>
+                
+                <div className="lightbox-thumbnails">
+                  {images.map((img, index) => (
+                    <div 
+                      key={index}
+                      className={`lightbox-thumbnail ${index === lightboxIndex ? 'active' : ''}`}
+                      onClick={() => setLightboxIndex(index)}
+                    >
+                      <img src={img} alt={`Миниатюра ${index + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <section className="property-info-section-house">
             <div className="property-layout-house">

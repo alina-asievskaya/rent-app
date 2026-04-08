@@ -606,7 +606,7 @@ const Favorites: React.FC = () => {
                   Моё избранное
                 </h1>
                 <p className="favorites-subtitle-favorit">
-                  Все сохраненные дома в одном месте. Сравнивайте, планируйте и делитесь с близкими.
+                  Все сохраненные дома в одном месте
                 </p>
               </div>
               <div className="hero-stats-favorit">

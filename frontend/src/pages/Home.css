@@ -855,3 +855,51 @@
     align-self: flex-start;
   }
 }
+/* Стили для некликабельных категорий */
+.category-card-modern.static-category {
+  cursor: default;
+  pointer-events: none;
+}
+
+.category-card-modern.static-category:hover {
+  transform: none;
+  background: rgb(var(--neutral-50));
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.category-card-modern.static-category:hover::before {
+  transform: translateY(-100%);
+}
+
+.category-card-modern.static-category:hover .category-icon-modern {
+  color: rgb(var(--primary-500));
+  transform: none;
+}
+
+/* Стили для преимуществ без анимации */
+.benefit-card-modern.static-benefit {
+  cursor: default;
+}
+
+.benefit-card-modern.static-benefit:hover {
+  background: rgb(var(--neutral-50));
+  transform: none;
+  box-shadow: none;
+}
+
+.benefit-card-modern.static-benefit:hover .benefit-icon-modern {
+  color: rgb(var(--primary-500));
+  transform: none;
+}
+
+/* Убираем анимацию для всех преимуществ */
+.benefits-grid-modern .benefit-card-modern {
+  animation: none;
+  transition: none;
+}
+
+.benefits-grid-modern .benefit-card-modern .benefit-icon-modern {
+  animation: none;
+  transition: none;
+}

@@ -696,16 +696,6 @@ const AdminPanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="adminpage-stat-card adminpage-stat-info">
-                  <div className="adminpage-stat-icon">
-                    <i className="fas fa-chart-line"></i>
-                  </div>
-                  <div className="adminpage-stat-content">
-                    <div className="adminpage-stat-number">24/7</div>
-                    <div className="adminpage-stat-label">Доступность</div>
-                    <div className="adminpage-stat-sub">системы</div>
-                  </div>
-                </div>
               </div>
 
               <div className="adminpage-quick-actions">
@@ -741,15 +731,7 @@ const AdminPanel: React.FC = () => {
                     <div className="adminpage-action-text">Просмотреть обращения</div>
                   </button>
 
-                  <button 
-                    className="adminpage-action-card"
-                    onClick={() => window.print()}
-                  >
-                    <div className="adminpage-action-icon">
-                      <i className="fas fa-print"></i>
-                    </div>
-                    <div className="adminpage-action-text">Отчеты</div>
-                  </button>
+                  
                 </div>
               </div>
             </div>

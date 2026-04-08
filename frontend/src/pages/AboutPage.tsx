@@ -4,29 +4,21 @@ import "./AboutPage.css";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faCrown,
   faUsers,
   faHeart,
   faShieldAlt,
   faMapMarkerAlt,
-  // faLeaf,
   faHome,
   faPhone,
   faClock,
   faUserTie,
-  faHistory,
   faBuilding,
   faGraduationCap,
-
   faGlobe,
-
-  faKey,
   faBuilding as faBuildingOffice
 } from '@fortawesome/free-solid-svg-icons';
 
 const AboutPage: React.FC = () => {
- 
-
   const familyTeam = [
     {
       id: 1,
@@ -67,35 +59,6 @@ const AboutPage: React.FC = () => {
   ];
 
   // Новые статистики для геро-секции
- 
-
-  const companyStory = [
-    {
-      year: "2010",
-      title: "Начало",
-      description: "Дмитрий и Анна Медовы начали с аренды собственной загородной усадьбы."
-    },
-    {
-      year: "2012",
-      title: "Первая команда",
-      description: "К команде присоединился брат Анны - Михаил, специалист по туризму."
-    },
-    {
-      year: "2014",
-      title: "Расширение",
-      description: "Ольга, однокурсница Михаила, стала частью команды как эксперт по сервису."
-    },
-    {
-      year: "2024",
-      title: "PrimeHouse сегодня",
-      description: "Более 200 элитных объектов и 125 довольных семей."
-    }
-  ];
-
-  
-
-  
-
   const contactInfo = [
     {
       icon: faMapMarkerAlt,
@@ -124,7 +87,6 @@ const AboutPage: React.FC = () => {
     }
   ];
 
- 
   return (
     <>
       <Header />
@@ -134,7 +96,6 @@ const AboutPage: React.FC = () => {
           <div className="hero-content-aboutpage">
             <div className="hero-text-aboutpage">
               <div className="hero-badge-aboutpage">
-                <FontAwesomeIcon icon={faCrown} />
                 <span>История нашей семьи</span>
               </div>
               <h1>
@@ -146,17 +107,14 @@ const AboutPage: React.FC = () => {
                 С 2010 года мы помогаем клиентам находить идеальные дома для аренды и отдыха, 
                 сотрудничая только с проверенными агентами.
               </p>
-              
-              
             </div>
             
-            <div className="hero-stats-section-aboutpage">
+            <div className="hero-stats-section-aboutpage static-stats-section">
               <div className="stats-header">
-                <FontAwesomeIcon icon={faKey} />
                 <h2>Наша специализация</h2>
               </div>
               <div className="stats-grid-aboutpage">
-                <div className="stats-card-aboutpage">
+                <div className="stats-card-aboutpage static-stat-card">
                   <div className="stats-icon-wrapper">
                     <FontAwesomeIcon icon={faHome} />
                   </div>
@@ -164,7 +122,7 @@ const AboutPage: React.FC = () => {
                   <p>Работаем только с профессиональными агентами по недвижимости</p>
                 </div>
                 
-                <div className="stats-card-aboutpage">
+                <div className="stats-card-aboutpage static-stat-card">
                   <div className="stats-icon-wrapper">
                     <FontAwesomeIcon icon={faBuildingOffice} />
                   </div>
@@ -172,7 +130,7 @@ const AboutPage: React.FC = () => {
                   <p>Каждый объект лично проверяется нашими специалистами</p>
                 </div>
                 
-                <div className="stats-card-aboutpage">
+                <div className="stats-card-aboutpage static-stat-card">
                   <div className="stats-icon-wrapper">
                     <FontAwesomeIcon icon={faUsers} />
                   </div>
@@ -180,7 +138,7 @@ const AboutPage: React.FC = () => {
                   <p>Индивидуальный подбор домов под ваши требования</p>
                 </div>
                 
-                <div className="stats-card-aboutpage">
+                <div className="stats-card-aboutpage static-stat-card">
                   <div className="stats-icon-wrapper">
                     <FontAwesomeIcon icon={faShieldAlt} />
                   </div>
@@ -199,44 +157,9 @@ const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Остальные секции остаются без изменений */}
-      <section className="story-section-aboutpage">
-        <div className="container">
-          <div className="section-header-aboutpage center">
-            <div className="story-badge">
-              <FontAwesomeIcon icon={faHistory} />
-              <span>Наша история</span>
-            </div>
-            <h2>Как всё начиналось</h2>
-            <p className="section-subtitle-aboutpage">
-              Путь от маленькой семейной идеи до лидера рынка
-            </p>
-          </div>
-          
-          <div className="story-timeline">
-            {companyStory.map((story, index) => (
-              <div key={index} className="story-point">
-                <div className="story-year">{story.year}</div>
-                <div className="story-content">
-                  <h3>{story.title}</h3>
-                  <p>{story.description}</p>
-                </div>
-                {index < companyStory.length - 1 && (
-                  <div className="timeline-line"></div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>      
-
       <section className="team-section-aboutpage">
         <div className="container">
           <div className="section-header-aboutpage center">
-            <div className="family-badge">
-              <FontAwesomeIcon icon={faHeart} />
-              <span>Семейное древо PrimeHouse</span>
-            </div>
             <h2>Наша команда - наша семья</h2>
             <p className="section-subtitle-aboutpage">
               Мы не просто коллеги, мы - одна семья
@@ -244,12 +167,11 @@ const AboutPage: React.FC = () => {
           </div>
           
           <div className="family-tree">
-            
             <div className="founders-row">
-              <div className="founder-card">
-                <div className="founder-avatar">
+              <div className="founder-card static-founder-card">
+                <div className="founder-avatar static-founder-avatar">
                   <img src={familyTeam[0].image} alt={familyTeam[0].name} />
-                  <div className="avatar-ring"></div>
+                  <div className="avatar-ring static-avatar-ring"></div>
                 </div>
                 <div className="founder-info">
                   <div className="founder-connection">
@@ -262,17 +184,17 @@ const AboutPage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="couple-connection">
-                <div className="heart-pulse">
+              <div className="couple-connection static-couple-connection">
+                <div className="heart-pulse static-heart-pulse">
                   <FontAwesomeIcon icon={faHeart} />
                 </div>
                 <div className="connection-text">С 2008 года вместе</div>
               </div>
               
-              <div className="founder-card">
-                <div className="founder-avatar">
+              <div className="founder-card static-founder-card">
+                <div className="founder-avatar static-founder-avatar">
                   <img src={familyTeam[1].image} alt={familyTeam[1].name} />
-                  <div className="avatar-ring"></div>
+                  <div className="avatar-ring static-avatar-ring"></div>
                 </div>
                 <div className="founder-info">
                   <div className="founder-connection">
@@ -286,13 +208,11 @@ const AboutPage: React.FC = () => {
               </div>
             </div>
             
-            
-            
             <div className="relatives-row">
-              <div className="relative-card">
-                <div className="relative-avatar">
+              <div className="relative-card static-relative-card">
+                <div className="relative-avatar static-relative-avatar">
                   <img src={familyTeam[2].image} alt={familyTeam[2].name} />
-                  <div className="avatar-badge">
+                  <div className="avatar-badge static-avatar-badge">
                     <FontAwesomeIcon icon={faGraduationCap} />
                   </div>
                 </div>
@@ -307,17 +227,17 @@ const AboutPage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="partner-connection">
-                <div className="study-icon">
+              <div className="partner-connection static-partner-connection">
+                <div className="study-icon static-study-icon">
                   <FontAwesomeIcon icon={faBuilding} />
                 </div>
                 <div className="connection-text">Однокурсники в БГУ</div>
               </div>
               
-              <div className="relative-card">
-                <div className="relative-avatar">
+              <div className="relative-card static-relative-card">
+                <div className="relative-avatar static-relative-avatar">
                   <img src={familyTeam[3].image} alt={familyTeam[3].name} />
-                  <div className="avatar-badge">
+                  <div className="avatar-badge static-avatar-badge">
                     <FontAwesomeIcon icon={faGlobe} />
                   </div>
                 </div>
@@ -334,7 +254,7 @@ const AboutPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="team-story">
+          <div className="team-story static-team-story">
             <h3>Наша история в деталях</h3>
             <p>
               Всё началось с простой идеи - сделать отдых в загородных домах доступным и комфортным. 
@@ -361,8 +281,8 @@ const AboutPage: React.FC = () => {
           
           <div className="contact-grid">
             {contactInfo.map((contact, index) => (
-              <div key={index} className="contact-card">
-                <div className="contact-icon">
+              <div key={index} className="contact-card static-contact-card">
+                <div className="contact-icon static-contact-icon">
                   <FontAwesomeIcon icon={contact.icon} />
                 </div>
                 <h3>{contact.title}</h3>

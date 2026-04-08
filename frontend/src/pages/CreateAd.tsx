@@ -477,7 +477,7 @@ const CreateAd: React.FC = () => {
 
       if (response.ok && result.success) {
         localStorage.removeItem('propertyDraft');
-        showNotification('🎉 Объявление успешно создано!', 'success');
+        showNotification('Объявление успешно создано', 'success');
         setTimeout(() => {
           navigate('/my-houses');
         }, 2000);

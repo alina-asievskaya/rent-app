@@ -37,7 +37,7 @@ namespace RentApp.API.Models
         [Column("id_agent")]
         public bool Id_agent { get; set; } = false;
 
-        // Навигационное свойство для Agent (ДОБАВЬТЕ ЭТО)
+
         public Agent? AgentInfo { get; set; }
     }
 }

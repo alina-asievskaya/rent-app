@@ -1063,3 +1063,126 @@
     padding: 2rem 1rem;
   }
 }
+
+/* Статические стили для AboutPage */
+
+/* Геро-секция без анимаций */
+.hero-stats-section-aboutpage.static-stats-section {
+  animation: none;
+  transition: none;
+}
+
+.stats-card-aboutpage.static-stat-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.stats-card-aboutpage.static-stat-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgb(var(--primary-100));
+}
+
+/* Команда - статические карточки */
+.founder-card.static-founder-card {
+  cursor: default;
+}
+
+.founder-card.static-founder-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-xl);
+  border-color: rgb(var(--primary-200));
+}
+
+.founder-avatar.static-founder-avatar .avatar-ring.static-avatar-ring {
+  animation: none;
+  border: 3px solid rgba(var(--primary-300), 0.3);
+}
+
+/* Отключение анимации сердца */
+.couple-connection.static-couple-connection .heart-pulse.static-heart-pulse {
+  animation: none;
+  transform: scale(1);
+}
+
+/* Отключение анимаций для родственников */
+.relative-card.static-relative-card {
+  cursor: default;
+}
+
+.relative-card.static-relative-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-lg);
+  border-color: rgb(var(--neutral-200));
+}
+
+.relative-avatar.static-relative-avatar .avatar-badge.static-avatar-badge {
+  animation: none;
+}
+
+/* Отключение анимаций для партнерской связи */
+.partner-connection.static-partner-connection .study-icon.static-study-icon {
+  animation: none;
+}
+
+/* История команды - статическая */
+.team-story.static-team-story {
+  animation: none;
+  transition: none;
+}
+
+.team-story.static-team-story:hover {
+  transform: none;
+}
+
+/* Контактные карточки - статические */
+.contact-card.static-contact-card {
+  cursor: default;
+}
+
+.contact-card.static-contact-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-lg);
+  border-color: rgb(var(--neutral-200));
+}
+
+.contact-icon.static-contact-icon {
+  animation: none;
+}
+
+/* Общие отключения анимаций */
+.founder-card,
+.relative-card,
+.contact-card,
+.stats-card-aboutpage,
+.hero-stats-section-aboutpage,
+.couple-connection,
+.partner-connection,
+.team-story {
+  animation: none !important;
+  transition: none !important;
+}
+
+.founder-card:hover,
+.relative-card:hover,
+.contact-card:hover,
+.stats-card-aboutpage:hover,
+.hero-stats-section-aboutpage:hover,
+.team-story:hover {
+  transform: none !important;
+}
+
+/* Отключение всех анимаций внутри секций */
+.team-section-aboutpage *,
+.contact-section-aboutpage *,
+.about-hero-aboutpage * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Отключение hover-эффектов */
+.team-section-aboutpage *:hover,
+.contact-section-aboutpage *:hover,
+.about-hero-aboutpage *:hover {
+  transform: none !important;
+}

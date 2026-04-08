@@ -166,10 +166,6 @@ const Home: React.FC = () => {
     navigate(`/house/${propertyId}`);
   };
 
-  const handleCategoryClick = (category: string) => {
-    navigate(`/catalog?type=${encodeURIComponent(category)}`);
-  };
-
   const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -278,9 +274,7 @@ const Home: React.FC = () => {
             {categories.map((category, index) => (
               <div 
                 key={index} 
-                className="category-card-modern"
-                onClick={() => handleCategoryClick(category.label)}
-                style={{ cursor: 'pointer' }}
+                className="category-card-modern static-category"
               >
                 <div className="category-icon-modern" style={{ color: category.color }}>
                   <FontAwesomeIcon icon={category.icon} />
@@ -414,7 +408,7 @@ const Home: React.FC = () => {
           
           <div className="benefits-grid-modern">
             {benefits.map((benefit, index) => (
-              <div key={index} className="benefit-card-modern">
+              <div key={index} className="benefit-card-modern static-benefit">
                 <div className="benefit-icon-modern">
                   <FontAwesomeIcon icon={benefit.icon} />
                 </div>

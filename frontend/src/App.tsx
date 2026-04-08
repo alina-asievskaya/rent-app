@@ -52,7 +52,7 @@ const AppContent: React.FC = () => {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/house/:id" element={<HouseInfo />} />
-          <Route path="/agents/:id" element={<AgentProfile />} />
+          <Route path="/agents/:id" element={<AgentProfile />} /> 
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
   <Route path="/user-agreement" element={<UserAgreement />} />
           <Route path="/chat/:chatId" element={

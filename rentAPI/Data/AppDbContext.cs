@@ -305,7 +305,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(h => h.HouseType);
             });
 
-            // Конфигурация HousesInfo
             modelBuilder.Entity<HouseInfo>(entity =>
             {
                 entity.ToTable("Houses_info");
@@ -355,7 +354,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(hi => hi.City);
             });
 
-            // Конфигурация PhotoHouses
             modelBuilder.Entity<PhotoHouse>(entity =>
             {
                 entity.ToTable("Photo_houses");
@@ -382,7 +380,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(ph => ph.IdHouse);
             });
 
-            // Конфигурация ReviewHouses
             modelBuilder.Entity<ReviewHouse>(entity =>
             {
                 entity.ToTable("Reviews_houses");
@@ -429,7 +426,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(rh => rh.Rating);
             });
 
-            // Конфигурация Convenience
             modelBuilder.Entity<Convenience>(entity =>
             {
                 entity.ToTable("Convenience");
@@ -509,8 +505,7 @@ namespace RentApp.API.Data
 
                 entity.HasIndex(c => c.IdHouse);
             });
-            // Конфигурация Chats
-           // Конфигурация Chats
+            
 modelBuilder.Entity<Chat>(entity =>
 {
     entity.ToTable("Chats");
@@ -536,7 +531,6 @@ modelBuilder.Entity<Chat>(entity =>
         .HasColumnName("created_at")
         .HasDefaultValueSql("GETUTCDATE()");
 
-    // Внешние ключи
     entity.HasOne(c => c.User1)
         .WithMany()
         .HasForeignKey(c => c.User1Id)
@@ -553,19 +547,15 @@ modelBuilder.Entity<Chat>(entity =>
         .OnDelete(DeleteBehavior.Restrict)
         .IsRequired(false);
 
-    // Проверка, что пользователи разные
     entity.HasCheckConstraint("CK_Different_Users", "id_user1 <> id_user2");
 
-    // Индексы
     entity.HasIndex(c => c.User1Id);
     entity.HasIndex(c => c.User2Id);
     entity.HasIndex(c => c.HouseId);
     entity.HasIndex(c => c.CreatedAt);
-    // Уникальность по User1Id, User2Id, HouseId, но HouseId может быть null
     entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId });
 });
 
-            // Конфигурация Messages
             modelBuilder.Entity<Message>(entity =>
             {
                 entity.ToTable("Messages");
@@ -596,7 +586,6 @@ modelBuilder.Entity<Chat>(entity =>
                     .HasColumnName("created_at")
                     .HasDefaultValueSql("GETUTCDATE()");
 
-                // Внешние ключи
                 entity.HasOne(m => m.Chat)
                     .WithMany(c => c.Messages)
                     .HasForeignKey(m => m.ChatId)
@@ -607,10 +596,8 @@ modelBuilder.Entity<Chat>(entity =>
                     .HasForeignKey(m => m.SenderId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Проверка, что сообщение не пустое
                 entity.HasCheckConstraint("CK_Message_NotEmpty", "LEN(TRIM([message])) > 0");
 
-                // Индексы
                 entity.HasIndex(m => m.ChatId);
                 entity.HasIndex(m => m.SenderId);
                 entity.HasIndex(m => m.CreatedAt);
@@ -618,7 +605,6 @@ modelBuilder.Entity<Chat>(entity =>
                 entity.HasIndex(m => new { m.ChatId, m.IsRead, m.CreatedAt });
             });
 
-            // Конфигурация Users (обновленная для связи с Chat)
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("Users");
@@ -651,17 +637,14 @@ modelBuilder.Entity<Chat>(entity =>
                     .HasColumnName("id_agent")
                     .HasDefaultValue(false);
 
-                // Уникальные индексы
                 entity.HasIndex(u => u.Email).IsUnique();
                 entity.HasIndex(u => u.Phone_num).IsUnique();
 
-                // Связь с Agent
                 entity.HasOne(u => u.AgentInfo)
                     .WithOne(a => a.User)
                     .HasForeignKey<Agent>(a => a.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Связи для чата (неявные - через внешние ключи в Chat)
                 entity.HasMany<User>()
                     .WithMany()
                     .UsingEntity<Chat>(

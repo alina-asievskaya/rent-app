@@ -6,11 +6,11 @@ namespace RentApp.API.DTOs
     {
         [Required(ErrorMessage = "Email обязателен")]
         [EmailAddress(ErrorMessage = "Некорректный формат email")]
-        [MaxLength(50, ErrorMessage = "Email не должен превышать 50 символов")] // Изменено с 100 на 50
+        [MaxLength(50, ErrorMessage = "Email не должен превышать 50 символов")] 
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "ФИО обязательно")]
-        [MaxLength(500, ErrorMessage = "ФИО не должно превышать 500 символов")] // Добавил ограничение
+        [MaxLength(500, ErrorMessage = "ФИО не должно превышать 500 символов")] 
         public string Fio { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Пароль обязателен")]

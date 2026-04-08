@@ -969,7 +969,7 @@ const Header: React.FC = () => {
                       name="phone_num"
                       value={formData.phone_num}
                       onChange={handleInputChange}
-                      placeholder="+7 (999) 999-99-99"
+                      placeholder="+375 (XX) XXX-XX-XX"
                       required
                       className="auth-input"
                       disabled={isLoading}

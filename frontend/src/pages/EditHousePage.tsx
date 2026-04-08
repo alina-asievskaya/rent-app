@@ -722,7 +722,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     console.log('Response result:', result);
 
     if (response.ok && result.success) {
-      showNotification('Объявление успешно обновлено!', 'success');
+      showNotification('Объявление успешно обновлено', 'success');
       
       // Обновляем данные
       setTimeout(() => {

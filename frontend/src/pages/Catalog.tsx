@@ -424,7 +424,7 @@ const Catalog: React.FC = () => {
             imageUrl: house.imageUrl || 
               (house.photos && house.photos[0]) || 
               "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop",
-            price: priceStr || `${numericPrice} BYN/мес`,
+            price: priceStr || `${numericPrice} BYN/сутки`,
             address: address,
             info: info,
             beds: house.beds || house.rooms || 1,
@@ -436,7 +436,7 @@ const Catalog: React.FC = () => {
             features: house.features || [],
             houseType: house.houseType,
             region: house.region,
-            city: city, // Сохраняем город для фильтрации
+            city: city,
             street: house.street,
             rooms: house.rooms,
             bathrooms: house.bathrooms,
@@ -1006,7 +1006,7 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
 
               {/* Цена */}
               <div className="filter-group-agent">
-                <label className="filter-label-agent">Цена, BYN/мес</label>
+                <label className="filter-label-agent">Цена, BYN/сутки</label>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <input
                     type="number"

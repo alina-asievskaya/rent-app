@@ -739,9 +739,7 @@ const cleanPositionText = (text: string): string => {
                     alt={agent.fio}
                     className="agent-avatar"
                   />
-                  {agent.rating >= 4.5 && (
-                    <span className="agent-badge">Топ агент</span>
-                  )}
+                  
                 </div>
 
                 <div className="agent-basic-info">
@@ -764,7 +762,7 @@ const cleanPositionText = (text: string): string => {
                   </div>
                 </div>
 
-                {/* Контактная информация */}
+
                 <div className="agent-contact-info">
                   <h3>Контакты</h3>
                   <div className="contact-items">

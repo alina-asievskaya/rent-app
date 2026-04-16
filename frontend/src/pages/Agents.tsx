@@ -494,8 +494,6 @@ const Agents: React.FC = () => {
             }
           }));
         
-        console.log(`✅ Успешно преобразовано ${transformedAgents.length} агентов`);
-        console.log('📋 Агенты с UserId:', transformedAgents.map(a => ({ id: a.id, userId: a.userId, name: a.name, email: a.contact.email })));
         setAgents(transformedAgents);
         
         // Обновляем список специализаций из API если они есть

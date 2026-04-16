@@ -1163,7 +1163,7 @@ const HouseInfo: React.FC = () => {
   const images = house.photos && house.photos.length > 0 ? house.photos : ["https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop"];
   const address = house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указана';
   const info = `${house.houseType || 'Дом'}, ${house.area} м²`;
-  const formattedPrice = `${house.price?.toLocaleString('ru-RU')} BYN/мес`;
+  const formattedPrice = `${house.price?.toLocaleString('ru-RU')} BYN/сутки`;
   const announcementDate = formatAnnouncementDate(house.announcementData);
   const hasManyPhotos = images.length > 5;
   const displayedThumbnails = showAllThumbnails ? images : images.slice(0, 5);
@@ -1184,9 +1184,6 @@ const HouseInfo: React.FC = () => {
               <div className="main-image-house" onClick={() => openLightbox(activeImage)}>
                 <img src={images[activeImage]} alt={`Дом ${activeImage + 1}`} />
                 <div className="image-badges-house">
-                  <span className="property-badge-house available-house">
-                    Аренда
-                  </span>
                   <button 
                     className="expand-button-house"
                     onClick={(e) => {

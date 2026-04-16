@@ -421,28 +421,5 @@ app.MapGet("/api/chats/health", () =>
     });
 });
 
-Console.WriteLine("=== Application Starting ===");
-Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
-Console.WriteLine($"Application Name: {app.Environment.ApplicationName}");
-Console.WriteLine("=== Available Routes ===");
-Console.WriteLine("- Swagger UI: /swagger");
-Console.WriteLine("- Health Check: /health");
-Console.WriteLine("- API Base: /api");
-Console.WriteLine("- Agents Catalog: GET /api/agents/catalog");
-Console.WriteLine("- Houses Catalog: GET /api/houses/catalog");
-Console.WriteLine("- Chats: GET /api/chats/my-chats");
-Console.WriteLine("- Favorites: GET /api/favorites/my-favorites");
-Console.WriteLine("=== Chat Endpoints ===");
-Console.WriteLine("GET  /api/chats/my-chats           - Получить все чаты пользователя");
-Console.WriteLine("GET  /api/chats/{id}               - Получить конкретный чат");
-Console.WriteLine("GET  /api/chats/{id}/messages      - Получить сообщения чата");
-Console.WriteLine("POST /api/chats/create             - Создать или получить чат");
-Console.WriteLine("POST /api/chats/{id}/send          - Отправить сообщение");
-Console.WriteLine("POST /api/chats/{id}/mark-read     - Пометить сообщения как прочитанные");
-Console.WriteLine("POST /api/chats/mark-all-read      - Пометить все чаты как прочитанные");
-Console.WriteLine("GET  /api/chats/unread-count       - Получить количество непрочитанных");
-Console.WriteLine("GET  /api/chats/{id}/info          - Получить информацию о чате");
-Console.WriteLine("DELETE /api/chats/{id}             - Удалить чат");
-Console.WriteLine("===================================");
 
 app.Run();

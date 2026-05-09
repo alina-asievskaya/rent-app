@@ -9,9 +9,8 @@ import {
   faPause, faPlay, faClock, faCheckCircle
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
-// import Header from '../components/Header';  // ❌ Удалён – Header уже рендерится в App
 
-// ========== Интерфейсы (без изменений) ==========
+
 interface UserData {
   id: number;
   email: string;

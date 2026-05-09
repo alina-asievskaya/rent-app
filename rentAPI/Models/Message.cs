@@ -19,10 +19,12 @@ namespace RentApp.API.Models
         [Column("id_sender")]
         public int SenderId { get; set; }
 
-        [Required]
         [MaxLength(2000)]
         [Column("message")]
-        public string Text { get; set; } = string.Empty;
+        public string? Text { get; set; }  
+
+        [Column("image_url")]
+        public string? ImageUrl { get; set; }
 
         [Column("is_read")]
         public bool IsRead { get; set; } = false;
@@ -30,12 +32,11 @@ namespace RentApp.API.Models
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        // Навигационные свойства
         [ForeignKey("ChatId")]
         public Chat Chat { get; set; } = null!;
 
         [ForeignKey("SenderId")]
         public User Sender { get; set; } = null!;
-
-        
     }
 }

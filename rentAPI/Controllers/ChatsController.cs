@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using RentApp.API.Models;
 using System.Security.Claims;
 using RentApp.API.Data;
+using RentApp.API.Services;
+using RentApp.API.DTOs;
 
 namespace RentApp.API.Controllers
 {
@@ -14,11 +16,13 @@ namespace RentApp.API.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<ChatsController> _logger;
+        private readonly CloudinaryService _cloudinaryService;
 
-        public ChatsController(AppDbContext context, ILogger<ChatsController> logger)
+        public ChatsController(AppDbContext context, ILogger<ChatsController> logger, CloudinaryService cloudinaryService)
         {
             _context = context;
             _logger = logger;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpGet("my-chats")]
@@ -30,99 +34,67 @@ namespace RentApp.API.Controllers
                 if (userId == 0)
                     return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
-                _logger.LogInformation($"Получение чатов для пользователя {userId}");
-
                 var chats = await _context.Chats
                     .Include(c => c.User1)
                     .Include(c => c.User2)
                     .Include(c => c.House)
-                    .Include(c => c.Messages
-                        .OrderByDescending(m => m.CreatedAt)
-                        .Take(1))
+                    .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(1))
                     .Where(c => c.User1Id == userId || c.User2Id == userId)
-                    .OrderByDescending(c => c.Messages
-                        .OrderByDescending(m => m.CreatedAt)
-                        .FirstOrDefault()
-                        .CreatedAt)
+                    .OrderByDescending(c => c.Messages.FirstOrDefault()!.CreatedAt)
                     .ToListAsync();
 
                 var chatDtos = new List<object>();
-
                 foreach (var chat in chats)
                 {
                     try
                     {
                         var lastMessage = chat.Messages.FirstOrDefault();
                         var otherUser = chat.User1Id == userId ? chat.User2 : chat.User1;
-                        
                         var unreadCount = await _context.Messages
-                            .CountAsync(m => m.ChatId == chat.Id && 
-                                            !m.IsRead && 
-                                            m.SenderId != userId);
+                            .CountAsync(m => m.ChatId == chat.Id && !m.IsRead && m.SenderId != userId);
 
-                        // Для чатов с агентом (без дома)
                         string adTitle = "Консультация с агентом";
                         string adAddress = "Чат без привязки к объявлению";
                         int housePrice = 0;
                         string housePhoto = "";
 
-                        // ИЗМЕНЕНИЕ: Проверяем не на > 0, а на наличие значения и что это не null
                         if (chat.HouseId.HasValue && chat.House != null)
-                        {
-                            var houseInfo = await _context.HousesInfo
-                                .FirstOrDefaultAsync(h => h.IdHouse == chat.HouseId);
-                            
-                            adTitle = $"{chat.House?.HouseType ?? "Дом"}, {chat.House?.Area ?? 0} м²";
-                            adAddress = houseInfo != null ? 
-                                $"{houseInfo.City}, {houseInfo.Street}" : 
-                                "Адрес не указан";
-                            housePrice = (int)(chat.House?.Price ?? 0);
-                            housePhoto = await _context.PhotoHouses
-                                .Where(p => p.IdHouse == chat.HouseId)
-                                .Select(p => p.Photo)
-                                .FirstOrDefaultAsync() ?? "";
-                        }
+{
+    var houseInfo = await _context.HousesInfo.FirstOrDefaultAsync(h => h.IdHouse == chat.HouseId);
+    adTitle = $"{chat.House.HouseType ?? "Дом"}, {chat.House.Area} м²";
+    adAddress = houseInfo != null ? $"{houseInfo.City}, {houseInfo.Street}" : "Адрес не указан";
+    housePrice = (int)chat.House.Price;
+    housePhoto = await _context.PhotoHouses
+        .Where(p => p.IdHouse == chat.HouseId)
+        .Select(p => p.Photo)
+        .FirstOrDefaultAsync() ?? "";
+}
 
-                        var chatDto = new
+                        chatDtos.Add(new
                         {
                             id = chat.Id,
                             user_id = otherUser?.Id ?? 0,
                             user_name = otherUser?.Fio ?? "Неизвестный пользователь",
                             user_avatar = "",
-                            ad_id = chat.HouseId ?? 0, // Используем 0 для null
+                            ad_id = chat.HouseId ?? 0,
                             ad_title = adTitle,
                             ad_address = adAddress,
-                            last_message = lastMessage?.Text ?? "Чат создан",
+                            last_message = lastMessage != null ? (lastMessage.Text ?? "Изображение") : "Чат создан",
                             last_message_time = lastMessage?.CreatedAt ?? chat.CreatedAt,
                             unread_count = unreadCount,
                             created_at = chat.CreatedAt,
                             house_price = housePrice,
                             house_photo = housePhoto
-                        };
-
-                        chatDtos.Add(chatDto);
+                        });
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Ошибка при обработке чата {chat.Id}");
-                        continue;
-                    }
+                    catch (Exception ex) { _logger.LogError(ex, $"Ошибка при обработке чата {chat.Id}"); }
                 }
-
-                return Ok(new { 
-                    success = true, 
-                    data = chatDtos,
-                    total = chatDtos.Count
-                });
+                return Ok(new { success = true, data = chatDtos, total = chatDtos.Count });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении чатов");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Внутренняя ошибка сервера",
-                    detailed = ex.Message
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
             }
         }
 
@@ -132,126 +104,48 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
-
-                _logger.LogInformation($"Создание чата: User={userId}, OtherUser={request.OtherUserId}, House={request.HouseId}");
-
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
                 if (userId == request.OtherUserId)
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Нельзя создать чат с самим собой" 
-                    });
-                }
+                    return BadRequest(new { success = false, message = "Нельзя создать чат с самим собой" });
 
                 var currentUser = await _context.Users.FindAsync(userId);
                 var otherUser = await _context.Users.FindAsync(request.OtherUserId);
-                
                 if (currentUser == null || otherUser == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Пользователь не найден" 
-                    });
+                    return NotFound(new { success = false, message = "Пользователь не найден" });
 
-                // Проверяем, не является ли текущий пользователь администратором
                 if (currentUser.Email?.ToLower() == "admin@gmail.com")
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Администратор не может инициировать новые чаты" 
-                    });
-                }
-
-                // Проверяем, не является ли другой пользователь администратором
+                    return BadRequest(new { success = false, message = "Администратор не может инициировать новые чаты" });
                 if (otherUser.Email?.ToLower() == "admin@gmail.com")
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Вы не можете написать администратору" 
-                    });
-                }
+                    return BadRequest(new { success = false, message = "Вы не можете написать администратору" });
 
-                var house = await _context.Houses
-                    .Include(h => h.Owner)
-                    .FirstOrDefaultAsync(h => h.Id == request.HouseId);
-
-                if (house == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Объявление не найдено" 
-                    });
-
+                var house = await _context.Houses.Include(h => h.Owner).FirstOrDefaultAsync(h => h.Id == request.HouseId);
+                if (house == null) return NotFound(new { success = false, message = "Объявление не найдено" });
                 if (house.IdOwner == userId)
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Вы не можете создать чат по своему объявлению" 
-                    });
-                }
+                    return BadRequest(new { success = false, message = "Вы не можете создать чат по своему объявлению" });
 
-                var user1Id = Math.Min(userId, request.OtherUserId);
-                var user2Id = Math.Max(userId, request.OtherUserId);
-
-                var existingChat = await _context.Chats
-                    .FirstOrDefaultAsync(c => c.User1Id == user1Id && 
-                                             c.User2Id == user2Id && 
-                                             c.HouseId == request.HouseId);
-
-                if (existingChat != null)
-                {
-                    _logger.LogInformation($"Найден существующий чат: {existingChat.Id}");
-                    return Ok(new { 
-                        success = true, 
-                        data = new { 
-                            chat_id = existingChat.Id,
-                            is_new = false
-                        } 
-                    });
-                }
+                var u1 = Math.Min(userId, request.OtherUserId);
+                var u2 = Math.Max(userId, request.OtherUserId);
+                var existing = await _context.Chats.FirstOrDefaultAsync(c => c.User1Id == u1 && c.User2Id == u2 && c.HouseId == request.HouseId);
+                if (existing != null)
+                    return Ok(new { success = true, data = new { chat_id = existing.Id, is_new = false } });
 
                 var chat = new Chat
                 {
-                    User1Id = user1Id,
-                    User2Id = user2Id,
+                    User1Id = u1,
+                    User2Id = u2,
                     HouseId = request.HouseId,
                     CreatedAt = DateTime.UtcNow
                 };
-
                 await _context.Chats.AddAsync(chat);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Создан новый чат: {chat.Id}");
-
-                var welcomeMessage = new Message
-                {
-                    ChatId = chat.Id,
-                    SenderId = userId,
-                    Text = request.InitialMessage ?? "Здравствуйте! Меня интересует ваше объявление.",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _context.Messages.AddAsync(welcomeMessage);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    success = true, 
-                    data = new { 
-                        chat_id = chat.Id,
-                        is_new = true,
-                        welcome_message_id = welcomeMessage.Id
-                    } 
-                });
+                // Нет автоматического сообщения
+                return Ok(new { success = true, data = new { chat_id = chat.Id, is_new = true } });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при создании чата");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось создать чат",
-                    detailed = ex.Message
-                });
+                return StatusCode(500, new { success = false, message = "Не удалось создать чат" });
             }
         }
 
@@ -261,129 +155,45 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
-
-                _logger.LogInformation($"Создание чата с агентом: CurrentUser={userId}, RequestedAgentUserId={request.AgentId}");
-
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
                 if (userId == request.AgentId)
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Нельзя создать чат с самим собой" 
-                    });
-                }
+                    return BadRequest(new { success = false, message = "Нельзя создать чат с самим собой" });
 
                 var currentUser = await _context.Users.FindAsync(userId);
-                var agentUser = await _context.Users
-                    .Include(u => u.AgentInfo)
-                    .FirstOrDefaultAsync(u => u.Id == request.AgentId);
-                
+                var agentUser = await _context.Users.Include(u => u.AgentInfo).FirstOrDefaultAsync(u => u.Id == request.AgentId);
                 if (currentUser == null || agentUser == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Пользователь или агент не найден" 
-                    });
+                    return NotFound(new { success = false, message = "Пользователь не найден" });
 
-                // Проверяем, является ли пользователь агентом
                 if (!agentUser.Id_agent)
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Указанный пользователь не является агентом" 
-                    });
-                }
-
-                // Проверяем, не является ли текущий пользователь администратором
+                    return BadRequest(new { success = false, message = "Указанный пользователь не является агентом" });
                 if (currentUser.Email?.ToLower() == "admin@gmail.com")
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Администратор не может инициировать новые чаты" 
-                    });
-                }
-
-                // Проверяем, не является ли агент администратором
+                    return BadRequest(new { success = false, message = "Администратор не может инициировать новые чаты" });
                 if (agentUser.Email?.ToLower() == "admin@gmail.com")
-                {
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Вы не можете написать администратору" 
-                    });
-                }
+                    return BadRequest(new { success = false, message = "Вы не можете написать администратору" });
 
-                var user1Id = Math.Min(userId, request.AgentId);
-                var user2Id = Math.Max(userId, request.AgentId);
+                var u1 = Math.Min(userId, request.AgentId);
+                var u2 = Math.Max(userId, request.AgentId);
+                var existing = await _context.Chats.FirstOrDefaultAsync(c => c.User1Id == u1 && c.User2Id == u2 && !c.HouseId.HasValue);
+                if (existing != null)
+                    return Ok(new { success = true, data = new { chat_id = existing.Id, is_new = false } });
 
-                // Ищем существующий чат с агентом (HouseId = null)
-                var existingChat = await _context.Chats
-                    .FirstOrDefaultAsync(c => c.User1Id == user1Id && 
-                                             c.User2Id == user2Id && 
-                                             !c.HouseId.HasValue);
-
-                if (existingChat != null)
-                {
-                    _logger.LogInformation($"Найден существующий чат с агентом: {existingChat.Id}");
-                    return Ok(new { 
-                        success = true, 
-                        data = new { 
-                            chat_id = existingChat.Id,
-                            is_new = false
-                        } 
-                    });
-                }
-
-                // Создаем новый чат с агентом
                 var chat = new Chat
                 {
-                    User1Id = user1Id,
-                    User2Id = user2Id,
-                    HouseId = null, // Используем null для чатов без привязки к дому
+                    User1Id = u1,
+                    User2Id = u2,
+                    HouseId = null,
                     CreatedAt = DateTime.UtcNow
                 };
-
                 await _context.Chats.AddAsync(chat);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Создан новый чат с агентом: {chat.Id}");
-
-                var welcomeMessage = new Message
-                {
-                    ChatId = chat.Id,
-                    SenderId = userId,
-                    Text = request.InitialMessage ?? "Здравствуйте! Мне нужна консультация по подбору жилья.",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _context.Messages.AddAsync(welcomeMessage);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    success = true, 
-                    data = new { 
-                        chat_id = chat.Id,
-                        is_new = true,
-                        welcome_message_id = welcomeMessage.Id
-                    } 
-                });
+                // Нет автоматического сообщения
+                return Ok(new { success = true, data = new { chat_id = chat.Id, is_new = true } });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при создании чата с агентом");
-                // Логируем внутреннее исключение для отладки
-                if (ex.InnerException != null)
-                {
-                    _logger.LogError("Inner Exception: {Message}", ex.InnerException.Message);
-                    _logger.LogError("Inner Exception StackTrace: {StackTrace}", ex.InnerException.StackTrace);
-                }
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось создать чат с агентом",
-                    detailed = ex.Message,
-                    innerException = ex.InnerException?.Message,
-                    stackTrace = ex.StackTrace
-                });
+                return StatusCode(500, new { success = false, message = "Не удалось создать чат" });
             }
         }
 
@@ -393,92 +203,44 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
-
-                _logger.LogInformation($"Получение чата {chatId} для пользователя {userId}");
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
                 var chat = await _context.Chats
-                    .Include(c => c.User1)
-                    .Include(c => c.User2)
-                    .Include(c => c.House)
-                    .ThenInclude(h => h.HouseInfo)
-                    .Include(c => c.Messages
-                        .OrderBy(m => m.CreatedAt)
-                        .Take(100))
-                    .ThenInclude(m => m.Sender)
-                    .FirstOrDefaultAsync(c => c.Id == chatId && 
-                                             (c.User1Id == userId || c.User2Id == userId));
+                    .Include(c => c.User1).Include(c => c.User2)
+                    .Include(c => c.House).ThenInclude(h => h.HouseInfo)
+                    .Include(c => c.Messages.OrderBy(m => m.CreatedAt).Take(100)).ThenInclude(m => m.Sender)
+                    .FirstOrDefaultAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
 
-                if (chat == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Чат не найден или у вас нет доступа" 
-                    });
+                if (chat == null) return NotFound(new { success = false, message = "Чат не найден" });
 
-                var unreadMessages = chat.Messages
-                    .Where(m => !m.IsRead && m.SenderId != userId)
-                    .ToList();
-
-                if (unreadMessages.Any())
+                var unread = chat.Messages.Where(m => !m.IsRead && m.SenderId != userId).ToList();
+                if (unread.Any())
                 {
-                    foreach (var message in unreadMessages)
-                    {
-                        message.IsRead = true;
-                    }
-                    
-                    try
-                    {
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation($"Помечено как прочитано: {unreadMessages.Count} сообщений в чате {chatId}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Ошибка при обновлении статуса сообщений");
-                    }
+                    foreach (var m in unread) m.IsRead = true;
+                    await _context.SaveChangesAsync();
                 }
 
                 var otherUser = chat.User1Id == userId ? chat.User2 : chat.User1;
-                
-                // Для чатов с агентом (без дома)
-                object houseInfoObj = null;
-                // ИЗМЕНЕНИЕ: Проверяем не на > 0, а на наличие значения
+                object houseInfoObj;
                 if (chat.HouseId.HasValue && chat.House != null)
                 {
-                    var houseInfo = chat.House.HouseInfo;
+                    var hi = chat.House.HouseInfo;
                     houseInfoObj = new
                     {
                         id = chat.House.Id,
                         title = chat.House.HouseType,
                         price = chat.House.Price,
                         area = chat.House.Area,
-                        address = houseInfo != null ? 
-                            $"{houseInfo.City}, {houseInfo.Street}" : 
-                            "Адрес не указан",
-                        city = houseInfo?.City,
-                        street = houseInfo?.Street,
-                        rooms = houseInfo?.Rooms,
-                        main_photo = await _context.PhotoHouses
-                            .Where(p => p.IdHouse == chat.House.Id)
-                            .Select(p => p.Photo)
-                            .FirstOrDefaultAsync()
+                        address = hi != null ? $"{hi.City}, {hi.Street}" : "Адрес не указан",
+                        city = hi?.City,
+                        street = hi?.Street,
+                        rooms = hi?.Rooms,
+                        main_photo = await _context.PhotoHouses.Where(p => p.IdHouse == chat.House.Id).Select(p => p.Photo).FirstOrDefaultAsync()
                     };
                 }
                 else
                 {
-                    // Для чатов с агентом создаем пустую информацию о "доме"
-                    houseInfoObj = new
-                    {
-                        id = 0,
-                        title = "Консультация с агентом",
-                        price = 0,
-                        area = 0,
-                        address = "Чат без привязки к объявлению",
-                        city = "",
-                        street = "",
-                        rooms = 0,
-                        main_photo = ""
-                    };
+                    houseInfoObj = new { id = 0, title = "Консультация с агентом", price = 0, area = 0, address = "Чат без привязки", city = "", street = "", rooms = 0, main_photo = "" };
                 }
 
                 var response = new
@@ -487,19 +249,13 @@ namespace RentApp.API.Controllers
                     data = new
                     {
                         id = chat.Id,
-                        other_user = otherUser != null ? new
-                        {
-                            id = otherUser.Id,
-                            name = otherUser.Fio,
-                            email = otherUser.Email,
-                            phone = otherUser.Phone_num,
-                            is_agent = otherUser.Id_agent
-                        } : null,
+                        other_user = otherUser != null ? new { id = otherUser.Id, name = otherUser.Fio, email = otherUser.Email, phone = otherUser.Phone_num, is_agent = otherUser.Id_agent } : null,
                         house = houseInfoObj,
                         messages = chat.Messages.Select(m => new
                         {
                             id = m.Id,
                             text = m.Text,
+                            image_url = m.ImageUrl,
                             sender_id = m.SenderId,
                             sender_name = m.Sender?.Fio ?? "Неизвестный",
                             is_own = m.SenderId == userId,
@@ -509,22 +265,16 @@ namespace RentApp.API.Controllers
                             date = m.CreatedAt.ToString("yyyy-MM-dd")
                         }).ToList(),
                         created_at = chat.CreatedAt,
-                        total_messages = await _context.Messages
-                            .CountAsync(m => m.ChatId == chatId),
+                        total_messages = await _context.Messages.CountAsync(m => m.ChatId == chatId),
                         can_load_more = chat.Messages.Count >= 100
                     }
                 };
-
                 return Ok(response);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Ошибка при получении чата {chatId}");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Внутренняя ошибка сервера",
-                    detailed = ex.Message
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
@@ -534,15 +284,10 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
-                var hasAccess = await _context.Chats
-                    .AnyAsync(c => c.Id == chatId && 
-                                  (c.User1Id == userId || c.User2Id == userId));
-
-                if (!hasAccess)
-                    return NotFound(new { success = false, message = "Чат не найден" });
+                var hasAccess = await _context.Chats.AnyAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
+                if (!hasAccess) return NotFound(new { success = false, message = "Чат не найден" });
 
                 var messages = await _context.Messages
                     .Include(m => m.Sender)
@@ -554,8 +299,9 @@ namespace RentApp.API.Controllers
                     {
                         id = m.Id,
                         text = m.Text,
+                        image_url = m.ImageUrl,
                         sender_id = m.SenderId,
-                        sender_name = m.Sender.Fio,
+                        sender_name = m.Sender!.Fio,
                         is_own = m.SenderId == userId,
                         is_read = m.IsRead,
                         created_at = m.CreatedAt,
@@ -565,29 +311,13 @@ namespace RentApp.API.Controllers
                     .OrderBy(m => m.created_at)
                     .ToListAsync();
 
-                var totalMessages = await _context.Messages
-                    .CountAsync(m => m.ChatId == chatId);
-
-                return Ok(new
-                {
-                    success = true,
-                    data = messages,
-                    pagination = new
-                    {
-                        skip = skip,
-                        take = take,
-                        total = totalMessages,
-                        has_more = (skip + take) < totalMessages
-                    }
-                });
+                var total = await _context.Messages.CountAsync(m => m.ChatId == chatId);
+                return Ok(new { success = true, data = messages, pagination = new { skip, take, total, has_more = (skip + take) < total } });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Ошибка при получении сообщений чата {chatId}");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Внутренняя ошибка сервера"
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
@@ -597,60 +327,26 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > 2000)
+                    return BadRequest(new { success = false, message = "Некорректное сообщение" });
 
-                if (string.IsNullOrWhiteSpace(request.Text))
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Сообщение не может быть пустым" 
-                    });
-
-                if (request.Text.Length > 2000)
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Сообщение слишком длинное (максимум 2000 символов)" 
-                    });
-
-                var chat = await _context.Chats
-                    .Include(c => c.User1)
-                    .Include(c => c.User2)
-                    .FirstOrDefaultAsync(c => c.Id == chatId && 
-                                             (c.User1Id == userId || c.User2Id == userId));
-
-                if (chat == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Чат не найден или у вас нет доступа" 
-                    });
+                var chat = await _context.Chats.Include(c => c.User1).Include(c => c.User2)
+                    .FirstOrDefaultAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
+                if (chat == null) return NotFound(new { success = false, message = "Чат не найден" });
 
                 var currentUser = await _context.Users.FindAsync(userId);
                 var otherUser = chat.User1Id == userId ? chat.User2 : chat.User1;
 
-                // Проверяем, не является ли текущий пользователь администратором
                 if (currentUser?.Email?.ToLower() == "admin@gmail.com")
                 {
-                    // Администратор может отвечать только если:
-                    // 1. Это ответ в существующем диалоге
-                    // 2. Другой пользователь не администратор
                     if (otherUser?.Email?.ToLower() == "admin@gmail.com")
-                    {
-                        return BadRequest(new { 
-                            success = false, 
-                            message = "Администратор не может писать самому себе" 
-                        });
-                    }
+                        return BadRequest(new { success = false, message = "Администратор не может писать самому себе" });
                 }
                 else
                 {
-                    // Обычный пользователь не может писать администратору
                     if (otherUser?.Email?.ToLower() == "admin@gmail.com")
-                    {
-                        return BadRequest(new { 
-                            success = false, 
-                            message = "Вы не можете написать администратору" 
-                        });
-                    }
+                        return BadRequest(new { success = false, message = "Вы не можете написать администратору" });
                 }
 
                 var message = new Message
@@ -661,28 +357,106 @@ namespace RentApp.API.Controllers
                     IsRead = false,
                     CreatedAt = DateTime.UtcNow
                 };
-
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Отправлено сообщение: Chat={chatId}, Sender={userId}, Length={request.Text.Length}");
-
-                return Ok(new { 
-                    success = true, 
-                    data = new { 
-                        message_id = message.Id,
-                        created_at = message.CreatedAt
-                    } 
-                });
+                return Ok(new { success = true, data = new { message_id = message.Id, created_at = message.CreatedAt } });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Ошибка при отправке сообщения в чат {chatId}");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось отправить сообщение",
-                    detailed = ex.Message
+                return StatusCode(500, new { success = false, message = "Не удалось отправить" });
+            }
+        }
+
+        [HttpDelete("{chatId}/messages/{messageId}")]
+        public async Task<IActionResult> DeleteMessage(int chatId, int messageId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+
+                var message = await _context.Messages
+                    .Include(m => m.Chat)
+                    .FirstOrDefaultAsync(m => m.Id == messageId && m.ChatId == chatId);
+                if (message == null) return NotFound(new { success = false, message = "Сообщение не найдено" });
+                if (message.SenderId != userId)
+                    return Forbid("Вы можете удалять только свои сообщения");
+
+                var hasAccess = message.Chat.User1Id == userId || message.Chat.User2Id == userId;
+                if (!hasAccess) return Forbid("Нет доступа к чату");
+
+                _context.Messages.Remove(message);
+                await _context.SaveChangesAsync();
+                return Ok(new { success = true, message = "Сообщение удалено" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при удалении сообщения");
+                return StatusCode(500, new { success = false, message = "Не удалось удалить сообщение" });
+            }
+        }
+
+        [HttpPost("{chatId}/upload-image")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        public async Task<IActionResult> UploadImage(int chatId, IFormFile file, [FromForm] string? text)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+
+                if (file == null || file.Length == 0)
+                    return BadRequest(new { success = false, message = "Файл не выбран" });
+
+                var allowed = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var ext = Path.GetExtension(file.FileName).ToLower();
+                if (!allowed.Contains(ext))
+                    return BadRequest(new { success = false, message = "Разрешены только изображения" });
+
+                var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
+                if (chat == null) return NotFound(new { success = false, message = "Чат не найден" });
+
+                var uploadResult = await _cloudinaryService.UploadImageAsync(file);
+                if (uploadResult == null)
+                    return BadRequest(new { success = false, message = "Ошибка загрузки изображения" });
+
+                var message = new Message
+                {
+                    ChatId = chatId,
+                    SenderId = userId,
+                    Text = string.IsNullOrWhiteSpace(text) ? "" : text.Trim(),
+                    ImageUrl = uploadResult.Secure_url,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _context.Messages.AddAsync(message);
+                await _context.SaveChangesAsync();
+
+                var sender = await _context.Users.FindAsync(userId);
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        id = message.Id,
+                        text = message.Text,
+                        image_url = message.ImageUrl,
+                        sender_id = message.SenderId,
+                        sender_name = sender?.Fio ?? "Вы",
+                        is_own = true,
+                        is_read = false,
+                        created_at = message.CreatedAt,
+                        time = message.CreatedAt.ToString("HH:mm"),
+                        date = message.CreatedAt.ToString("yyyy-MM-dd")
+                    }
                 });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка загрузки изображения в чат {ChatId}", chatId);
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
@@ -692,51 +466,23 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
-                var chat = await _context.Chats
-                    .FirstOrDefaultAsync(c => c.Id == chatId && 
-                                             (c.User1Id == userId || c.User2Id == userId));
+                var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
+                if (chat == null) return NotFound(new { success = false, message = "Чат не найден" });
 
-                if (chat == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Чат не найден" 
-                    });
-
-                var unreadMessages = await _context.Messages
-                    .Where(m => m.ChatId == chatId && 
-                               !m.IsRead && 
-                               m.SenderId != userId)
-                    .ToListAsync();
-
-                if (unreadMessages.Any())
+                var unread = await _context.Messages.Where(m => m.ChatId == chatId && !m.IsRead && m.SenderId != userId).ToListAsync();
+                if (unread.Any())
                 {
-                    foreach (var message in unreadMessages)
-                    {
-                        message.IsRead = true;
-                    }
-
+                    foreach (var m in unread) m.IsRead = true;
                     await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"Помечено как прочитано: {unreadMessages.Count} сообщений в чате {chatId}");
                 }
-
-                return Ok(new { 
-                    success = true, 
-                    data = new { 
-                        marked_count = unreadMessages.Count 
-                    } 
-                });
+                return Ok(new { success = true, data = new { marked_count = unread.Count } });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Ошибка при пометке сообщений как прочитанных в чате {chatId}");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось обновить статус сообщений"
-                });
+                _logger.LogError(ex, "Ошибка при пометке сообщений как прочитанных");
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
@@ -746,42 +492,23 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
-                var unreadMessages = await _context.Messages
+                var unread = await _context.Messages
                     .Include(m => m.Chat)
-                    .Where(m => !m.IsRead && 
-                               m.SenderId != userId && 
-                               (m.Chat.User1Id == userId || m.Chat.User2Id == userId))
+                    .Where(m => !m.IsRead && m.SenderId != userId && (m.Chat.User1Id == userId || m.Chat.User2Id == userId))
                     .ToListAsync();
-
-                if (unreadMessages.Any())
+                if (unread.Any())
                 {
-                    foreach (var message in unreadMessages)
-                    {
-                        message.IsRead = true;
-                    }
-
+                    foreach (var m in unread) m.IsRead = true;
                     await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"Помечено как прочитано: {unreadMessages.Count} сообщений для пользователя {userId}");
                 }
-
-                return Ok(new { 
-                    success = true, 
-                    data = new { 
-                        marked_count = unreadMessages.Count 
-                    } 
-                });
+                return Ok(new { success = true, data = new { marked_count = unread.Count } });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при пометке всех чатов как прочитанных");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось обновить статус сообщений"
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
@@ -791,29 +518,17 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
                 var count = await _context.Messages
                     .Include(m => m.Chat)
-                    .CountAsync(m => !m.IsRead && 
-                                    m.SenderId != userId && 
-                                    (m.Chat.User1Id == userId || m.Chat.User2Id == userId));
-
-                return Ok(new { 
-                    success = true, 
-                    data = new { 
-                        count = count 
-                    } 
-                });
+                    .CountAsync(m => !m.IsRead && m.SenderId != userId && (m.Chat.User1Id == userId || m.Chat.User2Id == userId));
+                return Ok(new { success = true, data = new { count } });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении количества непрочитанных сообщений");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось получить количество сообщений"
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
@@ -823,36 +538,19 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
-                var chat = await _context.Chats
-                    .FirstOrDefaultAsync(c => c.Id == chatId && 
-                                             (c.User1Id == userId || c.User2Id == userId));
-
-                if (chat == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Чат не найден или у вас нет доступа" 
-                    });
+                var chat = await _context.Chats.FirstOrDefaultAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
+                if (chat == null) return NotFound(new { success = false, message = "Чат не найден" });
 
                 _context.Chats.Remove(chat);
                 await _context.SaveChangesAsync();
-
-                _logger.LogInformation($"Удален чат: {chatId} пользователем {userId}");
-
-                return Ok(new { 
-                    success = true, 
-                    message = "Чат успешно удален" 
-                });
+                return Ok(new { success = true, message = "Чат удалён" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Ошибка при удалении чата {chatId}");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось удалить чат"
-                });
+                _logger.LogError(ex, "Ошибка при удалении чата");
+                return StatusCode(500, new { success = false, message = "Не удалось удалить чат" });
             }
         }
 
@@ -862,66 +560,33 @@ namespace RentApp.API.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                if (userId == 0)
-                    return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+                if (userId == 0) return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
 
                 var chat = await _context.Chats
-                    .Include(c => c.User1)
-                    .Include(c => c.User2)
-                    .Include(c => c.House)
-                    .ThenInclude(h => h.HouseInfo)
-                    .FirstOrDefaultAsync(c => c.Id == chatId && 
-                                             (c.User1Id == userId || c.User2Id == userId));
-
-                if (chat == null)
-                    return NotFound(new { 
-                        success = false, 
-                        message = "Чат не найден" 
-                    });
+                    .Include(c => c.User1).Include(c => c.User2)
+                    .Include(c => c.House).ThenInclude(h => h.HouseInfo)
+                    .FirstOrDefaultAsync(c => c.Id == chatId && (c.User1Id == userId || c.User2Id == userId));
+                if (chat == null) return NotFound(new { success = false, message = "Чат не найден" });
 
                 var otherUser = chat.User1Id == userId ? chat.User2 : chat.User1;
-                
-                // Для чатов с агентом (без дома)
-                object houseInfoObj = null;
-                // ИЗМЕНЕНИЕ: Проверяем не на > 0, а на наличие значения
+                object? houseInfoObj = null;
                 if (chat.HouseId.HasValue && chat.House != null)
                 {
-                    var houseInfo = chat.House.HouseInfo;
+                    var hi = chat.House.HouseInfo;
                     houseInfoObj = new
                     {
                         id = chat.House.Id,
                         title = chat.House.HouseType,
                         price = chat.House.Price,
                         area = chat.House.Area,
-                        address = houseInfo != null ? 
-                            $"{houseInfo.City}, {houseInfo.Street}" : 
-                            "Адрес не указан",
-                        city = houseInfo?.City,
-                        street = houseInfo?.Street,
-                        rooms = houseInfo?.Rooms,
-                        main_photo = await _context.PhotoHouses
-                            .Where(p => p.IdHouse == chat.House.Id)
-                            .Select(p => p.Photo)
-                            .FirstOrDefaultAsync()
+                        address = hi != null ? $"{hi.City}, {hi.Street}" : "Адрес не указан",
+                        city = hi?.City, street = hi?.Street, rooms = hi?.Rooms,
+                        main_photo = await _context.PhotoHouses.Where(p => p.IdHouse == chat.House.Id).Select(p => p.Photo).FirstOrDefaultAsync()
                     };
                 }
-
-                var unreadCount = await _context.Messages
-                    .CountAsync(m => m.ChatId == chatId && 
-                                    !m.IsRead && 
-                                    m.SenderId != userId);
-
-                var lastMessage = await _context.Messages
-                    .Where(m => m.ChatId == chatId)
-                    .OrderByDescending(m => m.CreatedAt)
-                    .Select(m => new
-                    {
-                        text = m.Text,
-                        created_at = m.CreatedAt,
-                        sender_id = m.SenderId,
-                        is_own = m.SenderId == userId
-                    })
-                    .FirstOrDefaultAsync();
+                var unread = await _context.Messages.CountAsync(m => m.ChatId == chatId && !m.IsRead && m.SenderId != userId);
+                var lastMsg = await _context.Messages.Where(m => m.ChatId == chatId).OrderByDescending(m => m.CreatedAt)
+                    .Select(m => new { m.Text, m.CreatedAt, m.SenderId, is_own = m.SenderId == userId }).FirstOrDefaultAsync();
 
                 return Ok(new
                 {
@@ -929,41 +594,26 @@ namespace RentApp.API.Controllers
                     data = new
                     {
                         id = chat.Id,
-                        other_user = otherUser != null ? new
-                        {
-                            id = otherUser.Id,
-                            name = otherUser.Fio,
-                            email = otherUser.Email,
-                            phone = otherUser.Phone_num,
-                            is_agent = otherUser.Id_agent
-                        } : null,
+                        other_user = otherUser != null ? new { id = otherUser.Id, name = otherUser.Fio, email = otherUser.Email, phone = otherUser.Phone_num, is_agent = otherUser.Id_agent } : null,
                         house = houseInfoObj,
-                        last_message = lastMessage,
-                        unread_count = unreadCount,
+                        last_message = lastMsg,
+                        unread_count = unread,
                         created_at = chat.CreatedAt,
-                        total_messages = await _context.Messages
-                            .CountAsync(m => m.ChatId == chatId)
+                        total_messages = await _context.Messages.CountAsync(m => m.ChatId == chatId)
                     }
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Ошибка при получении информации о чате {chatId}");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Не удалось получить информацию о чате"
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка" });
             }
         }
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                return 0;
-            }
-            return userId;
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.TryParse(claim, out int id) ? id : 0;
         }
     }
 

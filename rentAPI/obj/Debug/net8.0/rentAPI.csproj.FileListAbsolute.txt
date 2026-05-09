@@ -136,3 +136,5 @@ C:\Users\TestUSER\rent-app\rentAPI\obj\Debug\net8.0\rentAPI.pdb
 C:\Users\TestUSER\rent-app\rentAPI\obj\Debug\net8.0\rentAPI.genruntimeconfig.cache
 C:\Users\TestUSER\rent-app\rentAPI\obj\Debug\net8.0\ref\rentAPI.dll
 C:\Users\TestUSER\rent-app\rentAPI\bin\Debug\net8.0\rentAPI.staticwebassets.runtime.json
+C:\Users\TestUSER\rent-app\rentAPI\bin\Debug\net8.0\CloudinaryDotNet.dll
+C:\Users\TestUSER\rent-app\rentAPI\bin\Debug\net8.0\Newtonsoft.Json.dll

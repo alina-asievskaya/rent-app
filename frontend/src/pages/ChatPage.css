@@ -765,3 +765,27 @@
   opacity: 1;
   visibility: visible;
 }
+.message-delete-btn {
+  background: none;
+  border: none;
+  color: rgba(0,0,0,0.3);
+  cursor: pointer;
+  margin-left: 8px;
+  transition: color 0.2s;
+}
+.message-delete-btn:hover {
+  color: #dc3545;
+}
+.message-wrapper.own .message-delete-btn {
+  color: rgba(255,255,255,0.6);
+}
+.message-wrapper.own .message-delete-btn:hover {
+  color: #ffcccc;
+}
+
+.emoji-picker-container {
+  position: absolute;
+  bottom: 80px;
+  left: 20px;
+  z-index: 1000;
+}

@@ -13,5 +13,7 @@ namespace RentApp.API.DTOs
         public string Photo { get; set; } = string.Empty;
         public int ReviewsCount { get; set; }
         public bool IsAgent { get; set; } = true;
+
+        public string DisplayName { get; set; } = string.Empty;
     }
 }

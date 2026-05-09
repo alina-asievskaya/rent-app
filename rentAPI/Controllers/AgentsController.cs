@@ -224,40 +224,41 @@ namespace RentApp.API.Controllers
             }
         }
 
+        // Изменённый метод UpdateAgent с проверкой прав
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdateAgent(int id, [FromBody] UpdateAgentDto updateDto)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(new { 
-                        success = false, 
-                        message = "Неверные данные", 
-                        errors = ModelState.Values
-                            .SelectMany(v => v.Errors)
-                            .Select(e => e.ErrorMessage) 
-                    });
+            if (!ModelState.IsValid)
+    {
+        var errors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage);
+        _logger.LogError("ModelState invalid: {Errors}", string.Join(", ", errors));
+        return BadRequest(new { success = false, message = "Ошибка валидации", errors });
+    }
 
-                var result = await _agentService.UpdateAgentAsync(id, updateDto);
-                if (!result)
-                    return NotFound(new { success = false, message = "Агент не найден" });
+            // Загружаем агента вместе с пользователем
+            var agent = await _context.Agents
+                .Include(a => a.User)
+                .FirstOrDefaultAsync(a => a.Id == id);
 
-                return Ok(new { 
-                    success = true, 
-                    message = "Данные агента успешно обновлены",
-                    agentId = id 
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ошибка при обновлении агента с ID {Id}", id);
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Ошибка сервера при обновлении данных",
-                    error = ex.Message 
-                });
-            }
+            if (agent == null)
+                return NotFound(new { success = false, message = "Агент не найден" });
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && agent.UserId != userId)
+                return Forbid();  // Только владелец или админ
+
+            var result = await _agentService.UpdateAgentAsync(id, updateDto);
+            if (!result)
+                return BadRequest(new { success = false, message = "Не удалось обновить данные агента" });
+
+            return Ok(new { success = true, message = "Данные агента обновлены" });
         }
 
         [HttpGet("{id}/details")]
@@ -314,5 +315,27 @@ namespace RentApp.API.Controllers
                 });
             }
         }
+
+        // Эндпоинт для получения профиля текущего пользователя-агента
+        [HttpGet("my-profile")]
+        [Authorize]
+        public async Task<IActionResult> GetMyAgentProfile()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
+
+            var agent = await _context.Agents
+                .Include(a => a.User)
+                .FirstOrDefaultAsync(a => a.UserId == userId);
+
+            if (agent == null)
+                return NotFound(new { success = false, message = "Вы не являетесь агентом" });
+
+            var dto = await _agentService.GetAgentDetailsAsync(agent.Id);
+            return Ok(new { success = true, data = dto });
+        }
+
+        
     }
 }

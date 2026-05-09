@@ -10,7 +10,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
 
-
 interface UserData {
   id: number;
   email: string;
@@ -125,7 +124,21 @@ interface ChatApiResponse {
   data?: ChatData[];
 }
 
-// ========== Компонент ==========
+// Новый интерфейс для профиля агента
+interface AgentProfileData {
+  id: number;
+  userId: number;
+  fio: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  experience: number;
+  rating: number;
+  photo: string;
+  reviewsCount: number;
+  displayName: string;
+}
+
 const ProfilePage: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -149,6 +162,13 @@ const ProfilePage: React.FC = () => {
   const [userBookingsLoading, setUserBookingsLoading] = useState(false);
   const [historyBookings, setHistoryBookings] = useState<UserBooking[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Состояния для редактирования профиля агента
+  const [agentData, setAgentData] = useState<AgentProfileData | null>(null);
+  const [editingAgent, setEditingAgent] = useState(false);
+  const [editedAgent, setEditedAgent] = useState<Partial<AgentProfileData>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   const navigate = useNavigate();
 
   const topicTranslations: Record<string, string> = {
@@ -158,7 +178,7 @@ const ProfilePage: React.FC = () => {
     other: 'Другое',
   };
 
-  // ========== API вызовы (полностью сохранены) ==========
+  // ========== API вызовы ==========
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -184,6 +204,90 @@ const ProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const fetchAgentProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5213/api/agents/my-profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setAgentData(result.data);
+          setEditedAgent(result.data);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const uploadToCloudinary = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'rent_app');
+    formData.append('cloud_name', 'dnblbt7wc');
+
+    try {
+      const response = await fetch('https://api.cloudinary.com/v1_1/dnblbt7wc/image/upload', {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) throw new Error('Upload failed');
+      const data = await response.json();
+      return data.secure_url;
+    } catch (error) {
+      console.error(error);
+      setMessage({ text: 'Ошибка загрузки фото', type: 'error' });
+      return null;
+    }
+  };
+
+  const handleAgentPhotoUpload = async (file: File) => {
+    setUploadingPhoto(true);
+    const url = await uploadToCloudinary(file);
+    if (url) {
+      setEditedAgent(prev => ({ ...prev, photo: url }));
+    }
+    setUploadingPhoto(false);
+  };
+
+  const handleAgentSave = async () => {
+  if (!agentData) return;
+  try {
+    const token = localStorage.getItem('token');
+    const payload = {
+      Fio: editedAgent.fio,
+      Phone: editedAgent.phone,
+      Specialization: editedAgent.specialization,
+      Experience: editedAgent.experience,
+      Photo: editedAgent.photo,
+      DisplayName: editedAgent.displayName
+    };
+    
+    const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      setMessage({ text: 'Данные агента обновлены', type: 'success' });
+      setEditingAgent(false);
+      fetchAgentProfile();
+      fetchUserData();
+      setTimeout(() => setMessage({ text: '', type: 'success' }), 3000);
+    } else {
+      setMessage({ text: result.message || 'Ошибка обновления', type: 'error' });
+    }
+  } catch (error) {
+    console.error(error);
+    setMessage({ text: 'Ошибка соединения', type: 'error' });
+  }
+};
 
   const fetchUserAds = async () => {
     try {
@@ -541,15 +645,25 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (userData && userData.id_agent) {
+      fetchAgentProfile();
+    }
+  }, [userData]);
+
   useEffect(() => {
     if (activeTab === 'ads' && userData) fetchUserAds();
   }, [activeTab, userData]);
+
   useEffect(() => {
     if (activeTab === 'support' && userData) fetchUserFeedback();
   }, [activeTab, userData]);
+
   useEffect(() => {
     if (activeTab === 'chats' && userData) fetchUserChats();
   }, [activeTab, userData]);
+
   useEffect(() => {
     if (activeTab === 'requests' && userData) {
       fetchIncomingRequests();
@@ -594,7 +708,6 @@ const ProfilePage: React.FC = () => {
             {userData.id_agent ? 'Агент недвижимости' : 'Пользователь'}
           </div>
         </div>
-        {/* <Header />  ❌ Удалён, так как Header уже есть в App */}
         <nav className="profilepage-nav">
           <button className={`profilepage-nav-item ${activeTab === 'profile' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('profile')}>
             <FontAwesomeIcon icon={faUser} className="profilepage-nav-icon" />
@@ -635,7 +748,6 @@ const ProfilePage: React.FC = () => {
         </nav>
       </div>
 
-      {/* Остальная часть компонента без изменений... */}
       <div className="profilepage-content">
         {message.text && (
           <div className={`profilepage-message ${message.type}`}>
@@ -708,6 +820,93 @@ const ProfilePage: React.FC = () => {
                   <button className="profilepage-btn-primary profilepage-save-btn" onClick={handleSaveChanges}>
                     <FontAwesomeIcon icon={faSave} /> Сохранить изменения
                   </button>
+                </div>
+              )}
+
+              {/* Блок редактирования профиля агента – появляется только если пользователь является агентом */}
+              
+              {userData.id_agent && agentData && (
+                <div className="profilepage-info-section" style={{ marginTop: '40px' }}>
+                  <h3 className="profilepage-section-title">Профиль агента</h3>
+                  <div className="profilepage-info-stack">
+                    <div className="profilepage-info-stack-item">
+                      <div className="profilepage-stack-header">
+                        <label className="profilepage-stack-label">О себе / Специализация</label>
+                        {editingAgent ? (
+                          <textarea
+                            value={editedAgent.displayName || ''}
+                            onChange={(e) => setEditedAgent({ ...editedAgent, displayName: e.target.value })}
+                            className="profilepage-stack-input"
+                            rows={6}
+                            placeholder="Расскажите о себе, своём опыте, специализации..."
+                          />
+                        ) : (
+                          <div className="profilepage-stack-value" style={{ whiteSpace: 'pre-wrap' }}>
+                            {agentData.displayName || 'Не указано'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="profilepage-stack-divider" />
+                    
+                    {/* Опыт (можно оставить, если нужно) */}
+                    <div className="profilepage-info-stack-item">
+                      <div className="profilepage-stack-header">
+                        <label className="profilepage-stack-label">Опыт (лет)</label>
+                        {editingAgent ? (
+                          <input
+                            type="number"
+                            value={editedAgent.experience || 0}
+                            onChange={(e) => setEditedAgent({ ...editedAgent, experience: parseInt(e.target.value) || 0 })}
+                            className="profilepage-stack-input"
+                          />
+                        ) : (
+                          <div className="profilepage-stack-value">{agentData.experience} лет</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="profilepage-stack-divider" />
+                    
+                    {/* Фото агента */}
+                    <div className="profilepage-info-stack-item">
+                      <div className="profilepage-stack-header">
+                        <label className="profilepage-stack-label">Фото агента</label>
+                        {editingAgent ? (
+                          <div className="profilepage-photo-edit">
+                            {editedAgent.photo ? (
+                              <div className="profilepage-photo-preview">
+                                <img src={editedAgent.photo} alt="Фото агента" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
+                                <button type="button" onClick={() => setEditedAgent({ ...editedAgent, photo: '' })} style={{ marginLeft: '10px' }}>Удалить</button>
+                              </div>
+                            ) : (
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) handleAgentPhotoUpload(e.target.files[0]);
+                                }}
+                              />
+                            )}
+                            {uploadingPhoto && <div className="profilepage-spinner-small"></div>}
+                          </div>
+                        ) : (
+                          <div className="profilepage-stack-value">
+                            {agentData.photo ? (
+                              <img src={agentData.photo} alt="Фото агента" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
+                            ) : 'Нет фото'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {editingAgent ? (
+                    <div className="profilepage-actions">
+                      <button className="profilepage-btn-primary" onClick={handleAgentSave}>Сохранить</button>
+                      <button className="profilepage-btn-secondary" onClick={() => { setEditingAgent(false); setEditedAgent(agentData); }}>Отмена</button>
+                    </div>
+                  ) : (
+                    <button className="profilepage-btn-secondary" onClick={() => setEditingAgent(true)}>Редактировать профиль агента</button>
+                  )}
                 </div>
               )}
             </div>

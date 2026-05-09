@@ -43,8 +43,11 @@ namespace RentApp.API.DTOs
         [MaxLength(200)]
         public string Position { get; set; } = string.Empty;
         
-        // Добавляем недостающее свойство
         public bool IsAgent { get; set; } = true;
+        
+        // НОВОЕ ПОЛЕ - DisplayName из БД
+        [MaxLength(2000)]
+        public string DisplayName { get; set; } = string.Empty;
     }
 
     public class AgentCatalogDto

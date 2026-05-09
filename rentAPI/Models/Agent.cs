@@ -35,7 +35,10 @@ namespace RentApp.API.Models
         [Column("reviews_count")]
         public int ReviewsCount { get; set; } = 0;
 
-        // Навигационные свойства
+        [MaxLength(2000)]
+        [Column("display_name")]
+        public string DisplayName { get; set; } = string.Empty;
+
         public User User { get; set; } = null!;
         public ICollection<AgentReview> Reviews { get; set; } = new List<AgentReview>();
     }

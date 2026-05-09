@@ -25,7 +25,6 @@ namespace RentApp.API.Services
                     .Where(a => a.User.Id_agent)
                     .AsQueryable();
 
-                // Поиск
                 if (!string.IsNullOrEmpty(filter.Search))
                 {
                     var search = filter.Search.ToLower();
@@ -35,22 +34,17 @@ namespace RentApp.API.Services
                         (a.User.Phone_num != null && a.User.Phone_num.ToLower().Contains(search)));
                 }
 
-                // Фильтр по специализации
                 if (!string.IsNullOrEmpty(filter.Specialty) && filter.Specialty != "Все")
                 {
                     query = query.Where(a => a.Specialization == filter.Specialty);
                 }
 
-                // Фильтр по опыту
                 if (!string.IsNullOrEmpty(filter.Experience) && filter.Experience != "Любой")
                 {
                     var (minExp, maxExp) = ParseExperienceRange(filter.Experience);
-                    query = query.Where(a =>
-                        a.Experience >= minExp &&
-                        a.Experience <= maxExp);
+                    query = query.Where(a => a.Experience >= minExp && a.Experience <= maxExp);
                 }
 
-                // Фильтр по рейтингу
                 if (!string.IsNullOrEmpty(filter.Rating) && filter.Rating != "Любой")
                 {
                     if (double.TryParse(filter.Rating.Replace("+", ""), out var minRating))
@@ -59,7 +53,6 @@ namespace RentApp.API.Services
                     }
                 }
 
-                // Сортировка
                 query = filter.SortBy switch
                 {
                     "rating-desc" => query.OrderByDescending(a => a.Rating),
@@ -68,14 +61,12 @@ namespace RentApp.API.Services
                     _ => query.OrderByDescending(a => a.Rating)
                 };
 
-                // Пагинация
                 var totalCount = await query.CountAsync();
                 var agents = await query
                     .Skip((filter.Page - 1) * filter.PageSize)
                     .Take(filter.PageSize)
                     .ToListAsync();
 
-                // Получаем уникальные специализации для фильтров
                 var specialties = await GetSpecialtiesAsync();
 
                 var result = new AgentCatalogDto
@@ -111,7 +102,6 @@ namespace RentApp.API.Services
 
         private AgentDto MapToDto(Agent agent)
         {
-            // Парсинг специализаций
             var specialties = new List<string>();
             if (!string.IsNullOrEmpty(agent.Specialization))
             {
@@ -127,12 +117,10 @@ namespace RentApp.API.Services
                 specialties.Add(agent.Specialization);
             }
 
-            // Создаем позицию на основе специализации
             var position = specialties.Count > 0 
                 ? $"Агент по {string.Join(", ", specialties.Take(2))}"
                 : "Агент по недвижимости";
 
-            // Создаем описание
             var description = $"Специализируюсь на {string.Join(", ", specialties)}. " +
                              $"Опыт работы {agent.Experience} лет. " +
                              $"Рейтинг: {agent.Rating}/5.";
@@ -154,18 +142,15 @@ namespace RentApp.API.Services
                 Specialties = specialties,
                 Description = description,
                 Position = position,
-                IsAgent = true
+                IsAgent = true,
+                DisplayName = agent.DisplayName   // <-- ДОБАВЛЕНО
             };
         }
 
         private string GetDefaultAvatar(string name)
         {
             var hash = name.GetHashCode();
-            var colors = new[]
-            {
-                "1abc9c", "2ecc71", "3498db", "9b59b6", 
-                "e74c3c", "f39c12", "d35400", "c0392b"
-            };
+            var colors = new[] { "1abc9c", "2ecc71", "3498db", "9b59b6", "e74c3c", "f39c12", "d35400", "c0392b" };
             var color = colors[Math.Abs(hash) % colors.Length];
             return $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(name)}&background={color}&color=fff&size=400";
         }
@@ -179,10 +164,8 @@ namespace RentApp.API.Services
 
             if (agent == null) return null;
 
-            // Обновляем счетчик отзывов
             agent.ReviewsCount = agent.Reviews?.Count ?? 0;
             
-            // Сохраняем изменения (если нужно обновить в базе)
             if (_context.Entry(agent).State == EntityState.Modified)
             {
                 await _context.SaveChangesAsync();
@@ -191,7 +174,6 @@ namespace RentApp.API.Services
             return MapToDto(agent);
         }
 
-        // Метод для получения деталей агента (только UserId и основные данные)
         public async Task<AgentDetailsDto?> GetAgentDetailsAsync(int id)
         {
             var agent = await _context.Agents
@@ -203,8 +185,8 @@ namespace RentApp.API.Services
             return new AgentDetailsDto
             {
                 Id = agent.Id,
-                UserId = agent.UserId, // Это UserId из таблицы Users
-                Fio = agent.User?.Fio ?? "Неизвестный агент",
+                UserId = agent.UserId,
+                Fio = agent.User?.Fio ?? "",
                 Email = agent.User?.Email ?? "",
                 Phone = agent.User?.Phone_num ?? "",
                 Specialization = agent.Specialization,
@@ -212,7 +194,8 @@ namespace RentApp.API.Services
                 Rating = agent.Rating,
                 Photo = agent.Photo,
                 ReviewsCount = agent.ReviewsCount,
-                IsAgent = true
+                IsAgent = true,
+                DisplayName = agent.DisplayName
             };
         }
 
@@ -220,13 +203,10 @@ namespace RentApp.API.Services
         {
             try
             {
-                // Проверяем, существует ли пользователь
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Email == createDto.Email);
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == createDto.Email);
 
                 if (user == null)
                 {
-                    // Создаем нового пользователя
                     user = new User
                     {
                         Email = createDto.Email,
@@ -240,12 +220,10 @@ namespace RentApp.API.Services
                 }
                 else
                 {
-                    // Обновляем флаг агента
                     user.Id_agent = true;
                     _context.Users.Update(user);
                 }
 
-                // Создаем агента
                 var agent = new Agent
                 {
                     UserId = user.Id,
@@ -255,6 +233,11 @@ namespace RentApp.API.Services
                     Rating = createDto.Rating
                 };
 
+                if (string.IsNullOrWhiteSpace(createDto.DisplayName))
+                    agent.DisplayName = $"{user.Fio} - {createDto.Specialization}";
+                else
+                    agent.DisplayName = createDto.DisplayName;
+
                 await _context.Agents.AddAsync(agent);
                 await _context.SaveChangesAsync();
 
@@ -263,6 +246,53 @@ namespace RentApp.API.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при создании агента");
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateAgentAsync(int id, UpdateAgentDto updateDto)
+        {
+            try
+            {
+                var agent = await _context.Agents
+                    .Include(a => a.User)
+                    .FirstOrDefaultAsync(a => a.Id == id);
+
+                if (agent == null)
+                    return false;
+
+                if (!string.IsNullOrEmpty(updateDto.Specialization))
+                    agent.Specialization = updateDto.Specialization;
+
+                if (updateDto.Experience.HasValue)
+                    agent.Experience = updateDto.Experience.Value;
+
+                if (!string.IsNullOrEmpty(updateDto.Photo))
+                    agent.Photo = updateDto.Photo;
+
+                if (updateDto.Rating.HasValue)
+                    agent.Rating = updateDto.Rating.Value;
+
+                if (!string.IsNullOrEmpty(updateDto.DisplayName))
+                    agent.DisplayName = updateDto.DisplayName;
+
+                if (agent.User != null)
+                {
+                    if (!string.IsNullOrEmpty(updateDto.Fio))
+                        agent.User.Fio = updateDto.Fio;
+
+                    if (!string.IsNullOrEmpty(updateDto.Phone))
+                        agent.User.Phone_num = updateDto.Phone;
+                }
+
+                _context.Agents.Update(agent);
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при обновлении агента");
                 return false;
             }
         }
@@ -313,15 +343,12 @@ namespace RentApp.API.Services
         public async Task<bool> AddAgentReviewAsync(int agentId, int userId, CreateAgentReviewDto createDto)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
-            
             try
             {
-                // Проверяем, существует ли агент
                 var agent = await _context.Agents.FindAsync(agentId);
                 if (agent == null)
                     return false;
 
-                // Создаем новый отзыв (без проверки на существующий)
                 var review = new AgentReview
                 {
                     UserId = userId,
@@ -332,13 +359,8 @@ namespace RentApp.API.Services
                 };
                 
                 await _context.AgentReviews.AddAsync(review);
-                
-                // Сохраняем изменения
                 await _context.SaveChangesAsync();
-                
-                // Пересчитываем средний рейтинг агента и количество отзывов
                 await UpdateAgentRatingAsync(agentId);
-                
                 await transaction.CommitAsync();
                 return true;
             }
@@ -361,61 +383,11 @@ namespace RentApp.API.Services
                 var agent = await _context.Agents.FindAsync(agentId);
                 if (agent != null)
                 {
-                    // Обновляем рейтинг
                     agent.Rating = Math.Round(reviews.Average(ar => ar.Rating), 1);
-                    
-                    // Обновляем количество отзывов
                     agent.ReviewsCount = reviews.Count;
-                    
                     _context.Agents.Update(agent);
                     await _context.SaveChangesAsync();
                 }
-            }
-        }
-
-        public async Task<bool> UpdateAgentAsync(int id, UpdateAgentDto updateDto)
-        {
-            try
-            {
-                var agent = await _context.Agents
-                    .Include(a => a.User)
-                    .FirstOrDefaultAsync(a => a.Id == id);
-
-                if (agent == null)
-                    return false;
-
-                // Обновляем данные агента
-                if (!string.IsNullOrEmpty(updateDto.Specialization))
-                    agent.Specialization = updateDto.Specialization;
-
-                if (updateDto.Experience.HasValue)
-                    agent.Experience = updateDto.Experience.Value;
-
-                if (!string.IsNullOrEmpty(updateDto.Photo))
-                    agent.Photo = updateDto.Photo;
-
-                if (updateDto.Rating.HasValue)
-                    agent.Rating = updateDto.Rating.Value;
-
-                // Обновляем данные пользователя
-                if (agent.User != null)
-                {
-                    if (!string.IsNullOrEmpty(updateDto.Fio))
-                        agent.User.Fio = updateDto.Fio;
-
-                    if (!string.IsNullOrEmpty(updateDto.Phone))
-                        agent.User.Phone_num = updateDto.Phone;
-                }
-
-                _context.Agents.Update(agent);
-                await _context.SaveChangesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ошибка при обновлении агента");
-                return false;
             }
         }
     }

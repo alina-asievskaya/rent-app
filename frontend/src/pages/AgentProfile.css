@@ -365,8 +365,28 @@
   color: #1B4332;
   margin-bottom: 2.5rem;
   font-size: 1.05rem;
+  
+}
+/* Полная отмена обрезания текста */
+.agent-description,
+.agent-description * {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  -webkit-line-clamp: unset !important;
+  display: block !important;
+  max-height: none !important;
+  height: auto !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
+/* Убираем возможные ограничения у родительских контейнеров */
+.about-section,
+.agent-profile-content {
+  overflow: visible !important;
+  max-height: none !important;
+}
 .specialties-section {
   margin: 2.5rem 0;
 }

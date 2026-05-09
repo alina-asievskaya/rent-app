@@ -1,4 +1,3 @@
-// RentApp.API/DTOs/UpdateAgentDto.cs
 using System.ComponentModel.DataAnnotations;
 
 namespace RentApp.API.DTOs
@@ -8,26 +7,23 @@ namespace RentApp.API.DTOs
         [MaxLength(100)]
         public string? Fio { get; set; }
 
-        [Phone(ErrorMessage = "Некорректный формат номера телефона")]
+        [Phone]
         [MaxLength(20)]
         public string? Phone { get; set; }
 
         [MaxLength(100)]
         public string? Specialization { get; set; }
 
-        [Range(0, 50, ErrorMessage = "Опыт должен быть от 0 до 50 лет")]
+        [Range(0, 50)]
         public int? Experience { get; set; }
 
         [MaxLength(500)]
         public string? Photo { get; set; }
 
-        [Range(0, 5, ErrorMessage = "Рейтинг должен быть от 0 до 5")]
+        [Range(0, 5)]
         public double? Rating { get; set; }
 
-        [MaxLength(100)]
-        public string? City { get; set; }
-
-        [MaxLength(500)]
-        public string? Bio { get; set; }
+        [MaxLength(2000)] // увеличьте длину, если нужно много текста
+        public string? DisplayName { get; set; }
     }
 }

@@ -118,6 +118,137 @@ namespace rentAPI.Migrations
                     b.ToTable("AgentReviews", (string)null);
                 });
 
+            modelBuilder.Entity("RentApp.API.Models.Booking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_booking");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Approved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("approved");
+
+                    b.Property<DateOnly>("BookingDate")
+                        .HasColumnType("date")
+                        .HasColumnName("booking_date");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<int>("HouseId")
+                        .HasColumnType("int")
+                        .HasColumnName("id_house");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("id_user");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingDate");
+
+                    b.HasIndex("HouseId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("HouseId", "BookingDate")
+                        .IsUnique();
+
+                    b.ToTable("Bookings", (string)null);
+                });
+
+            modelBuilder.Entity("RentApp.API.Models.BookingDecorationItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_booking_decoration");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("int")
+                        .HasColumnName("id_booking");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("item_name");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("price");
+
+                    b.Property<int>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("quantity");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.ToTable("BookingDecorationItems", (string)null);
+                });
+
+            modelBuilder.Entity("RentApp.API.Models.BookingFoodItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_booking_food");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("int")
+                        .HasColumnName("id_booking");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("item_name");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("price");
+
+                    b.Property<int>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("RestaurantName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("restaurant_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.ToTable("BookingFoodItems", (string)null);
+                });
+
             modelBuilder.Entity("RentApp.API.Models.Chat", b =>
                 {
                     b.Property<int>("Id")
@@ -666,6 +797,47 @@ namespace rentAPI.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("RentApp.API.Models.Booking", b =>
+                {
+                    b.HasOne("RentApp.API.Models.House", "House")
+                        .WithMany()
+                        .HasForeignKey("HouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RentApp.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("House");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RentApp.API.Models.BookingDecorationItem", b =>
+                {
+                    b.HasOne("RentApp.API.Models.Booking", "Booking")
+                        .WithMany("DecorationItems")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("RentApp.API.Models.BookingFoodItem", b =>
+                {
+                    b.HasOne("RentApp.API.Models.Booking", "Booking")
+                        .WithMany("FoodItems")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
             modelBuilder.Entity("RentApp.API.Models.Chat", b =>
                 {
                     b.HasOne("RentApp.API.Models.House", "House")
@@ -807,6 +979,13 @@ namespace rentAPI.Migrations
             modelBuilder.Entity("RentApp.API.Models.Agent", b =>
                 {
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("RentApp.API.Models.Booking", b =>
+                {
+                    b.Navigation("DecorationItems");
+
+                    b.Navigation("FoodItems");
                 });
 
             modelBuilder.Entity("RentApp.API.Models.Chat", b =>

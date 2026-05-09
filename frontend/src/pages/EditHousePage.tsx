@@ -724,7 +724,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (response.ok && result.success) {
       showNotification('Объявление успешно обновлено', 'success');
       
-      // Обновляем данные
       setTimeout(() => {
         if (token) {
           fetchHouseData(token);
@@ -841,7 +840,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <div className="form-grid">
                   <div className="form-group">
                     <label className="form-label">
-                      <span>Цена аренды в месяц</span>
+                      <span>Цена аренды в сутки</span>
                       <span className="required">*</span>
                     </label>
                     <div className="input-with-suffix">
@@ -856,7 +855,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         placeholder="50000"
                         className="form-input"
                       />
-                      <span className="suffix">Br/мес</span>
+                      <span className="suffix">Br/сутки</span>
                     </div>
                   </div>
 

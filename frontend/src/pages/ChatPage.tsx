@@ -117,7 +117,6 @@ const ChatPage: React.FC = () => {
             const isAdmin = Array.isArray(roles) ? roles.includes('Admin') : roles === 'Admin';
             setIsCurrentUserAdmin(isAdmin);
             
-            console.log('👤 Текущий пользователь:', { email, isAdmin });
           }
         }
       } catch (error) {

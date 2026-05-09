@@ -3,7 +3,6 @@ import Header from "../components/Header";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSearch,
@@ -15,7 +14,6 @@ import {
   faChevronRight
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
-
 
 interface House {
   id: number;
@@ -30,19 +28,16 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-// Партнёры: быстрые бренды + элитные рестораны Минска
 const partners = [
-  // Быстрое питание
   { name: "Мак Бай", logo: "https://fest-sbv.gck.by/media/b23f3705f42fa6e51890b5973b55e20e/b23f3705f42fa6e51890b5973b55e20e.png" },
   { name: "KFC", logo: "https://otzovik.by/wp-content/uploads/2023/08/otzyvy-o-kfc.by-kiefsi.webp" },
   { name: "Burger King", logo: "https://static.tildacdn.com/tild3261-6339-4635-a337-316364643738/Banner16.png" },
   { name: "Пицца Лисица", logo: "https://cdn.picodi.com/by/shop/thumb_300/pzz_522_001_2.png" },
   { name: "Пицца Темпо", logo: "https://expobel.by/upload/iblock/7af/p2gbh8i27s32pqt9unf226e6kwkbe5tm.jpg" },
-  { name: "Ronin", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_Apy8E2GWs48-YOZPU88OKMTGDmQ29u65xQ&s" },
-  // Элитные рестораны Минска
+  { name: "The ODI", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_Apy8E2GWs48-YOZPU88OKMTGDmQ29u65xQ&s" },
   { name: "Fabriq", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMxVuEtPNZeHvyXkfr6oXd-1hNEXVOcYZisw&s" },
   { name: "Grand Cafe", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRPgxxSQ_aBncjBOiy1sDalXl11BMtwLkm2bA&s" },
-  { name: "Ember", logo: "https://www.mastercard.by/content/dam/public/mastercardcom/by/ru/offers/mc_by_offers_800x448-ember.jpg" },
+  { name: "Louis Prima", logo: "https://www.mastercard.by/content/dam/public/mastercardcom/by/ru/offers/mc_by_offers_800x448-ember.jpg" },
 ];
 
 const Home: React.FC = () => {
@@ -143,11 +138,8 @@ const Home: React.FC = () => {
       if (response.ok) {
         setFavorites(prev => {
           const newSet = new Set(prev);
-          if (isFavorite) {
-            newSet.delete(id);
-          } else {
-            newSet.add(id);
-          }
+          if (isFavorite) newSet.delete(id);
+          else newSet.add(id);
           return newSet;
         });
       }
@@ -157,7 +149,7 @@ const Home: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number) => `${price.toLocaleString('ru-RU')} Br/мес`;
+  const formatPrice = (price: number) => `${price.toLocaleString('ru-RU')} Br/сутки`;
 
   const scrollPartners = (direction: 'left' | 'right') => {
     if (partnersScrollRef.current) {
@@ -173,81 +165,68 @@ const Home: React.FC = () => {
     <>
       <Header />
       <main className="home-page">
-        <section className="hero-modern">
-          <div className="container">
-            <div className="hero-content-modern">
-              <div className="hero-text-modern">
-                <h1 className="hero-title-modern">
-                  <span className="gradient-text">Элитная недвижимость</span>
-                  <br />для аренды в Беларуси
-                </h1>
-                <div className="hero__separator"></div>
-                <p className="hero-subtitle-modern">
-                  Находите и снимайте лучшие коттеджи, виллы и особняки.
-                  Эксклюзивные предложения премиум-класса.
-                </p>
-                <div className="hero-actions-modern">
-                  <button className="btn-primary-modern" onClick={handleSearchClick}>
-                    <FontAwesomeIcon icon={faSearch} /> Найти жилье
-                  </button>
-                  <button className="btn-secondary-modern" onClick={handleListProperty}>
-                    <FontAwesomeIcon icon={faBuilding} /> Сдать недвижимость
-                  </button>
-                </div>
+        <section className="hero-premium">
+          <div className="hero-premium-bg"></div>
+          <div className="hero-premium-overlay"></div>
+          <div className="container hero-premium-container">
+            <div className="hero-premium-content">
+              <h1 className="hero-premium-title">
+                <span className="gradient-text">Элитная недвижимость</span>
+                <br />для аренды в Беларуси
+              </h1>
+              <div className="hero-premium-divider"></div>
+              <p className="hero-premium-subtitle">
+                Находите и снимайте лучшие коттеджи, виллы и особняки.
+                Эксклюзивные предложения премиум-класса.
+              </p>
+              <div className="hero-premium-buttons">
+                <button className="btn-premium-primary" onClick={handleSearchClick}>
+                  <FontAwesomeIcon icon={faSearch} /> Найти жилье
+                </button>
+                <button className="btn-premium-secondary" onClick={handleListProperty}>
+                  <FontAwesomeIcon icon={faBuilding} /> Сдать недвижимость
+                </button>
               </div>
-              <div className="hero__visual">
-                <img 
-                  src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=500&fit=crop" 
-                  alt="Элитный дом"
-                  className="hero__image"
-                />
-              </div>
+              
             </div>
+          </div>
+          
+          <div className="hero-premium-decoration">
+            <div className="circle-1"></div>
+            <div className="circle-2"></div>
           </div>
         </section>
 
         <section className="categories-section">
-            <div className="container">
-              <h2 className="section-title-modern">Типы элитного жилья</h2>
-              <div className="categories-grid-photo">
-                <div className="category-photo-card">
-                  <img src="/photo/cotagge.jpeg" alt="Коттеджи" />
-                  <div className="category-photo-overlay">
-                    <h3>Коттеджи</h3>
-                  </div>
-                </div>
-                <div className="category-photo-card">
-                  <img src="/photo/villa.jpg" alt="Виллы" />
-                  <div className="category-photo-overlay">
-                    <h3>Виллы</h3>
-                  </div>
-                </div>
-                <div className="category-photo-card">
-                  <img src="/photo/osobnnak.jpg" alt="Особняки" />
-                  <div className="category-photo-overlay">
-                    <h3>Особняки</h3>
-                  </div>
-                </div>
-                <div className="category-photo-card">
-                  <img src="/photo/taynhouse.jpg" alt="Таунхаусы" />
-                  <div className="category-photo-overlay">
-                    <h3>Таунхаусы</h3>
-                  </div>
-                </div>
-                <div className="category-photo-card">
-                  <img src="/photo/ysadba.jpg" alt="Усадьбы" />
-                  <div className="category-photo-overlay">
-                    <h3>Усадьбы</h3>
-                  </div>
-                </div>
-                <div className="category-photo-card">
-                  <img src="/photo/home.jpg" alt="Резиденции" />
-                  <div className="category-photo-overlay">
-                    <h3>Резиденции</h3>
-                  </div>
-                </div>
+          <div className="container">
+            <h2 className="section-title-modern">Типы элитного жилья</h2>
+            <div className="categories-grid-photo">
+              <div className="category-photo-card">
+                <img src="/photo/cotagge.jpeg" alt="Коттеджи" />
+                <div className="category-photo-overlay"><h3>Коттеджи</h3></div>
+              </div>
+              <div className="category-photo-card">
+                <img src="/photo/villa.jpg" alt="Виллы" />
+                <div className="category-photo-overlay"><h3>Виллы</h3></div>
+              </div>
+              <div className="category-photo-card">
+                <img src="/photo/osobnnak.jpg" alt="Особняки" />
+                <div className="category-photo-overlay"><h3>Особняки</h3></div>
+              </div>
+              <div className="category-photo-card">
+                <img src="/photo/taynhouse.jpg" alt="Таунхаусы" />
+                <div className="category-photo-overlay"><h3>Таунхаусы</h3></div>
+              </div>
+              <div className="category-photo-card">
+                <img src="/photo/ysadba.jpg" alt="Усадьбы" />
+                <div className="category-photo-overlay"><h3>Усадьбы</h3></div>
+              </div>
+              <div className="category-photo-card">
+                <img src="/photo/home.jpg" alt="Резиденции" />
+                <div className="category-photo-overlay"><h3>Резиденции</h3></div>
               </div>
             </div>
+          </div>
         </section>
 
         <section className="featured-section-modern">
@@ -258,7 +237,6 @@ const Home: React.FC = () => {
                 Все предложения <FontAwesomeIcon icon={faArrowRight} />
               </button>
             </div>
-
             {loading ? (
               <div className="loading-properties"><FontAwesomeIcon icon={faSpinner} spin size="2x" /><p>Загрузка...</p></div>
             ) : error ? (
@@ -270,16 +248,11 @@ const Home: React.FC = () => {
                     <div className="property-image-modern">
                       <img src={property.photos?.[0] || "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop"} alt={property.houseType} />
                       <button className="favorite-btn-modern" onClick={(e) => handleFavoriteClick(property.id, e)}>
-                        <FontAwesomeIcon 
-                          icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} 
-                          style={{ color: favorites.has(property.id) ? '#EF4444' : 'var(--gold, #d4af37)' }} 
-                        />
+                        <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} style={{ color: favorites.has(property.id) ? '#EF4444' : 'var(--gold, #d4af37)' }} />
                       </button>
                     </div>
                     <div className="property-content-modern">
-                      <div className="property-price-modern">
-                        <span className="price-modern">{formatPrice(property.price)}</span>
-                      </div>
+                      <div className="property-price-modern"><span className="price-modern">{formatPrice(property.price)}</span></div>
                       <h3 className="property-title-modern">{property.houseType}</h3>
                       <button className="property-btn-modern">Подробнее <FontAwesomeIcon icon={faArrowRight} /></button>
                     </div>
@@ -296,9 +269,7 @@ const Home: React.FC = () => {
           <div className="container">
             <h2 className="section-title-modern">Надёжные партнёры</h2>
             <div className="partners-carousel-wrapper">
-              <button className="carousel-arrow left" onClick={() => scrollPartners('left')}>
-                <FontAwesomeIcon icon={faChevronLeft} />
-              </button>
+              <button className="carousel-arrow left" onClick={() => scrollPartners('left')}><FontAwesomeIcon icon={faChevronLeft} /></button>
               <div className="partners-carousel" ref={partnersScrollRef}>
                 {partners.map((partner, idx) => (
                   <div key={idx} className="partner-carousel-card">
@@ -307,9 +278,7 @@ const Home: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <button className="carousel-arrow right" onClick={() => scrollPartners('right')}>
-                <FontAwesomeIcon icon={faChevronRight} />
-              </button>
+              <button className="carousel-arrow right" onClick={() => scrollPartners('right')}><FontAwesomeIcon icon={faChevronRight} /></button>
             </div>
           </div>
         </section>

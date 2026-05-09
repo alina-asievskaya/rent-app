@@ -543,7 +543,7 @@ const Header: React.FC = () => {
   const shouldShowFavorites = isLoggedIn && !isAdmin;
 
   // Класс для Header в зависимости от страницы
-  const headerClass = `header ${isProfilePage ? 'header-fixed' : ''}`;
+  const headerClass = `header ${isProfilePage ? 'header-profile' : ''}`;
 
   // Функция для форматирования цены
   const formatPrice = (price: number): string => {
@@ -568,10 +568,15 @@ const Header: React.FC = () => {
       <header className={headerClass}>
         <nav className="nav">
           <div className="nav-brand">
-            <Link to="/" className="brand-link">
-              <h2>Prime<span>House</span></h2>
-            </Link>
-          </div>
+          <Link to="/" className="brand-link" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img 
+              src="/photo/logo.png" 
+              alt="PrimeHouse logo" 
+              style={{ height: '32px', width: 'auto' }}
+            />
+            <h2>Prime<span>House</span></h2>
+          </Link>
+        </div>
           
           <ul className="nav-links">
             <li>
@@ -778,14 +783,14 @@ const Header: React.FC = () => {
             ) : (
               <>
                 <button 
-                  className="btn-secondary" 
+                  className="header-btn-secondary" 
                   onClick={() => openAuthModal(true)}
                   disabled={isLoading}
                 >
                   {isLoading ? 'Загрузка...' : 'Войти'}
                 </button>
                 <button 
-                  className="btn-primary"
+                  className="header-btn-primary"
                   onClick={() => openAuthModal(false)}
                   disabled={isLoading}
                 >

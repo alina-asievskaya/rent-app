@@ -467,19 +467,16 @@ const Favorites: React.FC = () => {
     }
   };
 
-  // Форматирование цены
   const formatPrice = (price: number): string => {
-    return `${price.toLocaleString('ru-RU')} Br/мес`;
+    return `${price.toLocaleString('ru-RU')} Br/сутки`;
   };
 
-  // Получение основного изображения
   const getMainImage = (photos: string[]): string => {
     return photos && photos.length > 0 
       ? photos[0] 
       : "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop";
   };
 
-  // Сортировка
   const sortedFavorites = [...favorites].sort((a, b) => {
     switch (sortBy) {
       case 'date-desc':

@@ -150,7 +150,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             
-            <button type="submit" className="btn-primary auth-submit-btn" disabled={isLoading}>
+           <button type="submit" className="auth-submit-btn" disabled={isLoading}>
               {isLoading ? "Загрузка..." : "Войти"}
             </button>
             
@@ -269,7 +269,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             
-            <button type="submit" className="btn-primary auth-submit-btn" disabled={isLoading}>
+            {/* Исправлено: удалён класс btn-primary, оставлен только auth-submit-btn */}
+            <button type="submit" className="auth-submit-btn" disabled={isLoading}>
               {isLoading ? "Загрузка..." : "Зарегистрироваться"}
             </button>
             

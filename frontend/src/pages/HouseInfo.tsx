@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
+import BookingModal from '../components/BookingModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMapMarkerAlt,
@@ -225,11 +226,11 @@ const HouseInfo: React.FC = () => {
   const [checkingOwner, setCheckingOwner] = useState(false);
   const [ownerId, setOwnerId] = useState<number | null>(null);
   
-  // Новые состояния для галереи
   const [showAllThumbnails, setShowAllThumbnails] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [thumbnailScrollPosition, setThumbnailScrollPosition] = useState(0);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   const decodeToken = (token: string) => {
     try {
@@ -1087,7 +1088,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // Новые функции для управления галереей
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
     setLightboxOpen(true);
@@ -1241,7 +1241,6 @@ const HouseInfo: React.FC = () => {
             </div>
           </section>
 
-          {/* Лайтбокс */}
           {lightboxOpen && (
             <div className="lightbox-overlay" onClick={closeLightbox}>
               <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
@@ -1540,6 +1539,13 @@ const HouseInfo: React.FC = () => {
                         Позвонить владельцу
                       </button>
                     )}
+                    <button 
+                    
+                      className="btn-primary-house full-width-house" 
+                      onClick={() => setIsBookingModalOpen(true)}
+                    >
+                      Забронировать
+                    </button>
                     
                     {!isOwner && ownerInfo?.email !== 'admin@gmail.com' && (
                       <button 
@@ -1603,6 +1609,14 @@ const HouseInfo: React.FC = () => {
           </section>
         </div>
       </div>
+      
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        houseId={house.id}
+        onBookingSuccess={() => {
+        }}
+      />
     </>
   );
 };

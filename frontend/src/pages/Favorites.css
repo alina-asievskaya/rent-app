@@ -1,13 +1,16 @@
+/* Favorites.css - Мятный нефрит тема (сохранены розовые сердечки) */
+
 :root {
-  --primary-favorit: #2962ff;
-  --primary-light-favorit: #448aff;
-  --primary-dark-favorit: #1a56db;
+  --primary-favorit: #2d6a4f;
+  --primary-light-favorit: #40916c;
+  --primary-dark-favorit: #1b4332;
+  --accent-favorit: #d4af37;
   --danger-favorit: #ef4444;
   --success-favorit: #10b981;
   --warning-favorit: #f59e0b;
-  --bg-favorit: #f8fafc;
-  --border-favorit: #e3f2fd;
-  --shadow-favorit: 0 4px 20px rgba(41, 98, 255, 0.08);
+  --bg-favorit: #f0f7f4;
+  --border-favorit: rgba(45, 106, 79, 0.15);
+  --shadow-favorit: 0 4px 20px rgba(45, 106, 79, 0.08);
   --radius-favorit: 16px;
   --transition-favorit: all 0.3s ease;
 }
@@ -16,7 +19,7 @@
 .favorites-page-favorit {
   margin-top: 80px;
   min-height: calc(100vh - 80px);
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #f0f7f4 0%, #ffffff 100%);
   padding: 3rem 0;
 }
 
@@ -62,7 +65,7 @@
 }
 
 .hero-content-favorit svg {
-  color: #ff6b8b;
+  color: #ff6b8b; 
   font-size: 2.2rem;
 }
 
@@ -123,7 +126,7 @@
 }
 
 .selected-count-favorit {
-  background: rgba(41, 98, 255, 0.1);
+  background: rgba(45, 106, 79, 0.1);
   color: var(--primary-favorit);
   padding: 0.5rem 1rem;
   border-radius: 50px;
@@ -145,38 +148,38 @@
 
 .btn-select-all-favorit:hover,
 .btn-clear-selection-favorit:hover {
-  background: rgba(41, 98, 255, 0.05);
-  border-color: var(--primary-favorit);
+  background: rgba(45, 106, 79, 0.05);
+  border-color: var(--accent-favorit);
 }
 
-/* Кнопки - ВЕРНУТЬ ПРЕЖНЕЕ СКРУГЛЕНИЕ */
+/* Кнопки общего назначения */
 .btn-primary-favorit {
   background: linear-gradient(135deg, var(--primary-favorit), var(--primary-light-favorit));
   color: white;
   border: none;
   padding: 0.875rem 1.75rem;
-  border-radius: 8px; /* ← ВЕРНУТЬ ПРЕЖНЕЕ СКРУГЛЕНИЕ */
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition-favorit);
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  box-shadow: 0 4px 12px rgba(41, 98, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.2);
 }
 
 .btn-primary-favorit:hover {
   background: linear-gradient(135deg, var(--primary-dark-favorit), var(--primary-favorit));
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(41, 98, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(45, 106, 79, 0.3);
 }
 
 .btn-secondary-favorit {
   background: white;
-  color: #37474f;
+  color: #3a5e4c;
   border: 1px solid var(--border-favorit);
   padding: 0.875rem 1.75rem;
-  border-radius: 8px; /* ← ВЕРНУТЬ ПРЕЖНЕЕ СКРУГЛЕНИЕ */
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition-favorit);
@@ -186,9 +189,9 @@
 }
 
 .btn-secondary-favorit:hover {
-  border-color: var(--primary-favorit);
+  border-color: var(--accent-favorit);
   color: var(--primary-favorit);
-  background: rgba(41, 98, 255, 0.02);
+  background: rgba(45, 106, 79, 0.02);
 }
 
 .btn-danger-favorit {
@@ -196,7 +199,7 @@
   color: white;
   border: none;
   padding: 0.875rem 1.75rem;
-  border-radius: 8px; /* ← ВЕРНУТЬ ПРЕЖНЕЕ СКРУГЛЕНИЕ */
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition-favorit);
@@ -231,14 +234,14 @@
   background: white;
   border: 1px solid var(--border-favorit);
   border-radius: var(--radius-favorit);
-  color: #1a237e;
+  color: #1b4332;
 }
 
 .sort-select-favorit {
   border: none;
   background: none;
   font-weight: 600;
-  color: #1a237e;
+  color: #1b4332;
   cursor: pointer;
   outline: none;
   min-width: 180px;
@@ -246,16 +249,16 @@
 
 .sort-arrow-favorit {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #d4af37;
 }
 
 .results-count-favorit {
   font-size: 0.95rem;
-  color: #64748b;
+  color: #3a5e4c;
 }
 
 .results-count-favorit strong {
-  color: #1a237e;
+  color: #1b4332;
 }
 
 /* Контейнер карточек */
@@ -280,8 +283,8 @@
 
 .property-item-favorit.list-favorit:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(41, 98, 255, 0.15);
-  border-color: rgba(41, 98, 255, 0.2);
+  box-shadow: 0 20px 40px rgba(45, 106, 79, 0.15);
+  border-color: rgba(212, 175, 55, 0.3);
 }
 
 .property-item-image-favorit {
@@ -324,15 +327,16 @@
 }
 
 .badge-favorit.premium-favorit {
-  background: rgba(245, 158, 11, 0.9);
-  color: white;
+  background: rgba(212, 175, 55, 0.9);
+  color: #1b4332;
 }
 
 .badge-favorit.hot-favorit {
-  background: rgba(239, 68, 68, 0.9);
+  background: rgba(45, 106, 79, 0.9);
   color: white;
 }
 
+/* СЕРДЕЧКИ — сохранён розовый цвет */
 .favorite-btn-favorit {
   position: absolute;
   top: 1rem;
@@ -385,7 +389,7 @@
 }
 
 .card-select-favorit label:hover {
-  border-color: var(--primary-favorit);
+  border-color: var(--accent-favorit);
   background: white;
 }
 
@@ -425,22 +429,22 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(212, 175, 55, 0.1);
   padding: 0.5rem 0.75rem;
   border-radius: 50px;
   font-weight: 600;
-  color: #b45309;
+  color: #9c7c1c;
 }
 
 .property-rating-favorit svg {
-  color: #f59e0b;
+  color: var(--accent-favorit);
 }
 
 .property-item-address-favorit {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #546e7a;
+  color: #3a5e4c;
   font-weight: 500;
   margin-bottom: 0.75rem;
   font-size: 0.95rem;
@@ -451,7 +455,7 @@
 }
 
 .property-item-info-favorit {
-  color: #546e7a;
+  color: #3a5e4c;
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
@@ -469,16 +473,16 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #546e7a;
+  color: #3a5e4c;
   font-size: 0.875rem;
 }
 
 .property-item-features-favorit svg {
-  color: #94a3b8;
+  color: #d4af37;
 }
 
 .property-item-description-favorit {
-  color: #64748b;
+  color: #3a5e4c;
   line-height: 1.5;
   margin-bottom: 1rem;
   font-size: 0.9rem;
@@ -494,12 +498,12 @@
 
 .tag-favorit {
   padding: 0.375rem 0.75rem;
-  background: rgba(41, 98, 255, 0.08);
+  background: rgba(45, 106, 79, 0.08);
   color: var(--primary-favorit);
   border-radius: 50px;
   font-size: 0.8rem;
   font-weight: 500;
-  border: 1px solid rgba(41, 98, 255, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .property-item-actions-favorit {
@@ -513,7 +517,7 @@
   flex: 1;
   padding: 0.75rem;
   font-weight: 600;
-  border-radius: 8px; /* ← ВЕРНУТЬ ПРЕЖНЕЕ СКРУГЛЕНИЕ ДЛЯ КНОПОК В КАРТОЧКЕ */
+  border-radius: 8px;
   cursor: pointer;
   transition: var(--transition-favorit);
   font-size: 0.9rem;
@@ -535,12 +539,12 @@
 
 .property-item-actions-favorit .btn-secondary-favorit {
   background: transparent;
-  color: #546e7a;
+  color: #3a5e4c;
   border: 1px solid var(--border-favorit);
 }
 
 .property-item-actions-favorit .btn-secondary-favorit:hover {
-  border-color: var(--primary-favorit);
+  border-color: var(--accent-favorit);
   color: var(--primary-favorit);
 }
 
@@ -554,7 +558,7 @@
 
 .empty-state-icon-favorit {
   font-size: 5rem;
-  color: #e3f2fd;
+  color: rgba(45, 106, 79, 0.2);
   margin-bottom: 2rem;
   animation: bounce-favorit 2s infinite;
 }
@@ -566,13 +570,13 @@
 
 .favorites-empty-state-favorit h1 {
   font-size: 2.75rem;
-  color: #1a237e;
+  color: #1b4332;
   margin-bottom: 1rem;
 }
 
 .favorites-empty-state-favorit p {
   font-size: 1.25rem;
-  color: #546e7a;
+  color: #3a5e4c;
   margin-bottom: 2.5rem;
   max-width: 500px;
   margin-left: auto;
@@ -598,7 +602,7 @@
 }
 
 .favorites-tips-favorit h3 {
-  color: #1a237e;
+  color: #1b4332;
   margin-bottom: 2rem;
   text-align: center;
   font-size: 1.5rem;
@@ -629,13 +633,13 @@
 }
 
 .tip-card-favorit h4 {
-  color: #1a237e;
+  color: #1b4332;
   margin-bottom: 0.75rem;
   font-size: 1.125rem;
 }
 
 .tip-card-favorit p {
-  color: #64748b;
+  color: #3a5e4c;
   font-size: 0.95rem;
   line-height: 1.5;
 }

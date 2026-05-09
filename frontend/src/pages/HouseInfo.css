@@ -1449,7 +1449,6 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Сообщение при отсутствии фотографий */
 .no-photos-message {
   text-align: center;
   padding: 3rem;

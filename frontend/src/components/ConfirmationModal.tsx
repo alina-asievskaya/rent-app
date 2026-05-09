@@ -1,4 +1,4 @@
-// components/ConfirmationModal.tsx
+
 import React from 'react';
 import './ConfirmationModal.css';
 

@@ -1,0 +1,143 @@
+.decoration-selector {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.category-group {
+  margin-bottom: 1.5rem;
+}
+
+.category-group h4 {
+  color: #1B4332;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.decoration-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.decoration-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #F0F7F4;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.decoration-item:hover {
+  background: #e0efe8;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-name {
+  font-weight: 500;
+  color: #1B4332;
+}
+
+.item-price {
+  font-size: 0.9rem;
+  color: #D4AF37;
+  font-weight: 600;
+}
+
+.item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item-controls button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: white;
+  color: #2D6A4F;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.item-controls button:hover {
+  background: #2D6A4F;
+  color: white;
+  border-color: #2D6A4F;
+}
+
+.quantity {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  color: #1B4332;
+}
+
+.add-btn {
+  padding: 0.5rem 1rem !important;
+  border-radius: 6px !important;
+  background: #2D6A4F !important;
+  color: white !important;
+  border: none !important;
+  cursor: pointer;
+  width: auto !important;
+  font-weight: 500;
+}
+
+.add-btn:hover {
+  background: #1B4332 !important;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.skip-btn {
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #2D6A4F;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.skip-btn:hover {
+  border-color: #2D6A4F;
+  background: #F0F7F4;
+}
+
+.complete-btn {
+  background: linear-gradient(135deg, #2D6A4F, #40916C);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.2);
+}
+
+.complete-btn:hover {
+  background: linear-gradient(135deg, #1B4332, #2D6A4F);
+  transform: translateY(-2px);
+}

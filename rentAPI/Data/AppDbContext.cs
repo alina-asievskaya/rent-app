@@ -21,6 +21,9 @@ namespace RentApp.API.Data
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<Chat> Chats { get; set; }
         public DbSet<Message> Messages { get; set; }
+        public DbSet<Booking> Bookings { get; set; }
+public DbSet<BookingFoodItem> BookingFoodItems { get; set; }
+public DbSet<BookingDecorationItem> BookingDecorationItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -554,6 +557,58 @@ modelBuilder.Entity<Chat>(entity =>
     entity.HasIndex(c => c.HouseId);
     entity.HasIndex(c => c.CreatedAt);
     entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId });
+});
+// Bookings
+modelBuilder.Entity<Booking>(entity =>
+{
+    entity.ToTable("Bookings");
+    entity.HasKey(b => b.Id);
+    entity.Property(b => b.Id).HasColumnName("id_booking").ValueGeneratedOnAdd();
+    entity.Property(b => b.HouseId).HasColumnName("id_house").IsRequired();
+    entity.Property(b => b.UserId).HasColumnName("id_user").IsRequired();
+    entity.Property(b => b.BookingDate).HasColumnName("booking_date").IsRequired().HasColumnType("date");
+    entity.Property(b => b.Approved).HasColumnName("approved").HasDefaultValue(true);
+    entity.Property(b => b.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+
+    entity.HasOne(b => b.House).WithMany().HasForeignKey(b => b.HouseId).OnDelete(DeleteBehavior.Restrict);
+    entity.HasOne(b => b.User).WithMany().HasForeignKey(b => b.UserId).OnDelete(DeleteBehavior.Restrict);
+
+    entity.HasIndex(b => b.HouseId);
+    entity.HasIndex(b => b.UserId);
+    entity.HasIndex(b => b.BookingDate);
+    entity.HasIndex(b => new { b.HouseId, b.BookingDate }).IsUnique(); // одна дата - одно бронирование на дом
+});
+
+// BookingFoodItems
+modelBuilder.Entity<BookingFoodItem>(entity =>
+{
+    entity.ToTable("BookingFoodItems");
+    entity.HasKey(bf => bf.Id);
+    entity.Property(bf => bf.Id).HasColumnName("id_booking_food").ValueGeneratedOnAdd();
+    entity.Property(bf => bf.BookingId).HasColumnName("id_booking").IsRequired();
+    entity.Property(bf => bf.RestaurantName).HasColumnName("restaurant_name").IsRequired().HasMaxLength(100);
+    entity.Property(bf => bf.ItemName).HasColumnName("item_name").IsRequired().HasMaxLength(200);
+    entity.Property(bf => bf.Price).HasColumnName("price").HasColumnType("decimal(10,2)").IsRequired();
+    entity.Property(bf => bf.Quantity).HasColumnName("quantity").HasDefaultValue(1);
+
+    entity.HasOne(bf => bf.Booking).WithMany(b => b.FoodItems).HasForeignKey(bf => bf.BookingId).OnDelete(DeleteBehavior.Cascade);
+    entity.HasIndex(bf => bf.BookingId);
+});
+
+// BookingDecorationItems
+modelBuilder.Entity<BookingDecorationItem>(entity =>
+{
+    entity.ToTable("BookingDecorationItems");
+    entity.HasKey(bd => bd.Id);
+    entity.Property(bd => bd.Id).HasColumnName("id_booking_decoration").ValueGeneratedOnAdd();
+    entity.Property(bd => bd.BookingId).HasColumnName("id_booking").IsRequired();
+    entity.Property(bd => bd.Category).HasColumnName("category").IsRequired().HasMaxLength(100);
+    entity.Property(bd => bd.ItemName).HasColumnName("item_name").IsRequired().HasMaxLength(200);
+    entity.Property(bd => bd.Price).HasColumnName("price").HasColumnType("decimal(10,2)").IsRequired();
+    entity.Property(bd => bd.Quantity).HasColumnName("quantity").HasDefaultValue(1);
+
+    entity.HasOne(bd => bd.Booking).WithMany(b => b.DecorationItems).HasForeignKey(bd => bd.BookingId).OnDelete(DeleteBehavior.Cascade);
+    entity.HasIndex(bd => bd.BookingId);
 });
 
             modelBuilder.Entity<Message>(entity =>

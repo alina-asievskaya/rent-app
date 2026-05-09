@@ -6,7 +6,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 1000;
+  z-index: 9999;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -399,7 +399,26 @@ body:not(.profile-page) .page-content {
   box-shadow: 0 4px 12px rgba(45, 106, 79, 0.25);
 }
 
-.btn-secondary {
+/* Уникальные кнопки Header (нефритовая палитра) */
+.header-btn-primary {
+  background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.1);
+}
+
+.header-btn-primary:hover {
+  background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.2);
+}
+
+.header-btn-secondary {
   background: transparent;
   color: #1B4332;
   border: 1px solid rgba(212, 175, 55, 0.3);
@@ -410,7 +429,7 @@ body:not(.profile-page) .page-content {
   transition: all 0.3s;
 }
 
-.btn-secondary:hover {
+.header-btn-secondary:hover {
   border-color: #2D6A4F;
   color: #2D6A4F;
   background: rgba(45, 106, 79, 0.05);

@@ -1,3 +1,5 @@
+/* AuthModal.css - Мятный нефрит (без синего) */
+
 .auth-modal-overlay {
   position: fixed;
   top: 0;
@@ -25,7 +27,7 @@
   width: 90%;
   max-width: 450px;
   position: relative;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px rgba(45, 106, 79, 0.15);
   animation: modalSlideIn 0.3s ease;
 }
 
@@ -48,7 +50,7 @@
   border: none;
   font-size: 22px;
   cursor: pointer;
-  color: #666;
+  color: #2D6A4F;
   padding: 8px;
   border-radius: 50%;
   width: 36px;
@@ -57,12 +59,12 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s;
-  background-color: #f8f9fa;
+  background-color: #F0F7F4;
 }
 
 .auth-modal-close:hover {
-  background-color: #e9ecef;
-  color: #333;
+  background-color: #E8F0EC;
+  color: #D4AF37;
   transform: rotate(90deg);
 }
 
@@ -73,14 +75,14 @@
 
 .auth-modal-header h2 {
   margin: 0 0 10px 0;
-  color: #1a1a1a;
+  color: #1B4332;
   font-size: 28px;
   font-weight: 700;
 }
 
 .auth-modal-subtitle {
   margin: 0;
-  color: #666;
+  color: #2D6A4F;
   font-size: 16px;
   font-weight: 400;
 }
@@ -106,7 +108,7 @@
 .input-icon {
   position: absolute;
   left: 16px;
-  color: #666;
+  color: #2D6A4F;
   font-size: 18px;
   z-index: 1;
 }
@@ -114,28 +116,29 @@
 .auth-input {
   width: 100%;
   padding: 16px 16px 16px 50px;
-  border: 1.5px solid #e1e5e9;
+  border: 1.5px solid rgba(212, 175, 55, 0.3);
   border-radius: 10px;
   font-size: 16px;
   transition: all 0.3s;
-  background-color: #f8f9fa;
-  color: #333;
+  background-color: #F0F7F4;
+  color: #1B4332;
 }
 
 .auth-input:focus {
   outline: none;
-  border-color: #4a90e2;
+  border-color: #2D6A4F;
   background-color: white;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
 }
 
 .auth-input:disabled {
-  background-color: #f0f0f0;
+  background-color: #e0e7e3;
   cursor: not-allowed;
 }
 
 .auth-input::placeholder {
-  color: #999;
+  color: #2D6A4F;
+  opacity: 0.6;
 }
 
 .password-toggle-right {
@@ -143,7 +146,7 @@
   right: 16px;
   background: none;
   border: none;
-  color: #666;
+  color: #2D6A4F;
   cursor: pointer;
   padding: 8px;
   border-radius: 6px;
@@ -155,8 +158,8 @@
 }
 
 .password-toggle-right:hover:not(:disabled) {
-  color: #4a90e2;
-  background-color: #f0f7ff;
+  color: #D4AF37;
+  background-color: rgba(45, 106, 79, 0.05);
 }
 
 .password-toggle-right:disabled {
@@ -164,6 +167,7 @@
   cursor: not-allowed;
 }
 
+/* Уникальная кнопка отправки формы – без синего */
 .auth-submit-btn {
   width: 100%;
   padding: 16px;
@@ -171,7 +175,7 @@
   font-weight: 600;
   border-radius: 10px;
   margin-top: 10px;
-  background: linear-gradient(135deg, #4a90e2, #357ae8);
+  background: linear-gradient(135deg, #2D6A4F, #40916C);
   border: none;
   color: white;
   cursor: pointer;
@@ -179,9 +183,9 @@
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #357ae8, #2a65cc);
+  background: linear-gradient(135deg, #1B4332, #2D6A4F);
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(74, 144, 226, 0.25);
+  box-shadow: 0 6px 12px rgba(45, 106, 79, 0.25);
 }
 
 .auth-submit-btn:active:not(:disabled) {
@@ -196,20 +200,20 @@
 .auth-form-footer {
   text-align: center;
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
   margin-top: 10px;
 }
 
 .auth-switch-text {
   margin: 0;
-  color: #666;
+  color: #2D6A4F;
   font-size: 15px;
 }
 
 .auth-switch-btn {
   background: none;
   border: none;
-  color: #4a90e2;
+  color: #D4AF37;
   cursor: pointer;
   font-weight: 600;
   padding: 0;
@@ -219,7 +223,7 @@
 }
 
 .auth-switch-btn:hover:not(:disabled) {
-  color: #357ae8;
+  color: #2D6A4F;
   text-decoration: underline;
 }
 
@@ -229,7 +233,7 @@
 }
 
 .input-hint {
-  color: #666;
+  color: #2D6A4F;
   font-size: 12px;
   margin-top: 4px;
   padding-left: 5px;
@@ -242,40 +246,32 @@
     margin: 20px;
     border-radius: 14px;
   }
-  
   .auth-modal-header h2 {
     font-size: 24px;
   }
-  
   .auth-modal-subtitle {
     font-size: 14px;
   }
-  
   .auth-input {
     padding: 14px 14px 14px 46px;
     font-size: 15px;
   }
-  
   .input-icon {
     left: 14px;
     font-size: 16px;
   }
-  
   .password-toggle-right {
     right: 14px;
     padding: 6px;
     font-size: 16px;
   }
-  
   .auth-submit-btn {
     padding: 14px;
     font-size: 15px;
   }
-  
   .auth-switch-text {
     font-size: 14px;
   }
-  
   .auth-switch-btn {
     font-size: 14px;
   }

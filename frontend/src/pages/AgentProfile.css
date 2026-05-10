@@ -367,7 +367,6 @@
   font-size: 1.05rem;
   
 }
-/* Полная отмена обрезания текста */
 .agent-description,
 .agent-description * {
   overflow: visible !important;
@@ -381,7 +380,6 @@
   overflow-wrap: break-word !important;
 }
 
-/* Убираем возможные ограничения у родительских контейнеров */
 .about-section,
 .agent-profile-content {
   overflow: visible !important;
@@ -423,7 +421,6 @@
   font-weight: 500;
 }
 
-/* Преимущества */
 .advantages-section {
   margin: 3rem 0;
 }

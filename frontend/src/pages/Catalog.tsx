@@ -34,7 +34,9 @@ import {
   faSpinner,
   faChevronLeft,
   faChevronRight,
-  faEllipsisH
+  faEllipsisH,
+  faSun,
+  faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -49,6 +51,7 @@ interface FilterOptions {
   areaMin: string;
   areaMax: string;
   features: string[];
+  rentType: string; // 'day' | 'month' | ''
 }
 
 interface SortOption {
@@ -85,6 +88,7 @@ interface Property {
   ownerEmail?: string;
   announcementData?: string;
   ownerId?: number;
+  rentType?: string; // 'day' или 'month'
 }
 
 interface ApiResponse {
@@ -154,7 +158,7 @@ const Catalog: React.FC = () => {
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage] = useState<number>(6); // 8 объявлений на странице
+  const [itemsPerPage] = useState<number>(6);
 
   // Состояние фильтров
   const [filters, setFilters] = useState<FilterOptions>({
@@ -165,7 +169,8 @@ const Catalog: React.FC = () => {
     priceMax: '',
     areaMin: '',
     areaMax: '',
-    features: []
+    features: [],
+    rentType: ''   // '' = все типы аренды
   });
 
   // Данные для фильтров - города и типы из БД
@@ -404,11 +409,9 @@ const Catalog: React.FC = () => {
             ? new Date(house.announcementData).getFullYear()
             : new Date().getFullYear();
           
-          // Формируем адрес: если есть city - используем его, иначе берем из address
           let city = house.city || '';
           const address = house.address || '';
           
-          // Если city не указан, но есть address - попробуем извлечь город из адреса
           if (!city && address.includes(',')) {
             city = address.split(',')[0].trim();
           }
@@ -417,6 +420,12 @@ const Catalog: React.FC = () => {
             `${house.rooms || house.beds || 1}-комн. ${house.houseType?.toLowerCase() || 'дом'}, ${house.area || 0} м²`;
           
           const ownerId = house.ownerId || house.id || 0;
+          
+          // Определяем тип аренды по цене (запасной вариант, если в API нет rentType)
+          let rentType = house.rentType;
+          if (!rentType) {
+            rentType = priceStr.includes('сутки') ? 'day' : 'month';
+          }
           
           return {
             id: house.id || 0,
@@ -447,12 +456,13 @@ const Catalog: React.FC = () => {
             ownerName: house.ownerName,
             ownerEmail: house.ownerEmail,
             announcementData: house.announcementData,
-            ownerId: ownerId
+            ownerId: ownerId,
+            rentType: rentType
           };
         });
         
         setProperties(transformedProperties);
-        setCurrentPage(1); // Сброс на первую страницу при новой загрузке
+        setCurrentPage(1);
       } else {
         throw new Error(result.message || result.error || 'Не удалось загрузить данные');
       }
@@ -471,8 +481,6 @@ const Catalog: React.FC = () => {
       }
       
       setApiError(errorMessage);
-      
-      // Очищаем свойства при ошибке
       setProperties([]);
       setCurrentPage(1);
     } finally {
@@ -496,22 +504,19 @@ const Catalog: React.FC = () => {
       priceMax: '',
       areaMin: '',
       areaMax: '',
-      features: []
+      features: [],
+      rentType: ''
     };
     
     setFilters(initialFilters);
 
-    // Загружаем избранное пользователя
     loadUserFavorites();
   }, [location.search]);
 
-  // Функция для загрузки избранного пользователя
   const loadUserFavorites = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        return;
-      }
+      if (!token) return;
 
       const response = await fetch('http://localhost:5213/api/favorites/my-favorites-ids', {
         method: 'GET',
@@ -521,9 +526,7 @@ const Catalog: React.FC = () => {
         }
       });
 
-      if (!response.ok) {
-        return;
-      }
+      if (!response.ok) return;
 
       const data = await response.json();
       if (data.success && data.data) {
@@ -535,7 +538,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Функция для получения иконки по названию особенности
   const getFeatureIcon = (feature: string) => {
     const iconMap: Record<string, IconProp> = {
       "Кондиционер": faSnowflake,
@@ -551,112 +553,104 @@ const Catalog: React.FC = () => {
     return iconMap[feature] || faCheckCircle;
   };
 
-  // Обработчик клика на избранное
-  // Обработчик клика на избранное
-const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
-  e.stopPropagation();
-  
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('Для добавления в избранное необходимо войти в систему');
-    navigate('/login');
-    return;
-  }
-
-  // Проверяем, является ли пользователь администратором
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
-    const roles = payload.role || payload.roles || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+  const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     
-    // Проверяем, является ли пользователь администратором
-    let isAdmin = false;
-    if (Array.isArray(roles)) {
-      isAdmin = roles.includes('Admin');
-    } else if (typeof roles === 'string') {
-      isAdmin = roles === 'Admin';
-    }
-    
-    // Проверяем email администратора
-    if (userEmail?.toLowerCase() === 'admin@gmail.com') {
-      isAdmin = true;
-    }
-    
-    if (isAdmin) {
-      alert('Администраторы не могут добавлять дома в избранное');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Для добавления в избранное необходимо войти в систему');
+      navigate('/login');
       return;
     }
-  } catch (error) {
-    console.error('Ошибка при декодировании токена:', error);
-  }
 
-  try {
-    const isCurrentlyFavorite = favorites.has(id);
-
-    if (isCurrentlyFavorite) {
-      const deleteResponse = await fetch(`http://localhost:5213/api/favorites/remove/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (deleteResponse.ok) {
-        setFavorites(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(id);
-          return newSet;
-        });
-        alert('Удалено из избранного');
-      } else {
-        alert('Ошибка при удалении из избранного');
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+      const roles = payload.role || payload.roles || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+      
+      let isAdmin = false;
+      if (Array.isArray(roles)) {
+        isAdmin = roles.includes('Admin');
+      } else if (typeof roles === 'string') {
+        isAdmin = roles === 'Admin';
       }
-    } else {
-      const addResponse = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (addResponse.ok) {
-        setFavorites(prev => {
-          const newSet = new Set(prev);
-          newSet.add(id);
-          return newSet;
-        });
-        alert('Добавлено в избранное');
-      } else {
-        alert('Ошибка при добавлении в избранное');
+      
+      if (userEmail?.toLowerCase() === 'admin@gmail.com') {
+        isAdmin = true;
       }
+      
+      if (isAdmin) {
+        alert('Администраторы не могут добавлять дома в избранное');
+        return;
+      }
+    } catch (error) {
+      console.error('Ошибка при декодировании токена:', error);
     }
-  } catch (error) {
-    console.error('Ошибка при обновлении избранного:', error);
-    alert('Произошла ошибка при обновлении избранного');
-  }
-};
+
+    try {
+      const isCurrentlyFavorite = favorites.has(id);
+
+      if (isCurrentlyFavorite) {
+        const deleteResponse = await fetch(`http://localhost:5213/api/favorites/remove/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (deleteResponse.ok) {
+          setFavorites(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+          alert('Удалено из избранного');
+        } else {
+          alert('Ошибка при удалении из избранного');
+        }
+      } else {
+        const addResponse = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (addResponse.ok) {
+          setFavorites(prev => {
+            const newSet = new Set(prev);
+            newSet.add(id);
+            return newSet;
+          });
+          alert('Добавлено в избранное');
+        } else {
+          alert('Ошибка при добавлении в избранное');
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при обновлении избранного:', error);
+      alert('Произошла ошибка при обновлении избранного');
+    }
+  };
 
   // Фильтрация + сортировка через useMemo
   const filteredProperties = useMemo(() => {
     let result = [...properties];
 
-    // Фильтр по городу - используем поле city из БД
     if (filters.city && filters.city !== "Все города") {
       result = result.filter(prop => 
         (prop.city && prop.city.toLowerCase() === filters.city.toLowerCase())
       );
     }
 
-    // Фильтр по типу недвижимости
     if (filters.propertyType && filters.propertyType !== "Все типы") {
       result = result.filter(prop => 
         (prop.houseType && prop.houseType.toLowerCase().includes(filters.propertyType.toLowerCase()))
       );
     }
 
-    // Фильтр по комнатам
     if (filters.rooms && filters.rooms !== "Любое") {
       if (filters.rooms === "4+") {
         result = result.filter(prop => prop.beds >= 4);
@@ -666,7 +660,11 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
       }
     }
 
-    // Фильтр по цене
+    // Фильтр по типу аренды
+    if (filters.rentType) {
+      result = result.filter(prop => prop.rentType === filters.rentType);
+    }
+
     if (filters.priceMin) {
       const minPrice = parseInt(filters.priceMin.replace(/\D/g, ''));
       if (!isNaN(minPrice)) {
@@ -687,7 +685,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
       }
     }
 
-    // Фильтр по площади
     if (filters.areaMin) {
       const minArea = parseInt(filters.areaMin);
       if (!isNaN(minArea)) {
@@ -702,107 +699,76 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
       }
     }
 
-    // Фильтр по особенностям
     if (filters.features.length > 0) {
       result = result.filter(prop =>
         filters.features.every(feature => prop.features.includes(feature))
       );
     }
 
-    // Сортировка
     result.sort((a, b) => {
       const priceA = parseInt(a.price.replace(/\D/g, '')) || 0;
       const priceB = parseInt(b.price.replace(/\D/g, '')) || 0;
 
       switch (sortBy) {
-        case "price-asc": {
-          return priceA - priceB;
-        }
-        case "price-desc": {
-          return priceB - priceA;
-        }
-        case "area-desc": {
-          return (b.area || 0) - (a.area || 0);
-        }
+        case "price-asc": return priceA - priceB;
+        case "price-desc": return priceB - priceA;
+        case "area-desc": return (b.area || 0) - (a.area || 0);
         case "newest": {
           const dateA = a.announcementData ? new Date(a.announcementData).getTime() : 0;
           const dateB = b.announcementData ? new Date(b.announcementData).getTime() : 0;
           return dateB - dateA;
         }
-        case "popular": {
-          return (b.rating || 0) - (a.rating || 0);
-        }
-        default: {
-          return 0;
-        }
+        case "popular": return (b.rating || 0) - (a.rating || 0);
+        default: return 0;
       }
     });
 
     return result;
   }, [properties, filters, sortBy]);
 
-  // Расчет данных для пагинации
   const totalProperties = filteredProperties.length;
   const totalPages = Math.ceil(totalProperties / itemsPerPage);
-  
-  // Расчет индексов для текущей страницы
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentProperties = filteredProperties.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Функция для изменения страницы
   const paginate = (pageNumber: number) => {
     if (pageNumber < 1 || pageNumber > totalPages) return;
     setCurrentPage(pageNumber);
-    // Прокрутка к верху при смене страницы
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Функция для генерации номеров страниц с учетом эллипсиса
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;
     
     if (totalPages <= maxVisiblePages) {
-      // Показать все страницы
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      // Показать страницы с эллипсисом
       if (currentPage <= 3) {
-        // Показать первые 4 страницы и последнюю
-        for (let i = 1; i <= 4; i++) {
-          pageNumbers.push(i);
-        }
+        for (let i = 1; i <= 4; i++) pageNumbers.push(i);
         pageNumbers.push('ellipsis');
         pageNumbers.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
-        // Показать первую страницу и последние 4
         pageNumbers.push(1);
         pageNumbers.push('ellipsis');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pageNumbers.push(i);
-        }
+        for (let i = totalPages - 3; i <= totalPages; i++) pageNumbers.push(i);
       } else {
-        // Показать первую, текущую и соседние
         pageNumbers.push(1);
         pageNumbers.push('ellipsis');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pageNumbers.push(i);
-        }
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pageNumbers.push(i);
         pageNumbers.push('ellipsis');
         pageNumbers.push(totalPages);
       }
     }
-    
     return pageNumbers;
   };
 
-  // Обработчики фильтров
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Сброс на первую страницу при изменении фильтров
+    setCurrentPage(1);
   };
 
   const handleFeatureToggle = (feature: string) => {
@@ -812,7 +778,7 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
         ? prev.features.filter(f => f !== feature)
         : [...prev.features, feature]
     }));
-    setCurrentPage(1); // Сброс на первую страницу при изменении фильтров
+    setCurrentPage(1);
   };
 
   const resetFilters = () => {
@@ -824,31 +790,27 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
       priceMax: '',
       areaMin: '',
       areaMax: '',
-      features: []
+      features: [],
+      rentType: ''
     });
-    setCurrentPage(1); // Сброс на первую страницу при сбросе фильтров
+    setCurrentPage(1);
   };
 
-  // Быстрый фильтр по типу дома
   const quickFilterByType = (type: string) => {
     handleFilterChange('propertyType', type);
   };
 
-  // Обновление URL при изменении фильтров
   useEffect(() => {
     const params = new URLSearchParams();
     if (filters.city) params.set('city', filters.city);
     if (filters.propertyType) params.set('type', filters.propertyType);
-    
     navigate({ search: params.toString() }, { replace: true });
   }, [filters.city, filters.propertyType, navigate]);
 
-  // Функция для повторной загрузки данных
   const retryFetch = () => {
     fetchProperties();
   };
 
-  // Компонент загрузки
   if (loading) {
     return (
       <>
@@ -866,7 +828,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
     <Header />
     
     <main className="catalog-page">
-      {/* Hero секция – изменён заголовок */}
       <section className="catalog-hero-premium">
         <div className="catalog-hero-premium-bg"></div>
         <div className="catalog-hero-premium-overlay"></div>
@@ -877,7 +838,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
             {totalProperties} предложений {filters.city && `в ${filters.city}`}
           </p>
           
-          {/* Быстрые фильтры по типу дома */}
           {propertyTypes.length > 1 && (
             <div className="quick-filters-premium">
               {propertyTypes.slice(1, 5).map(type => (
@@ -898,7 +858,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
             </div>
           )}
 
-          {/* Ошибка если есть */}
           {apiError && (
             <div className="error-message-premium">
               <FontAwesomeIcon icon={faExclamationTriangle} /> {apiError}
@@ -910,7 +869,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
 
       <div className="catalog-container">
         <div className="catalog-layout">
-          {/* Фильтры (сайдбар) */}
           <aside className={`catalog-filters ${showFilters ? "show" : ""}`}>
             <div className="filters-header">
               <h3><FontAwesomeIcon icon={faFilter} /> Фильтры</h3>
@@ -919,37 +877,85 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
               </button>
             </div>
 
-            {/* Город */}
             <div className="filter-group">
-              <label className="filter-label"><FontAwesomeIcon icon={faMapMarkerAlt} /> Город</label>
+            <label className="filter-label"><FontAwesomeIcon icon={faMapMarkerAlt} /> Город</label>
+            <div className="catalog-select-wrapper">
               <select className="filter-select" value={filters.city} onChange={(e) => handleFilterChange("city", e.target.value)}>
                 {cities.map(city => (
                   <option key={city} value={city === "Все города" ? "" : city}>{city}</option>
                 ))}
               </select>
+              <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
             </div>
+          </div>
 
-            {/* Тип недвижимости */}
             <div className="filter-group">
-              <label className="filter-label"><FontAwesomeIcon icon={faHome} /> Тип</label>
+            <label className="filter-label"><FontAwesomeIcon icon={faHome} /> Тип</label>
+            <div className="catalog-select-wrapper">
               <select className="filter-select" value={filters.propertyType} onChange={(e) => handleFilterChange("propertyType", e.target.value)}>
                 {propertyTypes.map(type => (
                   <option key={type} value={type === "Все типы" ? "" : type}>{type}</option>
                 ))}
               </select>
+              <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
             </div>
+          </div>
 
-            {/* Комнаты */}
             <div className="filter-group">
-              <label className="filter-label"><FontAwesomeIcon icon={faBed} /> Комнаты</label>
+            <label className="filter-label"><FontAwesomeIcon icon={faBed} /> Комнаты</label>
+            <div className="catalog-select-wrapper">
               <select className="filter-select" value={filters.rooms} onChange={(e) => handleFilterChange("rooms", e.target.value)}>
                 {roomOptions.map(room => (
                   <option key={room} value={room === "Любое" ? "" : room}>{room}</option>
                 ))}
               </select>
+              <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
+            </div>
+          </div>
+
+            {/* НОВЫЙ БЛОК: Тип аренды */}
+            <div className="filter-group">
+              <label className="filter-label">Тип аренды</label>
+              <div className="catalog-rent-type-group">
+                <label className={`catalog-rent-option ${filters.rentType === 'day' ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="rentTypeFilter"
+                    value="day"
+                    checked={filters.rentType === 'day'}
+                    onChange={(e) => handleFilterChange('rentType', e.target.value)}
+                  />
+                  <FontAwesomeIcon icon={faSun} className="catalog-rent-icon" />
+                  <div className="catalog-rent-text">
+                    <strong>Посутчно</strong>
+                    <small>Аренда на короткий срок</small>
+                  </div>
+                </label>
+                <label className={`catalog-rent-option ${filters.rentType === 'month' ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="rentTypeFilter"
+                    value="month"
+                    checked={filters.rentType === 'month'}
+                    onChange={(e) => handleFilterChange('rentType', e.target.value)}
+                  />
+                  <FontAwesomeIcon icon={faCalendarAlt} className="catalog-rent-icon" />
+                  <div className="catalog-rent-text">
+                    <strong>Помесячно</strong>
+                    <small>Долгосрочная аренда</small>
+                  </div>
+                </label>
+                {filters.rentType && (
+                  <button
+                    className="catalog-rent-clear"
+                    onClick={() => handleFilterChange('rentType', '')}
+                  >
+                    <FontAwesomeIcon icon={faTimes} /> Сбросить
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Цена */}
             <div className="filter-group">
               <label className="filter-label">Цена, BYN/сутки</label>
               <div className="price-range">
@@ -959,7 +965,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
               </div>
             </div>
 
-            {/* Площадь */}
             <div className="filter-group">
               <label className="filter-label"><FontAwesomeIcon icon={faRulerCombined} /> Площадь, м²</label>
               <div className="area-range">
@@ -969,7 +974,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
               </div>
             </div>
 
-            {/* Особенности */}
             <div className="filter-group">
               <label className="filter-label"><FontAwesomeIcon icon={faCheckCircle} /> Особенности</label>
               <div className="features-grid">
@@ -986,7 +990,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
             <button className="filter-reset-btn" onClick={resetFilters}>Сбросить фильтры</button>
           </aside>
 
-          {/* Основной контент */}
           <main className="catalog-main">
             <div className="catalog-toolbar">
               <div className="toolbar-left">
@@ -1038,22 +1041,20 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
                       <div className="property-image">
                         <img src={property.imageUrl} alt={property.address} onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop")} />
                         <div className="property-badges">
-                          {/* Убран бейдж Premium, оставлен только Hot */}
-                          {property.isHot && <span className="badge-hot">🔥 Горячее</span>}
                         </div>
                         <button className={`favorite-btn-premium ${favorites.has(property.id) ? "active" : ""}`} onClick={(e) => handleFavoriteClick(property.id, e)}>
                           <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
                         </button>
                       </div>
                       <div className="property-details">
-  <div className="property-header-row">
-    <div className="property-price">{property.price}</div>
-    <div className="property-rating">
-      <FontAwesomeIcon icon={faStar} />
-      <span>{property.rating || 0}</span>
-      {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
-    </div>
-  </div>
+                        <div className="property-header-row">
+                        <div className="property-price">{property.price}</div>
+                          <div className="property-rating">
+                            <FontAwesomeIcon icon={faStar} />
+                            <span>{property.rating || 0}</span>
+                            {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
+                          </div>
+                        </div>
                         <div className="property-address"><FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}</div>
                         <div className="property-features">
                           <span><FontAwesomeIcon icon={faBed} /> {property.beds} комн.</span>
@@ -1063,7 +1064,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
                         </div>
                         <p className="property-description">{property.description}</p>
                         <div className="property-tags">
-                          {/* Выводим ВСЕ особенности, без ограничений */}
                           {property.features.map((feat, idx) => (
                             <span key={idx} className="tag-premium">
                               <FontAwesomeIcon icon={getFeatureIcon(feat)} /> {feat}
@@ -1081,7 +1081,6 @@ const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
                   ))}
                 </div>
 
-                {/* Пагинация */}
                 {totalPages > 1 && (
                   <div className="pagination-premium">
                     <button className="page-btn" onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>

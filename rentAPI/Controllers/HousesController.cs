@@ -22,28 +22,29 @@ namespace RentApp.API.Controllers
             _context = context;
             _logger = logger;
         }
-      private decimal CalculateHouseRating(int houseId)
-{
-    var reviews = _context.ReviewHouses
-        .Where(r => r.IdHouses == houseId)
-        .ToList();
-    
-    if (reviews.Count == 0)
-        return 0;
-    
-    return Math.Round((decimal)reviews.Average(r => r.Rating), 1); // Приведение к decimal
-}
 
-// Метод для обновления рейтинга дома
-private async Task UpdateHouseRating(int houseId)
-{
-    var house = await _context.Houses.FindAsync(houseId);
-    if (house != null)
-    {
-        house.Rating = CalculateHouseRating(houseId);
-        await _context.SaveChangesAsync();
-    }
-}
+        private decimal CalculateHouseRating(int houseId)
+        {
+            var reviews = _context.ReviewHouses
+                .Where(r => r.IdHouses == houseId)
+                .ToList();
+            
+            if (reviews.Count == 0)
+                return 0;
+            
+            return Math.Round((decimal)reviews.Average(r => r.Rating), 1);
+        }
+
+        private async Task UpdateHouseRating(int houseId)
+        {
+            var house = await _context.Houses.FindAsync(houseId);
+            if (house != null)
+            {
+                house.Rating = CalculateHouseRating(houseId);
+                await _context.SaveChangesAsync();
+            }
+        }
+
         // GET: api/houses
         [HttpGet]
         [AllowAnonymous]
@@ -65,6 +66,7 @@ private async Task UpdateHouseRating(int houseId)
                         h.Description,
                         h.AnnouncementData,
                         h.HouseType,
+                        h.RentType, // <-- ДОБАВЛЕНО RentType
                         Photos = h.Photos.Select(p => p.Photo).ToList(),
                         HouseInfo = new
                         {
@@ -117,7 +119,6 @@ private async Task UpdateHouseRating(int houseId)
                     });
                 }
 
-                // Создаем дом
                 var house = new House
                 {
                     Price = houseDto.Price,
@@ -126,13 +127,13 @@ private async Task UpdateHouseRating(int houseId)
                     Description = houseDto.Description,
                     AnnouncementData = DateOnly.FromDateTime(DateTime.UtcNow),
                     HouseType = houseDto.HouseType,
+                    RentType = houseDto.RentType, // <-- ДОБАВЛЕНО RentType
                     Active = true
                 };
 
                 await _context.Houses.AddAsync(house);
                 await _context.SaveChangesAsync();
 
-                // Создаем информацию о доме
                 var houseInfo = new HouseInfo
                 {
                     IdHouse = house.Id,
@@ -143,10 +144,8 @@ private async Task UpdateHouseRating(int houseId)
                     Bathrooms = houseDto.Bathrooms,
                     Floor = houseDto.Floor
                 };
-
                 await _context.HousesInfo.AddAsync(houseInfo);
 
-                // Создаем удобства
                 var convenience = new Convenience
                 {
                     IdHouse = house.Id,
@@ -165,10 +164,8 @@ private async Task UpdateHouseRating(int houseId)
                     Education = houseDto.Education ?? string.Empty,
                     Shops = houseDto.Shops ?? string.Empty
                 };
-
                 await _context.Conveniences.AddAsync(convenience);
 
-                // Сохраняем фотографии из Cloudinary URL
                 if (houseDto.PhotoUrls != null && houseDto.PhotoUrls.Any())
                 {
                     foreach (var photoUrl in houseDto.PhotoUrls)
@@ -176,7 +173,7 @@ private async Task UpdateHouseRating(int houseId)
                         var photo = new PhotoHouse
                         {
                             IdHouse = house.Id,
-                            Photo = photoUrl // Сохраняем полный URL от Cloudinary
+                            Photo = photoUrl
                         };
                         await _context.PhotoHouses.AddAsync(photo);
                     }
@@ -220,7 +217,6 @@ private async Task UpdateHouseRating(int houseId)
                     .OrderByDescending(h => h.AnnouncementData)
                     .ToListAsync();
 
-                // Формируем ответ
                 var formattedHouses = houses.Select(h => new
                 {
                     Id = h.Id,
@@ -231,6 +227,7 @@ private async Task UpdateHouseRating(int houseId)
                         : h.Description,
                     FullDescription = h.Description,
                     HouseType = h.HouseType,
+                    RentType = h.RentType, // <-- ДОБАВЛЕНО RentType
                     AnnouncementData = h.AnnouncementData.ToString("yyyy-MM-dd"),
                     Photos = h.Photos.Select(p => p.Photo).ToList(),
                     Region = h.HouseInfo?.Region ?? string.Empty,
@@ -243,7 +240,7 @@ private async Task UpdateHouseRating(int houseId)
                     OwnerEmail = h.Owner?.Email ?? string.Empty,
                     IsPremium = h.Price > 500,
                     IsHot = h.AnnouncementData >= DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
-                    Rating = h.Rating, // Используем сохраненный рейтинг
+                    Rating = h.Rating,
                     Year = DateTime.UtcNow.Year,
                     Features = GetFeaturesList(h.Convenience),
                     Badge = "Аренда",
@@ -254,11 +251,12 @@ private async Task UpdateHouseRating(int houseId)
                 .Select(h => new
                 {
                     h.Id,
-                    Price = h.Price.ToString("N0") + " Br/мес",
+                    Price = h.Price.ToString("N0") + (h.RentType == "day" ? " Br/сутки" : " Br/мес"), // <-- динамическая цена
                     h.Area,
                     h.Description,
                     h.FullDescription,
                     h.HouseType,
+                    h.RentType, // <-- ДОБАВЛЕНО RentType
                     h.AnnouncementData,
                     h.Photos,
                     Address = $"{h.City}, {h.Street}",
@@ -335,6 +333,7 @@ private async Task UpdateHouseRating(int houseId)
                     h.Description,
                     h.Active,
                     h.HouseType,
+                    h.RentType, // <-- ДОБАВЛЕНО RentType
                     AnnouncementData = h.AnnouncementData.ToString("yyyy-MM-dd"),
                     MainPhoto = h.Photos.FirstOrDefault()?.Photo ?? null,
                     HouseInfo = new
@@ -414,114 +413,111 @@ private async Task UpdateHouseRating(int houseId)
         }
 
         [HttpGet("{id}/reviews")]
-[AllowAnonymous]
-public async Task<IActionResult> GetHouseReviews(int id)
-{
-    try
-    {
-        // Логирование для отладки
-        _logger.LogInformation("GET /api/houses/{Id}/reviews called", id);
-        
-        // Проверка ID
-        if (id <= 0)
+        [AllowAnonymous]
+        public async Task<IActionResult> GetHouseReviews(int id)
         {
-            return BadRequest(new
+            try
             {
-                success = false,
-                message = "Неверный ID дома"
-            });
-        }
-        
-        var reviews = await _context.ReviewHouses
-            .Where(r => r.IdHouses == id)
-            .Include(r => r.User)
-            .OrderByDescending(r => r.DataReviews)
-            .Select(r => new
-            {
-                r.Id,
-                r.Rating,
-                r.Text,
-                DataReviews = r.DataReviews.ToString("yyyy-MM-dd"),
-                User = new
+                _logger.LogInformation("GET /api/houses/{Id}/reviews called", id);
+                
+                if (id <= 0)
                 {
-                    r.User.Fio,
-                    r.User.Email
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Неверный ID дома"
+                    });
                 }
-            })
-            .ToListAsync();
-        
-        var house = await _context.Houses.FindAsync(id);
-        var houseRating = house?.Rating ?? 0;
-        
-        return Ok(new 
-        { 
-            success = true, 
-            data = reviews,
-            averageRating = houseRating,
-            totalReviews = reviews.Count
-        });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Ошибка при получении отзывов для дома ID={Id}", id);
-        return StatusCode(500, new
-        {
-            success = false,
-            message = "Ошибка при получении отзывов"
-        });
-    }
-}
-            // HousesController.cs - добавьте этот метод
-[HttpGet("{houseId}/owner-info")]
-[AllowAnonymous] // Разрешаем доступ без авторизации
-public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
-{
-    try
-    {
-        var house = await _context.Houses
-            .Include(h => h.Owner)
-            .FirstOrDefaultAsync(h => h.Id == houseId);
-
-        if (house == null)
-            return NotFound(new { success = false, message = "Дом не найден" });
-
-        var ownerInfo = new
-        {
-            id = house.IdOwner, // Используем IdOwner из House
-            fio = house.Owner.Fio,
-            email = house.Owner.Email,
-            phone_num = house.Owner.Phone_num,
-            id_agent = house.Owner.Id_agent
-        };
-
-        return Ok(new { success = true, data = ownerInfo });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, $"Ошибка при получении информации о владельце дома {houseId}");
-        return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
-    }
-}
-    
-
-            [HttpGet("users/by-email/{email}")]
-            [AllowAnonymous]
-            public async Task<IActionResult> GetUserByEmail(string email)
-            {
-                var user = await _context.Users
-                    .Where(u => u.Email == email)
-                    .Select(u => new {
-                        u.Fio,
-                        u.Email,
-                        u.Phone_num,
+                
+                var reviews = await _context.ReviewHouses
+                    .Where(r => r.IdHouses == id)
+                    .Include(r => r.User)
+                    .OrderByDescending(r => r.DataReviews)
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.Rating,
+                        r.Text,
+                        DataReviews = r.DataReviews.ToString("yyyy-MM-dd"),
+                        User = new
+                        {
+                            r.User.Fio,
+                            r.User.Email
+                        }
                     })
-                    .FirstOrDefaultAsync();
+                    .ToListAsync();
                 
-                if (user == null)
-                    return NotFound();
+                var house = await _context.Houses.FindAsync(id);
+                var houseRating = house?.Rating ?? 0;
                 
-                return Ok(new { success = true, data = user });
+                return Ok(new 
+                { 
+                    success = true, 
+                    data = reviews,
+                    averageRating = houseRating,
+                    totalReviews = reviews.Count
+                });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при получении отзывов для дома ID={Id}", id);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Ошибка при получении отзывов"
+                });
+            }
+        }
+
+        [HttpGet("{houseId}/owner-info")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
+        {
+            try
+            {
+                var house = await _context.Houses
+                    .Include(h => h.Owner)
+                    .FirstOrDefaultAsync(h => h.Id == houseId);
+
+                if (house == null)
+                    return NotFound(new { success = false, message = "Дом не найден" });
+
+                var ownerInfo = new
+                {
+                    id = house.IdOwner,
+                    fio = house.Owner.Fio,
+                    email = house.Owner.Email,
+                    phone_num = house.Owner.Phone_num,
+                    id_agent = house.Owner.Id_agent
+                };
+
+                return Ok(new { success = true, data = ownerInfo });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Ошибка при получении информации о владельце дома {houseId}");
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+            }
+        }
+
+        [HttpGet("users/by-email/{email}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserByEmail(string email)
+        {
+            var user = await _context.Users
+                .Where(u => u.Email == email)
+                .Select(u => new {
+                    u.Fio,
+                    u.Email,
+                    u.Phone_num,
+                })
+                .FirstOrDefaultAsync();
+            
+            if (user == null)
+                return NotFound();
+            
+            return Ok(new { success = true, data = user });
+        }
 
         // PUT: api/houses/{id}
         [HttpPut("{id}")]
@@ -554,13 +550,12 @@ public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
                     });
                 }
 
-                // Обновляем основную информацию
                 house.Price = houseDto.Price;
                 house.Area = houseDto.Area;
                 house.Description = houseDto.Description;
                 house.HouseType = houseDto.HouseType;
+                house.RentType = houseDto.RentType; // <-- ДОБАВЛЕНО RentType
 
-                // Обновляем информацию о доме
                 if (house.HouseInfo != null)
                 {
                     house.HouseInfo.Region = houseDto.Region;
@@ -571,7 +566,6 @@ public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
                     house.HouseInfo.Floor = houseDto.Floor;
                 }
 
-                // Обновляем удобства
                 if (house.Convenience != null)
                 {
                     house.Convenience.Conditioner = houseDto.Conditioner;
@@ -590,16 +584,13 @@ public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
                     house.Convenience.Shops = houseDto.Shops ?? string.Empty;
                 }
 
-                // Обновляем фотографии если есть новые URL
                 if (houseDto.PhotoUrls != null && houseDto.PhotoUrls.Any())
                 {
-                    // Удаляем старые фотографии если нужно
                     if (houseDto.DeleteExistingPhotos)
                     {
                         var existingPhotos = await _context.PhotoHouses
                             .Where(p => p.IdHouse == house.Id)
                             .ToListAsync();
-                        
                         _context.PhotoHouses.RemoveRange(existingPhotos);
                     }
 
@@ -610,7 +601,6 @@ public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
                             IdHouse = house.Id,
                             Photo = photoUrl
                         };
-
                         await _context.PhotoHouses.AddAsync(photo);
                     }
                 }
@@ -636,143 +626,137 @@ public async Task<IActionResult> GetHouseOwnerInfo(int houseId)
                 });
             }
         }
+
         [HttpPost("{id}/reviews")]
-[Authorize]
-public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto reviewDto)
-{
-    try
-    {
-        _logger.LogInformation("POST /api/houses/{Id}/reviews called", id);
-        
-        // Проверка входных данных
-        if (reviewDto == null)
+        [Authorize]
+        public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto reviewDto)
         {
-            _logger.LogWarning("ReviewDto is null");
-            return BadRequest(new
+            try
             {
-                success = false,
-                message = "Данные отзыва не предоставлены"
-            });
+                _logger.LogInformation("POST /api/houses/{Id}/reviews called", id);
+                
+                if (reviewDto == null)
+                {
+                    _logger.LogWarning("ReviewDto is null");
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Данные отзыва не предоставлены"
+                    });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList();
+                    
+                    _logger.LogWarning("Model validation failed: Rating={Rating}, TextLength={TextLength}, Errors: {Errors}", 
+                        reviewDto.Rating, reviewDto.Text?.Length, string.Join(", ", errors));
+                    
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Некорректные данные отзыва",
+                        errors = errors
+                    });
+                }
+                
+                if (reviewDto.Rating < 1 || reviewDto.Rating > 5)
+                {
+                    _logger.LogWarning("Invalid rating: {Rating}", reviewDto.Rating);
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Рейтинг должен быть от 1 до 5"
+                    });
+                }
+                
+                if (string.IsNullOrWhiteSpace(reviewDto.Text) || reviewDto.Text.Length < 10)
+                {
+                    _logger.LogWarning("Invalid text length: {Length}", reviewDto.Text?.Length);
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Текст отзыва должен содержать минимум 10 символов"
+                    });
+                }
+                
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    _logger.LogWarning("Invalid or missing user ID in token");
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = "Неверный токен"
+                    });
+                }
+                
+                var house = await _context.Houses.FindAsync(id);
+                if (house == null)
+                {
+                    _logger.LogWarning("House with ID {Id} not found", id);
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Дом не найден"
+                    });
+                }
+                
+                var existingReview = await _context.ReviewHouses
+                    .FirstOrDefaultAsync(r => r.IdUser == userId && r.IdHouses == id);
+                
+                if (existingReview != null)
+                {
+                    _logger.LogWarning("User {UserId} already has review for house {HouseId}", userId, id);
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Вы уже оставляли отзыв на этот дом"
+                    });
+                }
+                
+                var review = new ReviewHouse
+                {
+                    IdUser = userId,
+                    IdHouses = id,
+                    Rating = reviewDto.Rating,
+                    Text = reviewDto.Text.Trim(),
+                    DataReviews = DateOnly.FromDateTime(DateTime.UtcNow)
+                };
+                
+                await _context.ReviewHouses.AddAsync(review);
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Review added successfully for house {Id} by user {UserId}", id, userId);
+                
+                await UpdateHouseRating(id);
+                
+                house = await _context.Houses.FindAsync(id);
+                var updatedRating = house?.Rating ?? 0;
+                
+                return Ok(new 
+                { 
+                    success = true, 
+                    message = "Отзыв добавлен",
+                    rating = updatedRating,
+                    reviewId = review.Id
+                });
+            }
+            catch (Exception ex)
+            {   
+                _logger.LogError(ex, "Ошибка при добавлении отзыва для дома ID={Id}", id);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Ошибка при добавлении отзыва",
+                    error = ex.Message
+                });
+            }
         }
-        
-        // Проверка валидации модели
-        if (!ModelState.IsValid)
-        {
-            var errors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => e.ErrorMessage)
-                .ToList();
-            
-            _logger.LogWarning("Model validation failed: Rating={Rating}, TextLength={TextLength}, Errors: {Errors}", 
-                reviewDto.Rating, reviewDto.Text?.Length, string.Join(", ", errors));
-            
-            return BadRequest(new
-            {
-                success = false,
-                message = "Некорректные данные отзыва",
-                errors = errors
-            });
-        }
-        
-        // Проверка рейтинга
-        if (reviewDto.Rating < 1 || reviewDto.Rating > 5)
-        {
-            _logger.LogWarning("Invalid rating: {Rating}", reviewDto.Rating);
-            return BadRequest(new
-            {
-                success = false,
-                message = "Рейтинг должен быть от 1 до 5"
-            });
-        }
-        
-        // Проверка текста
-        if (string.IsNullOrWhiteSpace(reviewDto.Text) || reviewDto.Text.Length < 10)
-        {
-            _logger.LogWarning("Invalid text length: {Length}", reviewDto.Text?.Length);
-            return BadRequest(new
-            {
-                success = false,
-                message = "Текст отзыва должен содержать минимум 10 символов"
-            });
-        }
-        
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-        {
-            _logger.LogWarning("Invalid or missing user ID in token");
-            return Unauthorized(new
-            {
-                success = false,
-                message = "Неверный токен"
-            });
-        }
-        
-        // Проверяем, существует ли дом
-        var house = await _context.Houses.FindAsync(id);
-        if (house == null)
-        {
-            _logger.LogWarning("House with ID {Id} not found", id);
-            return NotFound(new
-            {
-                success = false,
-                message = "Дом не найден"
-            });
-        }
-        
-        // Проверяем, не оставлял ли пользователь уже отзыв на этот дом
-        var existingReview = await _context.ReviewHouses
-            .FirstOrDefaultAsync(r => r.IdUser == userId && r.IdHouses == id);
-        
-        if (existingReview != null)
-        {
-            _logger.LogWarning("User {UserId} already has review for house {HouseId}", userId, id);
-            return BadRequest(new
-            {
-                success = false,
-                message = "Вы уже оставляли отзыв на этот дом"
-            });
-        }
-        
-        var review = new ReviewHouse
-        {
-            IdUser = userId,
-            IdHouses = id,
-            Rating = reviewDto.Rating,
-            Text = reviewDto.Text.Trim(),
-            DataReviews = DateOnly.FromDateTime(DateTime.UtcNow)
-        };
-        
-        await _context.ReviewHouses.AddAsync(review);
-        await _context.SaveChangesAsync();
-        
-        _logger.LogInformation("Review added successfully for house {Id} by user {UserId}", id, userId);
-        
-        // Обновляем рейтинг дома
-        await UpdateHouseRating(id);
-        
-        // Получаем обновленный рейтинг
-        house = await _context.Houses.FindAsync(id);
-        var updatedRating = house?.Rating ?? 0;
-        
-        return Ok(new 
-        { 
-            success = true, 
-            message = "Отзыв добавлен",
-            rating = updatedRating,
-            reviewId = review.Id
-        });
-    }
-    catch (Exception ex)
-    {   
-        _logger.LogError(ex, "Ошибка при добавлении отзыва для дома ID={Id}", id);
-        return StatusCode(500, new
-        {
-            success = false,
-            message = "Ошибка при добавлении отзыва",
-            error = ex.Message
-        });
-    }
-}
+
         // DELETE: api/houses/{id}
         [HttpDelete("{id}")]
         [Authorize]
@@ -806,7 +790,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     });
                 }
 
-                // Удаляем все связанные данные
                 if (house.HouseInfo != null)
                     _context.HousesInfo.Remove(house.HouseInfo);
                 
@@ -819,7 +802,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                 if (house.Reviews.Any())
                     _context.ReviewHouses.RemoveRange(house.Reviews);
 
-                // Удаляем сам дом
                 _context.Houses.Remove(house);
                 
                 await _context.SaveChangesAsync();
@@ -857,7 +839,7 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     .Include(h => h.Owner)
                     .Include(h => h.Convenience)
                     .Include(h => h.Reviews)
-                    .ThenInclude(r => r.User) // Включаем данные пользователя для отзывов
+                        .ThenInclude(r => r.User)
                     .FirstOrDefaultAsync();
 
                 if (house == null)
@@ -869,7 +851,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     });
                 }
 
-                // Форматируем отзывы
                 var reviews = house.Reviews.Select(r => new
                 {
                     r.Id,
@@ -890,9 +871,10 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     Area = house.Area,
                     Description = house.Description,
                     HouseType = house.HouseType,
+                    RentType = house.RentType, // <-- ДОБАВЛЕНО RentType
                     AnnouncementData = house.AnnouncementData.ToString("yyyy-MM-dd"),
-                    Rating = house.Rating, // Добавляем рейтинг
-                    Reviews = reviews, // Добавляем отзывы
+                    Rating = house.Rating,
+                    Reviews = reviews,
                     Active = house.Active,
                     Photos = house.Photos.Select(p => p.Photo).ToList(),
                     HouseInfo = house.HouseInfo != null ? new
@@ -948,7 +930,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
 
         // АДМИН-МЕТОДЫ
 
-        // PUT: api/houses/admin/{id}
         [Authorize(Roles = "Admin")]
         [HttpPut("admin/{id}")]
         public async Task<IActionResult> UpdateHouseAdmin(int id, [FromBody] UpdateHouseDto houseDto)
@@ -969,13 +950,12 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     });
                 }
 
-                // Обновляем основную информацию
                 house.Price = houseDto.Price;
                 house.Area = houseDto.Area;
                 house.Description = houseDto.Description;
                 house.HouseType = houseDto.HouseType;
+                house.RentType = houseDto.RentType; // <-- ДОБАВЛЕНО RentType
 
-                // Обновляем информацию о доме
                 if (house.HouseInfo != null)
                 {
                     house.HouseInfo.Region = houseDto.Region;
@@ -986,7 +966,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     house.HouseInfo.Floor = houseDto.Floor;
                 }
 
-                // Обновляем удобства
                 if (house.Convenience != null)
                 {
                     house.Convenience.Conditioner = houseDto.Conditioner;
@@ -1027,7 +1006,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
             }
         }
         
-        // PATCH: api/houses/admin/{id}/toggle-active
         [Authorize(Roles = "Admin")]
         [HttpPatch("admin/{id}/toggle-active")]
         public async Task<IActionResult> ToggleActiveAdmin(int id, [FromBody] ToggleActiveDto dto)
@@ -1068,7 +1046,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
             }
         }
 
-        // DELETE: api/houses/admin/{id}
         [Authorize(Roles = "Admin")]
         [HttpDelete("admin/{id}")]
         public async Task<IActionResult> DeleteHouseAdmin(int id)
@@ -1091,7 +1068,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                     });
                 }
 
-                // Удаляем все связанные данные
                 if (house.HouseInfo != null)
                     _context.HousesInfo.Remove(house.HouseInfo);
                 
@@ -1104,7 +1080,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                 if (house.Reviews.Any())
                     _context.ReviewHouses.RemoveRange(house.Reviews);
 
-                // Удаляем сам дом
                 _context.Houses.Remove(house);
                 
                 await _context.SaveChangesAsync();
@@ -1128,9 +1103,6 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
             }
         }
 
-        // Вспомогательные методы
-
-        // Вспомогательный метод для получения списка удобств
         private List<string> GetFeaturesList(Convenience? convenience)
         {
             if (convenience == null)
@@ -1168,11 +1140,9 @@ public async Task<IActionResult> AddReview(int id, [FromBody] CreateReviewDto re
                 return false;
             }
 
-            // Проверяем, является ли пользователь владельцем
             var isOwner = await _context.Houses
                 .AnyAsync(h => h.Id == houseId && h.IdOwner == userId);
 
-            // Проверяем, является ли пользователь администратором
             var user = await _context.Users.FindAsync(userId);
             var isAdmin = user?.Id_agent == true;
 

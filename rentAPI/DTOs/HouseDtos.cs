@@ -5,11 +5,11 @@ namespace RentApp.API.DTOs
     public class CreateHouseDto
     {
         [Required(ErrorMessage = "Цена обязательна")]
-        [Range(1, 100000000, ErrorMessage = "Цена должна быть от 1 до 100,000,000")]
+        [Range(1, 100000000, ErrorMessage = "Цена должна быть от 1 до 100 000 000")]
         public decimal Price { get; set; }
 
         [Required(ErrorMessage = "Площадь обязательна")]
-        [Range(1, 10000, ErrorMessage = "Площадь должна быть от 1 до 10,000 м²")]
+        [Range(1, 10000, ErrorMessage = "Площадь должна быть от 1 до 10 000 м²")]
         public decimal Area { get; set; }
 
         [Required(ErrorMessage = "Описание обязательно")]
@@ -19,6 +19,11 @@ namespace RentApp.API.DTOs
 
         [Required(ErrorMessage = "Тип дома обязателен")]
         public string HouseType { get; set; } = "Коттедж";
+
+        // НОВОЕ ПОЛЕ – тип аренды
+        [Required(ErrorMessage = "Тип аренды обязателен")]
+        [RegularExpression("^(day|month)$", ErrorMessage = "Тип аренды должен быть 'day' или 'month'")]
+        public string RentType { get; set; } = "month";
 
         // HouseInfo
         [Required(ErrorMessage = "Область обязательна")]
@@ -66,6 +71,8 @@ namespace RentApp.API.DTOs
 
         [MaxLength(500)]
         public string Shops { get; set; } = string.Empty;
+
+        // Фотографии – массив Cloudinary URL
         public List<string> PhotoUrls { get; set; } = new List<string>();
     }
 }

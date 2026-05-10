@@ -3,16 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import './CreateAd.css';
 
-// Компонент уведомлений (без изменений)
 const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
-  message, 
-  type, 
-  onClose 
+  message, type, onClose 
 }) => {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 3000);
+    const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
@@ -28,9 +23,7 @@ const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'war
         <i className={`createad-notification-icon ${icons[type]}`}></i>
         <span className="createad-notification-text">{message}</span>
       </div>
-      <button className="createad-notification-close" onClick={onClose}>
-        &times;
-      </button>
+      <button className="createad-notification-close" onClick={onClose}>&times;</button>
     </div>
   );
 };
@@ -49,6 +42,7 @@ const CreateAd: React.FC = () => {
     bathrooms: '1',
     floor: '1',
     houseType: 'Коттедж',
+    rentType: 'month', // 'day' или 'month'
     region: 'Минская область',
     city: 'Минск',
     district: '',
@@ -56,7 +50,6 @@ const CreateAd: React.FC = () => {
     description: '',
     conditioner: false,
     furniture: false,
-    appliances: false,
     internet: false,
     security: false,
     videoSurveillance: false,
@@ -78,13 +71,8 @@ const CreateAd: React.FC = () => {
     photoUrls: [] as string[],
   });
 
-  const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
-    setNotification({ message, type });
-  };
-
-  const closeNotification = () => {
-    setNotification(null);
-  };
+  const showNotification = (message: string, type: 'success' | 'error' | 'warning') => setNotification({ message, type });
+  const closeNotification = () => setNotification(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -113,18 +101,14 @@ const CreateAd: React.FC = () => {
     { value: 'Коттедж', label: 'Коттедж', description: 'Отдельный дом с участком' },
     { value: 'Вилла', label: 'Вилла', description: 'Комфортабельный загородный дом' },
     { value: 'Особняк', label: 'Особняк', description: 'Просторный дом высшего класса' },
-    { value: 'Таунхаус', label: 'Таунхаус',  description: 'Дом на несколько семей' },
-    { value: 'Усадьба', label: 'Усадьба',  description: 'Большой дом с обширной территорией' },
+    { value: 'Таунхаус', label: 'Таунхаус', description: 'Дом на несколько семей' },
+    { value: 'Усадьба', label: 'Усадьба', description: 'Большой дом с обширной территорией' },
     { value: 'Резиденция', label: 'Резиденция', description: 'Элитный дом премиум-класса' }
   ];
 
   const belarusianRegions = [
-    'Минская область',
-    'Гомельская область',
-    'Гродненская область',
-    'Могилёвская область',
-    'Брестская область',
-    'Витебская область'
+    'Минская область', 'Гомельская область', 'Гродненская область',
+    'Могилёвская область', 'Брестская область', 'Витебская область'
   ];
 
   const citiesByRegion: Record<string, string[]> = {
@@ -139,30 +123,25 @@ const CreateAd: React.FC = () => {
   const getAllCities = () => Object.values(citiesByRegion).flat();
 
   const roomsOptions = [
-    { value: '1', label: '1 комната' },
-    { value: '2', label: '2 комнаты' },
-    { value: '3', label: '3 комнаты' },
-    { value: '4', label: '4 комнаты' },
-    { value: '5', label: '5 комнат' },
-    { value: '6', label: '6+ комнат' }
+    { value: '1', label: '1 комната' }, { value: '2', label: '2 комнаты' },
+    { value: '3', label: '3 комнаты' }, { value: '4', label: '4 комнаты' },
+    { value: '5', label: '5 комнат' }, { value: '6', label: '6+ комнат' }
   ];
 
   const bathroomsOptions = [
-    { value: '1', label: '1 санузел' },
-    { value: '2', label: '2 санузла' },
-    { value: '3', label: '3 санузла' },
-    { value: '4', label: '4+ санузла' }
+    { value: '1', label: '1 санузел' }, { value: '2', label: '2 санузла' },
+    { value: '3', label: '3 санузла' }, { value: '4', label: '4+ санузла' }
   ];
 
   const availableCities = useMemo(() => {
-    if (!formData.region || formData.region === '') return getAllCities();
+    if (!formData.region) return getAllCities();
     return citiesByRegion[formData.region] || getAllCities();
   }, [formData.region]);
 
   useEffect(() => {
     if (formData.region && formData.city) {
-      const allowedCities = citiesByRegion[formData.region];
-      if (allowedCities && !allowedCities.includes(formData.city)) {
+      const allowed = citiesByRegion[formData.region];
+      if (allowed && !allowed.includes(formData.city)) {
         setFormData(prev => ({ ...prev, city: '' }));
       }
     }
@@ -181,9 +160,9 @@ const CreateAd: React.FC = () => {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const newPhotos = Array.from(files).filter(file => file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024);
+    const newPhotos = Array.from(files).filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024);
     if (newPhotos.length === 0) {
-      showNotification('Пожалуйста, выберите изображения (JPG, PNG) размером до 10 МБ', 'warning');
+      showNotification('Выберите изображения (JPG, PNG) до 10 МБ', 'warning');
       return;
     }
     const maxPhotos = 20;
@@ -213,12 +192,12 @@ const CreateAd: React.FC = () => {
   const handleSetMainPhoto = (index: number) => {
     if (index === 0) return;
     const newPhotos = [...formData.photos];
-    const newPhotoUrls = [...formData.photoUrls];
-    const [selectedPhoto] = newPhotos.splice(index, 1);
-    const [selectedPhotoUrl] = newPhotoUrls.splice(index, 1);
-    newPhotos.unshift(selectedPhoto);
-    newPhotoUrls.unshift(selectedPhotoUrl);
-    setFormData(prev => ({ ...prev, photos: newPhotos, photoUrls: newPhotoUrls }));
+    const newUrls = [...formData.photoUrls];
+    const [photo] = newPhotos.splice(index, 1);
+    const [url] = newUrls.splice(index, 1);
+    newPhotos.unshift(photo);
+    newUrls.unshift(url);
+    setFormData(prev => ({ ...prev, photos: newPhotos, photoUrls: newUrls }));
     showNotification('Главная фотография изменена', 'success');
   };
 
@@ -234,13 +213,11 @@ const CreateAd: React.FC = () => {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const fileList = e.dataTransfer.files;
       const input = document.getElementById('photoUpload') as HTMLInputElement;
       const dataTransfer = new DataTransfer();
-      Array.from(fileList).forEach(file => dataTransfer.items.add(file));
+      Array.from(e.dataTransfer.files).forEach(f => dataTransfer.items.add(f));
       input.files = dataTransfer.files;
-      const changeEvent = { target: input } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handlePhotoUpload(changeEvent);
+      handlePhotoUpload({ target: input } as React.ChangeEvent<HTMLInputElement>);
     }
   };
 
@@ -258,6 +235,10 @@ const CreateAd: React.FC = () => {
         showNotification('Выберите тип дома', 'error');
         return false;
       }
+      if (!formData.rentType) {
+        showNotification('Выберите тип аренды', 'error');
+        return false;
+      }
       const floor = parseInt(formData.floor);
       if (floor < 0 || floor > 10) {
         showNotification('Этаж должен быть от 0 до 10', 'error');
@@ -266,18 +247,9 @@ const CreateAd: React.FC = () => {
       return true;
     }
     if (step === 2) {
-      if (!formData.region.trim()) {
-        showNotification('Введите область', 'error');
-        return false;
-      }
-      if (!formData.city.trim()) {
-        showNotification('Введите город', 'error');
-        return false;
-      }
-      if (!formData.street.trim()) {
-        showNotification('Введите адрес', 'error');
-        return false;
-      }
+      if (!formData.region.trim()) { showNotification('Введите область', 'error'); return false; }
+      if (!formData.city.trim()) { showNotification('Введите город', 'error'); return false; }
+      if (!formData.street.trim()) { showNotification('Введите адрес', 'error'); return false; }
       if (!formData.description.trim() || formData.description.length < 50) {
         showNotification('Описание должно содержать минимум 50 символов', 'error');
         return false;
@@ -300,23 +272,21 @@ const CreateAd: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
   const handlePrevStep = () => {
     setFormStep(prev => prev - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'rent_app');
-    formData.append('cloud_name', 'dnblbt7wc');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', 'rent_app');
+    fd.append('cloud_name', 'dnblbt7wc');
     try {
-      const response = await fetch('https://api.cloudinary.com/v1_1/dnblbt7wc/image/upload', { method: 'POST', body: formData });
-      const data = await response.json();
+      const res = await fetch('https://api.cloudinary.com/v1_1/dnblbt7wc/image/upload', { method: 'POST', body: fd });
+      const data = await res.json();
       return data.secure_url || null;
-    } catch (error) {
-      console.error('Ошибка загрузки в Cloudinary:', error);
+    } catch {
       return null;
     }
   };
@@ -332,12 +302,12 @@ const CreateAd: React.FC = () => {
         navigate('/login');
         return;
       }
-      const uploadedImageUrls: string[] = [];
+      const uploadedUrls: string[] = [];
       for (const photo of formData.photos) {
         const url = await uploadToCloudinary(photo);
-        if (url) uploadedImageUrls.push(url);
+        if (url) uploadedUrls.push(url);
       }
-      if (uploadedImageUrls.length === 0 && formData.photos.length > 0) {
+      if (uploadedUrls.length === 0 && formData.photos.length > 0) {
         showNotification('Не удалось загрузить фотографии', 'error');
         setIsSubmitting(false);
         return;
@@ -347,6 +317,7 @@ const CreateAd: React.FC = () => {
         Area: parseFloat(formData.area),
         Description: formData.description,
         HouseType: formData.houseType,
+        RentType: formData.rentType,
         Region: formData.region,
         City: formData.city,
         Street: formData.street,
@@ -367,7 +338,7 @@ const CreateAd: React.FC = () => {
         Transport: formData.transport || '',
         Education: formData.education || '',
         Shops: formData.shops || '',
-        PhotoUrls: uploadedImageUrls
+        PhotoUrls: uploadedUrls
       };
       const response = await fetch('http://localhost:5213/api/houses/create', {
         method: 'POST',
@@ -380,10 +351,9 @@ const CreateAd: React.FC = () => {
         showNotification('Объявление успешно создано', 'success');
         setTimeout(() => navigate('/my-houses'), 2000);
       } else {
-        showNotification(result.message || 'Ошибка при создании объявления', 'error');
+        showNotification(result.message || 'Ошибка при создании', 'error');
       }
-    } catch (error) {
-      console.error('Error creating ad:', error);
+    } catch  {
       showNotification('Ошибка соединения', 'error');
     } finally {
       setIsSubmitting(false);
@@ -397,7 +367,6 @@ const CreateAd: React.FC = () => {
     <div className="createad-page">
       {notification && <Notification message={notification.message} type={notification.type} onClose={closeNotification} />}
       <Header />
-      
       <div className="createad-hero-section">
         <div className="createad-container">
           <div className="createad-hero-content">
@@ -406,24 +375,15 @@ const CreateAd: React.FC = () => {
             <div className="createad-progress-steps">
               <div className={`createad-step ${formStep === 1 ? 'createad-active' : ''} ${formStep > 1 ? 'createad-completed' : ''}`}>
                 <div className="createad-step-number">1</div>
-                <div className="createad-step-info">
-                  <span className="createad-step-title">Основная информация</span>
-                  <span className="createad-step-description">Тип, цена, площадь</span>
-                </div>
+                <div className="createad-step-info"><span className="createad-step-title">Основная информация</span><span className="createad-step-description">Тип, цена, площадь</span></div>
               </div>
               <div className={`createad-step ${formStep === 2 ? 'createad-active' : ''} ${formStep > 2 ? 'createad-completed' : ''}`}>
                 <div className="createad-step-number">2</div>
-                <div className="createad-step-info">
-                  <span className="createad-step-title">Описание и фото</span>
-                  <span className="createad-step-description">Местоположение, удобства</span>
-                </div>
+                <div className="createad-step-info"><span className="createad-step-title">Описание и фото</span><span className="createad-step-description">Местоположение, удобства</span></div>
               </div>
               <div className={`createad-step ${formStep === 3 ? 'createad-active' : ''}`}>
                 <div className="createad-step-number">3</div>
-                <div className="createad-step-info">
-                  <span className="createad-step-title">Контакты</span>
-                  <span className="createad-step-description">Контактная информация</span>
-                </div>
+                <div className="createad-step-info"><span className="createad-step-title">Контакты</span><span className="createad-step-description">Контактная информация</span></div>
               </div>
             </div>
           </div>
@@ -434,19 +394,12 @@ const CreateAd: React.FC = () => {
         <div className="createad-container">
           <div className="createad-form-wrapper">
             <div className="createad-form-header">
-              <h2>
-                {formStep === 1 && 'Основная информация о доме'}
-                {formStep === 2 && 'Описание и фотографии'}
-                {formStep === 3 && 'Контактная информация'}
-              </h2>
+              <h2>{formStep === 1 && 'Основная информация'}{formStep === 2 && 'Описание и фотографии'}{formStep === 3 && 'Завершение'}</h2>
               <div className="createad-form-progress">
                 <span>Шаг {formStep} из 3</span>
-                <div className="createad-progress-bar">
-                  <div className="createad-progress-fill" style={{ width: `${(formStep / 3) * 100}%` }}></div>
-                </div>
+                <div className="createad-progress-bar"><div className="createad-progress-fill" style={{ width: `${(formStep / 3) * 100}%` }}></div></div>
               </div>
             </div>
-
             <form className="createad-property-form" onSubmit={handleSubmit}>
               {formStep === 1 && (
                 <div className="createad-form-step">
@@ -454,7 +407,7 @@ const CreateAd: React.FC = () => {
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-home"></i> Тип дома</h3>
                     <p className="createad-section-description">Выберите тип вашего дома</p>
                     <div className="createad-house-type-grid">
-                      {houseTypes.map((type) => (
+                      {houseTypes.map(type => (
                         <label key={type.value} className={`createad-house-type-card ${formData.houseType === type.value ? 'createad-selected' : ''}`}>
                           <input type="radio" name="houseType" value={type.value} checked={formData.houseType === type.value} onChange={handleInputChange} className="createad-visually-hidden" />
                           <div className="createad-card-content">
@@ -469,13 +422,39 @@ const CreateAd: React.FC = () => {
                   </div>
 
                   <div className="createad-form-section">
+                    <h3 className="createad-section-title"><i className="createad-icon fas fa-calendar-alt"></i> Тип аренды</h3>
+                    <p className="createad-section-description">Укажите, как вы сдаёте дом</p>
+                    <div className="createad-rent-type-group">
+                    <label className={`createad-rent-option ${formData.rentType === 'month' ? 'active' : ''}`}>
+                      <input type="radio" name="rentType" value="month" checked={formData.rentType === 'month'} onChange={handleInputChange} />
+                      <i className="fas fa-calendar-alt createad-rent-icon"></i>
+                      <div className="createad-rent-text">
+                        <strong>Помесячно</strong>
+                        <small>Долгосрочная аренда</small>
+                      </div>
+                    </label>
+                    <label className={`createad-rent-option ${formData.rentType === 'day' ? 'active' : ''}`}>
+                      <input type="radio" name="rentType" value="day" checked={formData.rentType === 'day'} onChange={handleInputChange} />
+                      <i className="fas fa-sun createad-rent-icon"></i>
+                      <div className="createad-rent-text">
+                        <strong>Посутчно</strong>
+                        <small>Аренда на короткий срок</small>
+                      </div>
+                    </label>
+                  </div>
+                  </div>
+
+                  <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-info-circle"></i> Основная информация</h3>
                     <div className="createad-form-grid">
                       <div className="createad-form-group">
-                        <label className="createad-form-label"><span>Цена аренды в месяц</span><span className="createad-required">*</span></label>
+                        <label className="createad-form-label">
+                          <span>Цена аренды {formData.rentType === 'month' ? 'в месяц' : 'за сутки'}</span>
+                          <span className="createad-required">*</span>
+                        </label>
                         <div className="createad-input-with-suffix">
                           <input type="number" name="price" value={formData.price} onChange={handleInputChange} required min="0" step="100" placeholder="50000" className="createad-form-input" />
-                          <span className="createad-suffix">Br/мес</span>
+                          <span className="createad-suffix">{formData.rentType === 'month' ? 'Br/мес' : 'Br/сут'}</span>
                         </div>
                       </div>
                       <div className="createad-form-group">
@@ -489,7 +468,7 @@ const CreateAd: React.FC = () => {
                         <label className="createad-form-label"><span>Количество комнат</span><span className="createad-required">*</span></label>
                         <div className="createad-select-wrapper">
                           <select name="rooms" value={formData.rooms} onChange={handleInputChange} required className="createad-form-select">
-                            {roomsOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            {roomsOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                           <i className="createad-select-arrow fas fa-chevron-down"></i>
                         </div>
@@ -498,7 +477,7 @@ const CreateAd: React.FC = () => {
                         <label className="createad-form-label"><span>Количество санузлов</span><span className="createad-required">*</span></label>
                         <div className="createad-select-wrapper">
                           <select name="bathrooms" value={formData.bathrooms} onChange={handleInputChange} required className="createad-form-select">
-                            {bathroomsOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            {bathroomsOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                           <i className="createad-select-arrow fas fa-chevron-down"></i>
                         </div>
@@ -514,6 +493,7 @@ const CreateAd: React.FC = () => {
 
               {formStep === 2 && (
                 <div className="createad-form-step">
+                  {/* Местоположение */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-map-marker-alt"></i> Местоположение</h3>
                     <div className="createad-form-grid">
@@ -543,6 +523,7 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Описание */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-pencil-alt"></i> Описание дома</h3>
                     <p className="createad-section-description">Расскажите подробнее о вашем доме</p>
@@ -555,6 +536,7 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Удобства */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-star"></i> Удобства и особенности</h3>
                     <p className="createad-section-description">Выберите доступные удобства</p>
@@ -586,7 +568,6 @@ const CreateAd: React.FC = () => {
                         </div>
                       </div>
                     </div>
-
                     <div className="createad-environment-section">
                       <h4>Окружение</h4>
                       <div className="createad-environment-grid">
@@ -597,6 +578,7 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Фотографии */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-camera"></i> Фотографии дома</h3>
                     <p className="createad-section-description">Загрузите фотографии вашего дома</p>
@@ -617,7 +599,7 @@ const CreateAd: React.FC = () => {
                     </div>
                     <div className="createad-upload-hint">
                       <p><strong>Рекомендации:</strong></p>
-                      <ul><li>Добавьте 5-20 качественных фотографий</li><li>Первая фотография будет главной в объявлении</li><li>Формат: JPG, PNG, до 10 МБ каждая</li><li>Сделайте фотографии с разных ракурсов</li></ul>
+                      <ul><li>Добавьте 5-20 качественных фотографий</li><li>Первая фотография будет главной в объявлении</li><li>Формат: JPG, PNG, до 10 МБ каждая</li></ul>
                     </div>
                     {photosCount > 0 && (
                       <div className="createad-photos-preview">
@@ -655,27 +637,17 @@ const CreateAd: React.FC = () => {
                       <div className="createad-check-item"><i className="fas fa-check-circle"></i><span>Описание и удобства добавлены</span></div>
                       <div className="createad-check-item"><i className={`fas ${photosCount > 0 ? 'fa-check-circle' : 'fa-times-circle'}`}></i><span>Фотографии загружены ({photosCount}/{maxPhotos})</span></div>
                     </div>
-                    {photosCount === 0 && (
-                      <div className="createad-photo-reminder"><i className="fas fa-exclamation-triangle"></i><p>Пожалуйста, добавьте хотя бы одну фотографию для публикации объявления.</p></div>
-                    )}
+                    {photosCount === 0 && <div className="createad-photo-reminder"><i className="fas fa-exclamation-triangle"></i><p>Добавьте хотя бы одну фотографию для публикации</p></div>}
                   </div>
                 </div>
               )}
 
               <div className="createad-form-navigation">
-                <div className="createad-navigation-left">
-                  {/* Кнопки "Сохранить черновик" и "Очистить черновик" УДАЛЕНЫ */}
-                </div>
+                <div className="createad-navigation-left"></div>
                 <div className="createad-navigation-right">
-                  {formStep > 1 && (
-                    <button type="button" onClick={handlePrevStep} className="createad-btn createad-btn-outline">
-                      <i className="fas fa-arrow-left"></i> Назад
-                    </button>
-                  )}
+                  {formStep > 1 && <button type="button" onClick={handlePrevStep} className="createad-btn createad-btn-outline"><i className="fas fa-arrow-left"></i> Назад</button>}
                   {formStep < 3 ? (
-                    <button type="button" onClick={handleNextStep} className="createad-btn createad-btn-primary">
-                      Продолжить <i className="fas fa-arrow-right"></i>
-                    </button>
+                    <button type="button" onClick={handleNextStep} className="createad-btn createad-btn-primary">Продолжить <i className="fas fa-arrow-right"></i></button>
                   ) : (
                     <button type="submit" className="createad-btn createad-btn-primary createad-btn-publish" disabled={isSubmitting || photosCount === 0}>
                       {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> Публикация...</> : <><i className="fas fa-eye"></i> Опубликовать объявление</>}
@@ -692,22 +664,9 @@ const CreateAd: React.FC = () => {
         <div className="createad-container">
           <h2>Почему стоит размещать объявления у нас?</h2>
           <div className="createad-benefits-grid">
-            <div className="createad-benefit-card">
-              <div className="createad-benefit-icon"><i className="fas fa-users"></i></div>
-              <h4>Широкая аудитория</h4>
-              <p>Тысячи потенциальных арендаторов ежедневно</p>
-            </div>
-            {/* Карточка "Безопасность сделок" УДАЛЕНА */}
-            <div className="createad-benefit-card">
-              <div className="createad-benefit-icon"><i className="fas fa-rocket"></i></div>
-              <h4>Быстрое размещение</h4>
-              <p>Ваше объявление увидят сразу</p>
-            </div>
-            <div className="createad-benefit-card">
-              <div className="createad-benefit-icon"><i className="fas fa-headset"></i></div>
-              <h4>Поддержка 24/7</h4>
-              <p>Помощь на всех этапах</p>
-            </div>
+            <div className="createad-benefit-card"><div className="createad-benefit-icon"><i className="fas fa-users"></i></div><h4>Широкая аудитория</h4><p>Тысячи потенциальных арендаторов ежедневно</p></div>
+            <div className="createad-benefit-card"><div className="createad-benefit-icon"><i className="fas fa-rocket"></i></div><h4>Быстрое размещение</h4><p>Ваше объявление увидят сразу</p></div>
+            <div className="createad-benefit-card"><div className="createad-benefit-icon"><i className="fas fa-headset"></i></div><h4>Поддержка 24/7</h4><p>Помощь на всех этапах</p></div>
           </div>
         </div>
       </div>

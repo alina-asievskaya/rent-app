@@ -805,9 +805,10 @@ const Agents: React.FC = () => {
 
               {/* Специализация */}
               <div className="filter-group-agent">
-                <label className="filter-label-agent">
-                  <FontAwesomeIcon icon={faHome}/> Тип домов
-                </label>
+              <label className="filter-label-agent">
+                <FontAwesomeIcon icon={faHome}/> Тип домов
+              </label>
+              <div className="agents-select-wrapper">
                 <select
                   className="filter-select-agent"
                   value={filters.specialty}
@@ -817,13 +818,16 @@ const Agents: React.FC = () => {
                     <option key={spec} value={spec}>{spec}</option>
                   ))}
                 </select>
+                <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
               </div>
+            </div>
 
               {/* Опыт */}
               <div className="filter-group-agent">
-                <label className="filter-label-agent">
-                  <FontAwesomeIcon icon={faClock}/> Опыт
-                </label>
+              <label className="filter-label-agent">
+                <FontAwesomeIcon icon={faClock}/> Опыт
+              </label>
+              <div className="agents-select-wrapper">
                 <select
                   className="filter-select-agent"
                   value={filters.experience}
@@ -833,13 +837,16 @@ const Agents: React.FC = () => {
                     <option key={exp} value={exp}>{exp}</option>
                   ))}
                 </select>
+                <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
               </div>
+            </div>
 
               {/* Рейтинг */}
               <div className="filter-group-agent">
-                <label className="filter-label-agent">
-                  <FontAwesomeIcon icon={faStar}/> Рейтинг
-                </label>
+              <label className="filter-label-agent">
+                <FontAwesomeIcon icon={faStar}/> Рейтинг
+              </label>
+              <div className="agents-select-wrapper">
                 <select
                   className="filter-select-agent"
                   value={filters.rating}
@@ -849,7 +856,9 @@ const Agents: React.FC = () => {
                     <option key={rating} value={rating}>{rating}</option>
                   ))}
                 </select>
+                <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
               </div>
+            </div>
 
               <div className="filter-actions-agent">
                 <button className="btn-secondary filter-reset-agent" onClick={resetFilters}>

@@ -51,6 +51,8 @@ interface ApiHouse {
     Rooms?: number;
     rooms?: number;
   };
+  rentType?: string;
+  RentType?: string;
 }
 
 interface AdData {
@@ -67,6 +69,7 @@ interface AdData {
     Street: string;
     Rooms: number;
   };
+  RentType?: string;
 }
 
 interface FeedbackData {
@@ -317,6 +320,7 @@ const ProfilePage: React.FC = () => {
               Street: house.houseInfo?.Street || house.HouseInfo?.street || house.houseInfo?.street || house.HouseInfo?.Street || '',
               Rooms: house.houseInfo?.Rooms || house.HouseInfo?.rooms || house.houseInfo?.rooms || house.HouseInfo?.Rooms || 1,
             },
+            RentType: house.rentType || house.RentType || 'day',
           }));
           setUserAds(formattedAds);
         } else {
@@ -436,6 +440,11 @@ const ProfilePage: React.FC = () => {
       setHistoryLoading(false);
     }
   };
+
+  const formatPrice = (price: number, rentType?: string) => {
+  const unit = rentType === 'month' ? 'месяц' : 'сутки';
+  return `${price.toLocaleString('ru-RU')} Br/${unit}`;
+};
 
   // ========== Обработчики ==========
   const handleApproveRequest = async (requestId: number) => {
@@ -956,7 +965,7 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <div className="profilepage-ad-item-content">
                         <div className="profilepage-ad-item-header">
-                          <h3>{ad.Price?.toLocaleString('ru-RU')} Br/сутки</h3>
+                          <h3>{formatPrice(ad.Price, ad.RentType)}</h3>
                           <div className="profilepage-ad-type">{ad.HouseType}</div>
                         </div>
                         <div className="profilepage-ad-item-address">

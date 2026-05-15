@@ -41,6 +41,8 @@ import {
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 
+
+
 // Типы для фильтров
 interface FilterOptions {
   city: string;
@@ -212,6 +214,22 @@ const Catalog: React.FC = () => {
     { id: 'newest', label: 'Сначала новые', icon: faClock },
     { id: 'popular', label: 'Популярные', icon: faFire }
   ];
+
+  const formatPriceWithIcon = (priceStr: string): React.ReactNode => {
+  const match = priceStr.match(/^([\d\s]+)\s*Br\s*(.*)$/i);
+  if (match) {
+    const number = match[1].trim(); 
+    const suffix = match[2];        
+    return (
+      <>
+        {number} <i className="nbrb-icon">&#xe901;</i>{suffix}
+      </>
+    );
+  }
+
+  return priceStr;
+};
+
 
   // Функция для получения информации о владельце дома
   const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
@@ -957,7 +975,7 @@ const Catalog: React.FC = () => {
             </div>
 
             <div className="filter-group">
-              <label className="filter-label">Цена, BYN/сутки</label>
+              <label className="filter-label">Цена, <i className="nbrb-icon">&#xe901;</i></label>
               <div className="price-range">
                 <input type="number" className="filter-input" placeholder="от" value={filters.priceMin} onChange={(e) => handleFilterChange("priceMin", e.target.value)} />
                 <span className="price-separator">—</span>
@@ -1048,7 +1066,7 @@ const Catalog: React.FC = () => {
                       </div>
                       <div className="property-details">
                         <div className="property-header-row">
-                        <div className="property-price">{property.price}</div>
+                          <div className="property-price">{formatPriceWithIcon(property.price)}</div>
                           <div className="property-rating">
                             <FontAwesomeIcon icon={faStar} />
                             <span>{property.rating || 0}</span>
@@ -1103,7 +1121,6 @@ const Catalog: React.FC = () => {
     </main>
   </>
 );
-
 };
 
 export default Catalog;

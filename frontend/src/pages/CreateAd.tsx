@@ -454,7 +454,10 @@ const CreateAd: React.FC = () => {
                         </label>
                         <div className="createad-input-with-suffix">
                           <input type="number" name="price" value={formData.price} onChange={handleInputChange} required min="0" step="100" placeholder="50000" className="createad-form-input" />
-                          <span className="createad-suffix">{formData.rentType === 'month' ? 'Br/мес' : 'Br/сут'}</span>
+                          <span className="createad-suffix">
+                            <i className="nbrb-icon">&#xe901;</i>
+                            {formData.rentType === 'month' ? '/мес' : '/сут'}
+                          </span>
                         </div>
                       </div>
                       <div className="createad-form-group">

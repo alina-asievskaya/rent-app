@@ -1163,7 +1163,14 @@ const HouseInfo: React.FC = () => {
   const images = house.photos && house.photos.length > 0 ? house.photos : ["https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop"];
   const address = house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указана';
   const info = `${house.houseType || 'Дом'}, ${house.area} м²`;
-  const formattedPrice = `${house.price?.toLocaleString('ru-RU')} BYN/сутки`;
+  const formatPriceWithIcon = (price: number): React.ReactNode => {
+  const numberStr = price?.toLocaleString('ru-RU') || '0';
+  return (
+    <>
+      {numberStr} <i className="nbrb-icon">&#xe901;</i>/сутки
+    </>
+  );
+};
   const announcementDate = formatAnnouncementDate(house.announcementData);
   const hasManyPhotos = images.length > 5;
   const displayedThumbnails = showAllThumbnails ? images : images.slice(0, 5);
@@ -1289,7 +1296,7 @@ const HouseInfo: React.FC = () => {
                     {address}
                   </p>
                   <div className="price-section-house">
-                    <h2>{formattedPrice}</h2>
+                    <h2>{formatPriceWithIcon(house.price)}</h2>
                   </div>
                 </div>
 

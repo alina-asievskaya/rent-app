@@ -39,37 +39,38 @@ namespace RentApp.API.Controllers
                 }
 
                 var favorites = await _context.Favorites
-                    .Where(f => f.UserId == userId)
-                    .Include(f => f.House)
-                        .ThenInclude(h => h.HouseInfo)
-                    .Include(f => f.House)
-                        .ThenInclude(h => h.Photos.Take(1))
-                    .Include(f => f.House)
-                        .ThenInclude(h => h.Owner)
-                    .OrderByDescending(f => f.CreatedAt)
-                    .Select(f => new
-                    {
-                        Id = f.House.Id,
-                        Price = f.House.Price,
-                        Area = f.House.Area,
-                        Description = f.House.Description.Length > 100 
-                            ? f.House.Description.Substring(0, 100) + "..." 
-                            : f.House.Description,
-                        FullDescription = f.House.Description,
-                        HouseType = f.House.HouseType,
-                        AnnouncementData = f.House.AnnouncementData.ToString("yyyy-MM-dd"),
-                        Photos = f.House.Photos.Select(p => p.Photo).ToList(),
-                        City = f.House.HouseInfo != null ? f.House.HouseInfo.City : string.Empty,
-                        Street = f.House.HouseInfo != null ? f.House.HouseInfo.Street : string.Empty,
-                        Rooms = f.House.HouseInfo != null ? f.House.HouseInfo.Rooms : 1,
-                        Bathrooms = f.House.HouseInfo != null ? f.House.HouseInfo.Bathrooms : 1,
-                        Floor = f.House.HouseInfo != null ? f.House.HouseInfo.Floor : 1,
-                        Rating = f.House.Rating,
-                        Year = DateTime.UtcNow.Year,
-                        AddedToFavorites = f.CreatedAt.ToString("yyyy-MM-dd"),
-                        IsActive = f.House.Active
-                    })
-                    .ToListAsync();
+                .Where(f => f.UserId == userId)
+                .Include(f => f.House)
+                    .ThenInclude(h => h.HouseInfo)
+                .Include(f => f.House)
+                    .ThenInclude(h => h.Photos.Take(1))
+                .Include(f => f.House)
+                    .ThenInclude(h => h.Owner)
+                .OrderByDescending(f => f.CreatedAt)
+                .Select(f => new
+                {
+                    Id = f.House.Id,
+                    Price = f.House.Price,
+                    Area = f.House.Area,
+                    Description = f.House.Description.Length > 100 
+                        ? f.House.Description.Substring(0, 100) + "..." 
+                        : f.House.Description,
+                    FullDescription = f.House.Description,
+                    HouseType = f.House.HouseType,
+                    AnnouncementData = f.House.AnnouncementData.ToString("yyyy-MM-dd"),
+                    Photos = f.House.Photos.Select(p => p.Photo).ToList(),
+                    City = f.House.HouseInfo != null ? f.House.HouseInfo.City : string.Empty,
+                    Street = f.House.HouseInfo != null ? f.House.HouseInfo.Street : string.Empty,
+                    Rooms = f.House.HouseInfo != null ? f.House.HouseInfo.Rooms : 1,
+                    Bathrooms = f.House.HouseInfo != null ? f.House.HouseInfo.Bathrooms : 1,
+                    Floor = f.House.HouseInfo != null ? f.House.HouseInfo.Floor : 1,
+                    Rating = f.House.Rating,
+                    Year = DateTime.UtcNow.Year,
+                    AddedToFavorites = f.CreatedAt.ToString("yyyy-MM-dd"),
+                    IsActive = f.House.Active,
+                    RentType = f.House.RentType   // <-- ДОБАВИТЬ ЭТУ СТРОКУ
+                })
+                .ToListAsync();
 
                 return Ok(new
                 {

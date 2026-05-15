@@ -59,6 +59,18 @@ const parseJwt = (token: string) => {
   }
 };
 
+// Функция форматирования цены с иконкой
+const formatPriceWithIcon = (price: number, rentType?: string): React.ReactNode => {
+  const unit = rentType === 'month' ? 'месяц' : 'сутки';
+  const numberStr = price.toLocaleString('ru-RU');
+  const suffix = `/${unit}`;
+  return (
+    <>
+      {numberStr} <i className="nbrb-icon">&#xe901;</i>{suffix}
+    </>
+  );
+};
+
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const [featuredProperties, setFeaturedProperties] = useState<House[]>([]);
@@ -132,7 +144,6 @@ const Home: React.FC = () => {
   const handleViewAllProperties = () => navigate("/catalog");
   const handlePropertyClick = (id: number) => navigate(`/house/${id}`);
 
-  // ИСПРАВЛЕННЫЙ обработчик избранного
   const handleFavoriteClick = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const token = localStorage.getItem('token');
@@ -143,14 +154,12 @@ const Home: React.FC = () => {
     }
 
     try {
-      // Безопасное декодирование JWT
       const payload = parseJwt(token);
       if (!payload) {
         alert("Ошибка авторизации. Попробуйте выйти и зайти снова.");
         return;
       }
 
-      // Проверка роли администратора (предполагается claim 'role' или полный URI)
       const role = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
       if (role === 'Admin') {
         alert('Администраторы не могут добавлять в избранное');
@@ -190,11 +199,6 @@ const Home: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number, rentType?: string) => {
-  const unit = rentType === 'month' ? 'месяц' : 'сутки';
-  return `${price.toLocaleString('ru-RU')} Br/${unit}`;
-};
-
   const scrollPartners = (direction: 'left' | 'right') => {
     if (partnersScrollRef.current) {
       const scrollAmount = 300;
@@ -231,7 +235,6 @@ const Home: React.FC = () => {
                   <FontAwesomeIcon icon={faBuilding} /> Сдать недвижимость
                 </button>
               </div>
-              
             </div>
           </div>
           
@@ -298,7 +301,7 @@ const Home: React.FC = () => {
                     <div className="property-content-modern">
                       <div className="property-price-modern">
                         <span className="price-modern">
-                          {formatPrice(property.price, property.rentType)}
+                          {formatPriceWithIcon(property.price, property.rentType)}
                         </span>
                       </div>
                       <h3 className="property-title-modern">{property.houseType}</h3>

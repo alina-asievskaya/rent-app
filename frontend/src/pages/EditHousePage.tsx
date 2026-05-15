@@ -610,7 +610,10 @@ const EditHousePage: React.FC = () => {
                     <label className="createad-form-label"><span>Цена аренды {formData.rentType === 'month' ? 'в месяц' : 'за сутки'}</span><span className="createad-required">*</span></label>
                     <div className="createad-input-with-suffix">
                       <input type="number" name="price" value={formData.price} onChange={handleInputChange} required min="0" step="100" className="createad-form-input" />
-                      <span className="createad-suffix">{formData.rentType === 'month' ? 'Br/мес' : 'Br/сут'}</span>
+                      <span className="createad-suffix">
+                        <i className="nbrb-icon">&#xe901;</i>
+                        {formData.rentType === 'month' ? '/мес' : '/сут'}
+                      </span>
                     </div>
                   </div>
                   <div className="createad-form-group">

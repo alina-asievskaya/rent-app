@@ -441,9 +441,14 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number, rentType?: string) => {
-  const unit = rentType === 'month' ? 'месяц' : 'сутки';
-  return `${price.toLocaleString('ru-RU')} Br/${unit}`;
+ const formatPriceWithIcon = (price: number, rentType?: string): React.ReactNode => {
+  const numberStr = price?.toLocaleString('ru-RU') || '0';
+  const suffix = rentType === 'month' ? '/мес' : '/сутки';
+  return (
+    <>
+      {numberStr} <i className="nbrb-icon">&#xe901;</i>{suffix}
+    </>
+  );
 };
 
   // ========== Обработчики ==========
@@ -965,7 +970,7 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <div className="profilepage-ad-item-content">
                         <div className="profilepage-ad-item-header">
-                          <h3>{formatPrice(ad.Price, ad.RentType)}</h3>
+                          <h3>{formatPriceWithIcon(ad.Price, ad.RentType)}</h3>
                           <div className="profilepage-ad-type">{ad.HouseType}</div>
                         </div>
                         <div className="profilepage-ad-item-address">

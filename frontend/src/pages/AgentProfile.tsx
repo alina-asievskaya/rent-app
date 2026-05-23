@@ -14,11 +14,13 @@ import {
   faUser,
   faChartLine,
   faExclamationCircle,
-  faComment
+  faComment,
+  faChevronRight,
+  faChevronLeft as faChevronLeftSolid,
+  faTimes,
 } from '@fortawesome/free-solid-svg-icons';
 import "./AgentProfile.css";
 
-// Детали агента для чата
 interface AgentDetailsData {
   id: number;
   userId: number;
@@ -33,7 +35,6 @@ interface AgentDetailsData {
   isAgent: boolean;
 }
 
-// Основные данные агента для профиля
 interface AgentProfileData {
   id: number;
   userId: number;
@@ -50,6 +51,7 @@ interface AgentProfileData {
   position: string;
   isAgent?: boolean;
   displayName: string;
+  portfolioPhotos: string[];
 }
 
 interface AgentReview {
@@ -128,6 +130,45 @@ const AgentProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [creatingChat, setCreatingChat] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [portfolioPhotos, setPortfolioPhotos] = useState<string[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  
+  // Состояния для карусели (прокрутка по одному фото)
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Адаптив: на узких экранах показываем 2 фото
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      const newItemsPerPage = window.innerWidth < 650 ? 2 : 3;
+      setItemsPerPage(newItemsPerPage);
+      // Корректируем индекс при изменении количества видимых элементов
+      setCurrentIndex(prev => Math.min(prev, totalItems - newItemsPerPage));
+    };
+    updateItemsPerPage();
+    window.addEventListener('resize', updateItemsPerPage);
+    return () => window.removeEventListener('resize', updateItemsPerPage);
+  }, [totalItems]);
+
+  // Сбрасываем индекс при изменении списка фото
+  useEffect(() => {
+    setTotalItems(portfolioPhotos.length);
+    setCurrentIndex(0);
+  }, [portfolioPhotos]);
+
+  const nextSlide = () => {
+    if (currentIndex < totalItems - itemsPerPage) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const prevSlide = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
 
   const decodeToken = (token: string) => {
     try {
@@ -308,6 +349,36 @@ const AgentProfile: React.FC = () => {
     }
   };
 
+  const nextPhoto = () => {
+    if (portfolioPhotos.length === 0) return;
+    setLightboxIndex((lightboxIndex + 1) % portfolioPhotos.length);
+  };
+
+  const prevPhoto = () => {
+    if (portfolioPhotos.length === 0) return;
+    setLightboxIndex((lightboxIndex - 1 + portfolioPhotos.length) % portfolioPhotos.length);
+  };
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!lightboxOpen) return;
+      if (e.key === 'ArrowRight') nextPhoto();
+      if (e.key === 'ArrowLeft') prevPhoto();
+      if (e.key === 'Escape') closeLightbox();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxOpen, lightboxIndex, portfolioPhotos.length]);
+
   useEffect(() => {
     const fetchAgentData = async () => {
       try {
@@ -326,9 +397,11 @@ const AgentProfile: React.FC = () => {
             userId: userId,
             isAgent: true,
             position: cleanPositionText(result.data.position || result.data.specialization || "Специалист по недвижимости"),
-            displayName: result.data.displayName || ""
+            displayName: result.data.displayName || "",
+            portfolioPhotos: result.data.portfolioPhotos || []
           };
           setAgent(agentWithUserId);
+          setPortfolioPhotos(agentWithUserId.portfolioPhotos);
           await fetchReviews();
         } else {
           throw new Error(result.message || 'Не удалось загрузить данные агента');
@@ -358,7 +431,7 @@ const AgentProfile: React.FC = () => {
 
   const handleSubmitReview = async () => {
     if (!id) {
-      alert('Ошибка: ID агента не найден');
+      alert('Ошибка: ID организатора не найден');
       return;
     }
     const token = localStorage.getItem('token');
@@ -419,7 +492,7 @@ const AgentProfile: React.FC = () => {
   };
 
   const handleStarClickUnauthorized = () => {
-    alert('Для оценки агента необходимо авторизоваться');
+    alert('Для оценки организатора необходимо авторизоваться');
     navigate('/login');
   };
 
@@ -434,7 +507,7 @@ const AgentProfile: React.FC = () => {
         <Header />
         <div className="agent-profile-loading">
           <div className="loading-spinner"><FontAwesomeIcon icon={faSpinner} spin size="3x" /></div>
-          <p>Загрузка профиля агента...</p>
+          <p>Загрузка профиля организатора...</p>
         </div>
       </>
     );
@@ -446,37 +519,35 @@ const AgentProfile: React.FC = () => {
         <Header />
         <div className="agent-profile-error">
           <FontAwesomeIcon icon={faExclamationCircle} size="3x" />
-          <h2>Агент не найден</h2>
-          <p>К сожалению, профиль данного агента недоступен.</p>
-          <button onClick={handleBack} className="btn-primary-agent">Вернуться к списку агентов</button>
+          <h2>Организатор не найден</h2>
+          <p>К сожалению, профиль данного организатора недоступен.</p>
+          <button onClick={handleBack} className="btn-primary-agent">Вернуться к списку организаторов</button>
         </div>
       </>
     );
   }
-const renderDescription = (text: string) => {
-  if (!text) return <p>Информация отсутствует</p>;
 
-  // Разбиваем по двойному переносу строки (пустая строка)
-  const paragraphs = text.split(/\n\s*\n/);
+  const renderDescription = (text: string) => {
+    if (!text) return <p>Информация отсутствует</p>;
+    const paragraphs = text.split(/\n\s*\n/);
+    return paragraphs.map((para, idx) => {
+      const lines = para.split(/\n/);
+      if (lines.length === 1) {
+        return <p key={idx}>{para}</p>;
+      }
+      return (
+        <p key={idx}>
+          {lines.map((line, i) => (
+            <React.Fragment key={i}>
+              {line}
+              {i < lines.length - 1 && <br />}
+            </React.Fragment>
+          ))}
+        </p>
+      );
+    });
+  };
 
-  return paragraphs.map((para, idx) => {
-    // Для каждого абзаца заменяем одиночные переносы на <br /> (если нужно)
-    const lines = para.split(/\n/);
-    if (lines.length === 1) {
-      return <p key={idx}>{para}</p>;
-    }
-    return (
-      <p key={idx}>
-        {lines.map((line, i) => (
-          <React.Fragment key={i}>
-            {line}
-            {i < lines.length - 1 && <br />}
-          </React.Fragment>
-        ))}
-      </p>
-    );
-  });
-};
   const formatExperience = (years: number) => {
     if (years === 1) return '1 год';
     if (years >= 2 && years <= 4) return `${years} года`;
@@ -497,7 +568,7 @@ const renderDescription = (text: string) => {
       <div className="agent-profile-page">
         <div className="agent-profile-header">
           <button className="back-button-agent" onClick={handleBack}>
-            <FontAwesomeIcon icon={faChevronLeft} /> Назад к агентам
+            <FontAwesomeIcon icon={faChevronLeft} /> Назад к организаторам
           </button>
         </div>
 
@@ -576,8 +647,8 @@ const renderDescription = (text: string) => {
               <div className="about-section">
                 <h2>Обо мне</h2>
                 <div className="agent-description">
-  {renderDescription(agent.displayName && agent.displayName.trim() !== "" ? agent.displayName : agent.description)}
-</div>
+                  {renderDescription(agent.displayName && agent.displayName.trim() !== "" ? agent.displayName : agent.description)}
+                </div>
                 {agent.specialties && agent.specialties.length > 0 && (
                   <div className="specialties-section">
                     <h3>Специализация</h3>
@@ -592,6 +663,82 @@ const renderDescription = (text: string) => {
                   </div>
                 )}
               </div>
+
+              {/* ===== ИСПРАВЛЕННАЯ КАРУСЕЛЬ – СДВИГ НА ОДНО ФОТО ===== */}
+              <div className="portfolio-section">
+                <h2>Портфолио работ</h2>
+                {portfolioPhotos.length === 0 ? (
+                  <p className="no-portfolio">Фотографии работ пока не добавлены</p>
+                ) : (
+                  <>
+                    <div className="portfolio-carousel-wrapper">
+                      <button 
+                        className="carousel-btn carousel-btn-prev" 
+                        onClick={prevSlide}
+                        disabled={currentIndex === 0}
+                      >
+                        <FontAwesomeIcon icon={faChevronLeftSolid} />
+                      </button>
+                      
+                      <div className="portfolio-viewport">
+                        <div 
+                          className="portfolio-slides"
+                          style={{ 
+                            transform: `translateX(-${currentIndex * (100 / itemsPerPage)}%)`,
+                          }}
+                        >
+                          {portfolioPhotos.map((url, idx) => (
+                            <div 
+                              key={idx} 
+                              className="portfolio-item" 
+                              style={{ flex: `0 0 calc(100% / ${itemsPerPage})` }}
+                              onClick={() => openLightbox(idx)}
+                            >
+                              <div className="portfolio-img-wrapper">
+                                <img src={url} alt={`Работа ${idx + 1}`} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <button 
+                        className="carousel-btn carousel-btn-next" 
+                        onClick={nextSlide}
+                        disabled={currentIndex >= totalItems - itemsPerPage}
+                      >
+                        <FontAwesomeIcon icon={faChevronRight} />
+                      </button>
+                    </div>
+                    <div className="carousel-counter">
+                      {currentIndex + 1} – {Math.min(currentIndex + itemsPerPage, totalItems)} из {totalItems}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Лайтбокс */}
+              {lightboxOpen && (
+                <div className="lightbox-overlay" onClick={closeLightbox}>
+                  <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+                    <button className="lightbox-close" onClick={closeLightbox}>
+                      <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                    <button className="lightbox-prev" onClick={prevPhoto}>
+                      <FontAwesomeIcon icon={faChevronLeftSolid} />
+                    </button>
+                    <div className="lightbox-image-wrapper">
+                      <img src={portfolioPhotos[lightboxIndex]} alt={`Работа ${lightboxIndex + 1}`} />
+                    </div>
+                    <button className="lightbox-next" onClick={nextPhoto}>
+                      <FontAwesomeIcon icon={faChevronRight} />
+                    </button>
+                    <div className="lightbox-counter">
+                      {lightboxIndex + 1} / {portfolioPhotos.length}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="reviews-section">
                 <h2>Отзывы клиентов ({agent.reviewsCount})</h2>
@@ -616,7 +763,7 @@ const renderDescription = (text: string) => {
                         value={newReview.text}
                         onChange={canLeaveReviewResult ? (e) => setNewReview({ ...newReview, text: e.target.value }) : undefined}
                         onClick={!canLeaveReviewResult ? handleTextareaClickUnauthorized : undefined}
-                        placeholder={canLeaveReviewResult ? "Расскажите о вашем опыте работы с агентом (минимум 10 символов)..." : "Для оставления отзыва необходимо авторизоваться"}
+                        placeholder={canLeaveReviewResult ? "Расскажите о вашем опыте работы с организатором (минимум 10 символов)..." : "Для оставления отзыва необходимо авторизоваться"}
                         rows={4}
                         maxLength={2000}
                         readOnly={!canLeaveReviewResult}
@@ -665,7 +812,7 @@ const renderDescription = (text: string) => {
                   <div className="no-reviews">
                     <FontAwesomeIcon icon={faComments} size="3x" />
                     <h3>Пока нет отзывов</h3>
-                    <p>Будьте первым, кто оставит отзыв об этом агенте</p>
+                    <p>Будьте первым, кто оставит отзыв об этом организаторе</p>
                   </div>
                 )}
               </div>

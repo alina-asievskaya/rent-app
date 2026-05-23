@@ -3,16 +3,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faStar,
   faComments,
-  faPhone,
   faCalendarAlt,
   faComment
 } from '@fortawesome/free-solid-svg-icons';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './AgentCard.css';
 
 export interface Agent {
   id: number;
-  userId: number; // Добавляем поле userId
+  userId: number;
   name: string;
   position: string;
   avatar: string;
@@ -47,15 +46,13 @@ const AgentCard: React.FC<AgentCardProps> = ({
   onChatClick,
   isCreatingChat = false
 }) => {
-  const handleContactClick = (e: React.MouseEvent, type: 'phone' | 'email') => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (type === 'phone') {
-      window.location.href = `tel:${agent.contact.phone}`;
-    } else {
-      window.location.href = `mailto:${agent.contact.email}`;
-    }
+  const navigate = useNavigate();
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Если клик был по кнопке или ссылке – не переходим
+    const target = e.target as HTMLElement;
+    if (target.closest('.agentcard-btn') || target.closest('a')) return;
+    navigate(`/agents/${agent.id}`);
   };
 
   const handleChatClick = (e: React.MouseEvent) => {
@@ -66,123 +63,16 @@ const AgentCard: React.FC<AgentCardProps> = ({
     }
   };
 
-  // Форматирование отзывов
   const formatReviews = (count: number) => {
     if (count === 1) return 'отзыв';
     if (count >= 2 && count <= 4) return 'отзыва';
     return 'отзывов';
   };
 
-  if (viewMode === 'list') {
-    return (
-      <div className={`agentcard ${viewMode}`}>
-        {/* Левая панель с аватаром и основной информацией */}
-        <div className="agentcard-header">
-          <div className="agentcard-avatar-container">
-            <img 
-              src={agent.avatar} 
-              alt={agent.name}
-              className="agentcard-avatar"
-            />
-          </div>
-          
-          <div className="agentcard-info">
-            <h3 className="agentcard-name">{agent.name}</h3>
-            <p className="agentcard-position">{agent.position}</p>
-          </div>
-        </div>
-
-        {/* Основное содержимое справа */}
-        <div className="agentcard-main-content">
-          {/* Рейтинг и отзывы в одну строку */}
-          <div className="agentcard-rating">
-            <div className="agentcard-stars">
-              <div className="agentcard-stars-container">
-                {[...Array(5)].map((_, i) => (
-                  <FontAwesomeIcon 
-                    key={i}
-                    icon={faStar}
-                    className={`agentcard-star ${i < Math.floor(agent.rating) ? 'filled' : ''}`}
-                  />
-                ))}
-                <span className="agentcard-rating-value">{agent.rating.toFixed(1)}</span>
-              </div>
-              <div className="agentcard-reviews">
-                <FontAwesomeIcon icon={faComments} className="agentcard-reviews-icon" />
-                <span>{agent.reviewsCount} {formatReviews(agent.reviewsCount)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Специализация */}
-          {agent.specialties.length > 0 && (
-            <div className="agentcard-specialties">
-              <div className="agentcard-specialties-list">
-                {agent.specialties.slice(0, 3).map((specialty, index) => (
-                  <span key={index} className="agentcard-specialty">
-                    {specialty}
-                  </span>
-                ))}
-                {agent.specialties.length > 3 && (
-                  <span className="agentcard-specialty-more">
-                    +{agent.specialties.length - 3}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Статистика в строку */}
-          <div className="agentcard-stats">
-            <div className="agentcard-stat-item">
-              <div className="agentcard-stat-icon">
-                <FontAwesomeIcon icon={faCalendarAlt} />
-              </div>
-              <div className="agentcard-stat-content">
-                <div className="agentcard-stat-value">{agent.experience} {agent.experience === 1 ? 'год' : 'лет'}</div>
-                <div className="agentcard-stat-label">опыт</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Кнопки действий */}
-          <div className="agentcard-actions">
-            <Link 
-              to={`/agents/${agent.id}`}
-              className="agentcard-btn agentcard-btn-primary"
-            >
-              Профиль агента
-            </Link>
-            
-            <div className="agentcard-contact-buttons">
-              <button 
-                className="agentcard-btn agentcard-btn-call"
-                onClick={(e) => handleContactClick(e, 'phone')}
-                aria-label="Позвонить"
-              >
-                <FontAwesomeIcon icon={faPhone} />
-                <span>Позвонить</span>
-              </button>
-              <button 
-                className="agentcard-btn agentcard-btn-email"
-                onClick={handleChatClick}
-                disabled={isCreatingChat}
-                aria-label="Написать в чат"
-              >
-                <FontAwesomeIcon icon={faComment} />
-                <span>Чат</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Оригинальный код для режима grid
-  return (
-    <div className={`agentcard ${viewMode}`}>
-      {/* Аватар и основная информация */}
+  // Общий контент карточки (без специализаций)
+  const renderContent = () => (
+    <>
+      {/* Шапка с аватаром и должностью */}
       <div className="agentcard-header">
         <div className="agentcard-avatar-container">
           <img 
@@ -191,7 +81,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
             className="agentcard-avatar"
           />
         </div>
-        
         <div className="agentcard-info">
           <h3 className="agentcard-name">{agent.name}</h3>
           <p className="agentcard-position">{agent.position}</p>
@@ -218,25 +107,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
         </div>
       </div>
 
-      {/* Специализация */}
-      {agent.specialties.length > 0 && (
-        <div className="agentcard-specialties">
-          <div className="agentcard-specialties-list">
-            {agent.specialties.slice(0, 2).map((specialty, index) => (
-              <span key={index} className="agentcard-specialty">
-                {specialty}
-              </span>
-            ))}
-            {agent.specialties.length > 2 && (
-              <span className="agentcard-specialty-more">
-                +{agent.specialties.length - 2}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Статистика */}
+      {/* Статистика: только опыт */}
       <div className="agentcard-stats">
         <div className="agentcard-stat-item">
           <div className="agentcard-stat-icon">
@@ -249,35 +120,109 @@ const AgentCard: React.FC<AgentCardProps> = ({
         </div>
       </div>
 
-      {/* Кнопки действий */}
+      {/* Кнопки действий: только "Смотреть профиль" и "Чат" */}
       <div className="agentcard-actions">
-        <Link 
-          to={`/agents/${agent.id}`}
+        <button 
           className="agentcard-btn agentcard-btn-primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/agents/${agent.id}`);
+          }}
         >
           Смотреть профиль
-        </Link>
+        </button>
         
-        <div className="agentcard-contact-buttons">
-          <button 
-            className="agentcard-btn agentcard-btn-call"
-            onClick={(e) => handleContactClick(e, 'phone')}
-            aria-label="Позвонить"
-          >
-            <FontAwesomeIcon icon={faPhone} />
-            <span>Позвонить</span>
-          </button>
-          <button 
-            className="agentcard-btn agentcard-btn-email"
-            onClick={handleChatClick}
-            disabled={isCreatingChat}
-            aria-label="Написать в чат"
-          >
-            <FontAwesomeIcon icon={faComment} />
-            <span>Чат</span>
-          </button>
+        <button 
+          className="agentcard-btn agentcard-btn-chat"
+          onClick={handleChatClick}
+          disabled={isCreatingChat}
+          aria-label="Написать в чат"
+        >
+          <FontAwesomeIcon icon={faComment} />
+          <span>Чат</span>
+        </button>
+      </div>
+    </>
+  );
+
+  // Для list-режима структура немного другая (нет сетки специализаций)
+  if (viewMode === 'list') {
+    return (
+      <div className={`agentcard ${viewMode}`} onClick={handleCardClick}>
+        <div className="agentcard-header">
+          <div className="agentcard-avatar-container">
+            <img 
+              src={agent.avatar} 
+              alt={agent.name}
+              className="agentcard-avatar"
+            />
+          </div>
+          <div className="agentcard-info">
+            <h3 className="agentcard-name">{agent.name}</h3>
+            <p className="agentcard-position">{agent.position}</p>
+          </div>
+        </div>
+
+        <div className="agentcard-main-content">
+          <div className="agentcard-rating">
+            <div className="agentcard-stars">
+              <div className="agentcard-stars-container">
+                {[...Array(5)].map((_, i) => (
+                  <FontAwesomeIcon 
+                    key={i}
+                    icon={faStar}
+                    className={`agentcard-star ${i < Math.floor(agent.rating) ? 'filled' : ''}`}
+                  />
+                ))}
+                <span className="agentcard-rating-value">{agent.rating.toFixed(1)}</span>
+              </div>
+              <div className="agentcard-reviews">
+                <FontAwesomeIcon icon={faComments} className="agentcard-reviews-icon" />
+                <span>{agent.reviewsCount} {formatReviews(agent.reviewsCount)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="agentcard-stats">
+            <div className="agentcard-stat-item">
+              <div className="agentcard-stat-icon">
+                <FontAwesomeIcon icon={faCalendarAlt} />
+              </div>
+              <div className="agentcard-stat-content">
+                <div className="agentcard-stat-value">{agent.experience} {agent.experience === 1 ? 'год' : 'лет'}</div>
+                <div className="agentcard-stat-label">опыт</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="agentcard-actions">
+            <button 
+              className="agentcard-btn agentcard-btn-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/agents/${agent.id}`);
+              }}
+            >
+              Смотреть профиль
+            </button>
+            <button 
+              className="agentcard-btn agentcard-btn-chat"
+              onClick={handleChatClick}
+              disabled={isCreatingChat}
+            >
+              <FontAwesomeIcon icon={faComment} />
+              <span>Чат</span>
+            </button>
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // Режим grid
+  return (
+    <div className={`agentcard ${viewMode}`} onClick={handleCardClick}>
+      {renderContent()}
     </div>
   );
 };

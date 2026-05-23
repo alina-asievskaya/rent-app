@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RentApp.API.Data;
 using RentApp.API.DTOs;
 using RentApp.API.Models;
+using System.Text.Json;   // NEW
 
 namespace RentApp.API.Services
 {
@@ -125,6 +126,20 @@ namespace RentApp.API.Services
                              $"Опыт работы {agent.Experience} лет. " +
                              $"Рейтинг: {agent.Rating}/5.";
 
+            // NEW: десериализация портфолио
+            List<string> portfolio = new();
+            if (!string.IsNullOrWhiteSpace(agent.PortfolioPhotos))
+            {
+                try
+                {
+                    portfolio = JsonSerializer.Deserialize<List<string>>(agent.PortfolioPhotos) ?? new();
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Ошибка десериализации PortfolioPhotos для агента {AgentId}", agent.Id);
+                }
+            }
+
             return new AgentDto
             {
                 Id = agent.Id,
@@ -143,7 +158,8 @@ namespace RentApp.API.Services
                 Description = description,
                 Position = position,
                 IsAgent = true,
-                DisplayName = agent.DisplayName   // <-- ДОБАВЛЕНО
+                DisplayName = agent.DisplayName,
+                PortfolioPhotos = portfolio   // NEW
             };
         }
 
@@ -258,8 +274,7 @@ namespace RentApp.API.Services
                     .Include(a => a.User)
                     .FirstOrDefaultAsync(a => a.Id == id);
 
-                if (agent == null)
-                    return false;
+                if (agent == null) return false;
 
                 if (!string.IsNullOrEmpty(updateDto.Specialization))
                     agent.Specialization = updateDto.Specialization;
@@ -275,6 +290,12 @@ namespace RentApp.API.Services
 
                 if (!string.IsNullOrEmpty(updateDto.DisplayName))
                     agent.DisplayName = updateDto.DisplayName;
+
+                // NEW: обновление портфолио
+                if (updateDto.PortfolioPhotos != null)
+                {
+                    agent.PortfolioPhotos = JsonSerializer.Serialize(updateDto.PortfolioPhotos);
+                }
 
                 if (agent.User != null)
                 {
@@ -346,8 +367,7 @@ namespace RentApp.API.Services
             try
             {
                 var agent = await _context.Agents.FindAsync(agentId);
-                if (agent == null)
-                    return false;
+                if (agent == null) return false;
 
                 var review = new AgentReview
                 {

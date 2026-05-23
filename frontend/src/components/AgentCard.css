@@ -1,7 +1,9 @@
-/* AgentCard.css - единый премиальный стиль (мятно-оливковый + золото) */
+/* AgentCard.css - премиум стиль (изменения: убраны специализации и кнопка звонка) */
+
 :root {
   --ac-primary: #2d6a4f;
   --ac-accent: #d4af37;
+  --ac-accent-dark: #b8941f;
   --ac-bg: #f0f7f4;
   --ac-text-dark: #1b4332;
   --ac-text-muted: #3a5e4c;
@@ -26,6 +28,7 @@
   flex-direction: column;
   height: 100%;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
 }
 
 .agentcard:hover {
@@ -40,7 +43,7 @@
   align-items: stretch;
 }
 
-/* Шапка карточки (аватар + имя + локация) */
+/* Шапка карточки (аватар + имя + должность) */
 .agentcard-header {
   display: flex;
   gap: 1rem;
@@ -99,35 +102,7 @@
   color: var(--ac-primary);
   font-weight: 600;
   font-size: 0.85rem;
-  margin: 0 0 0.5rem 0;
-}
-
-.agentcard-location {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--ac-text-muted);
-  font-size: 0.8rem;
-}
-
-.agentcard.list .agentcard-location {
-  justify-content: center;
-}
-
-.agentcard-location-icon {
-  font-size: 0.75rem;
-  color: var(--ac-accent);
-}
-
-/* Основное содержимое */
-.agentcard-main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.agentcard.list .agentcard-main-content {
-  padding: 1.5rem;
+  margin: 0;
 }
 
 /* Рейтинг */
@@ -160,7 +135,6 @@
 .agentcard-star {
   color: #e5e7eb;
   font-size: 0.9rem;
-  transition: color 0.2s;
 }
 
 .agentcard-star.filled {
@@ -187,57 +161,13 @@
   font-size: 0.8rem;
 }
 
-/* Специализации */
-.agentcard-specialties {
-  padding: 0.75rem 1.5rem;
-}
-
-.agentcard.list .agentcard-specialties {
-  padding: 0 0 0.5rem 0;
-}
-
-.agentcard-specialties-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.agentcard-specialty {
-  background: var(--ac-bg);
-  padding: 0.3rem 0.8rem;
-  border-radius: 50px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--ac-primary);
-  border: 1px solid var(--ac-border-accent);
-  transition: var(--ac-transition);
-}
-
-.agentcard-specialty:hover {
-  background: var(--ac-primary);
-  color: white;
-  border-color: var(--ac-primary);
-}
-
-.agentcard-specialty-more {
-  background: var(--ac-bg);
-  padding: 0.3rem 0.8rem;
-  border-radius: 50px;
-  font-size: 0.75rem;
-  color: var(--ac-text-muted);
-  border: 1px dashed var(--ac-border-accent);
-}
-
-/* Статистика */
+/* Статистика (только опыт) */
 .agentcard-stats {
   padding: 0.75rem 1.5rem;
 }
 
 .agentcard.list .agentcard-stats {
   padding: 0 0 1rem 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
 .agentcard-stat-item {
@@ -279,10 +209,6 @@
   font-size: 0.75rem;
 }
 
-.agentcard-stat-content {
-  flex: 1;
-}
-
 .agentcard-stat-value {
   font-weight: 700;
   color: var(--ac-text-dark);
@@ -300,15 +226,17 @@
   text-transform: lowercase;
 }
 
-/* Кнопки */
+/* Кнопки (только "Смотреть профиль" и "Чат") */
 .agentcard-actions {
   padding: 1rem 1.5rem 1.5rem;
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .agentcard.list .agentcard-actions {
   padding: 0;
-  display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
@@ -330,46 +258,42 @@
   width: 100%;
 }
 
+/* Главная кнопка – новый цвет при наведении (золотой) */
 .agentcard-btn-primary {
   background: linear-gradient(135deg, var(--ac-primary), #40916c);
   color: white;
-  margin-bottom: 0.8rem;
 }
 
 .agentcard-btn-primary:hover {
-  background: linear-gradient(135deg, #1b4332, var(--ac-primary));
+  background: linear-gradient(135deg, var(--ac-accent-dark), var(--ac-accent));
   transform: translateY(-2px);
   gap: 0.7rem;
+  color: var(--ac-text-dark);
 }
 
-.agentcard.list .agentcard-btn-primary {
-  margin-bottom: 0;
-}
-
-.agentcard-contact-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.agentcard.list .agentcard-contact-buttons {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.agentcard-btn-call,
-.agentcard-btn-email {
+/* Кнопка чата */
+.agentcard-btn-chat {
   background: white;
   border: 1px solid var(--ac-border-accent);
   color: var(--ac-text-dark);
 }
 
-.agentcard-btn-call:hover,
-.agentcard-btn-email:hover {
+.agentcard-btn-chat:hover {
   background: var(--ac-primary);
   color: white;
   border-color: var(--ac-primary);
   transform: translateY(-2px);
+}
+
+/* Убираем старые стили для специализаций и кнопки звонка (они больше не используются) */
+.agentcard-specialties,
+.agentcard-specialties-list,
+.agentcard-specialty,
+.agentcard-specialty-more,
+.agentcard-contact-buttons,
+.agentcard-btn-call,
+.agentcard-btn-email {
+  display: none;
 }
 
 /* Адаптивность */
@@ -393,15 +317,9 @@
   .agentcard.list .agentcard-info {
     text-align: left;
   }
-  .agentcard.list .agentcard-location {
-    justify-content: flex-start;
-  }
   .agentcard.list .agentcard-stars {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .agentcard.list .agentcard-contact-buttons {
-    flex-direction: column;
   }
 }
 
@@ -416,8 +334,5 @@
   }
   .agentcard-name {
     font-size: 1.2rem;
-  }
-  .agentcard-contact-buttons {
-    grid-template-columns: 1fr;
   }
 }

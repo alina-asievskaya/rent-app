@@ -6,7 +6,7 @@ import {
   faHistory, faHeadset, faSignOutAlt, faEdit, faTimes,
   faSave, faPlus, faPaperPlane, faEraser, faCheckDouble,
   faCheck, faTrash, faBed, faRulerCombined, faMapMarkerAlt,
-  faPause, faPlay, faClock, faCheckCircle, faTag
+  faPause, faPlay, faClock, faCheckCircle, faTag, faUpload
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
 
@@ -144,6 +144,7 @@ interface AgentProfileData {
   photo: string;
   reviewsCount: number;
   displayName: string;
+  portfolioPhotos?: string[];
 }
 
 const ProfilePage: React.FC = () => {
@@ -174,6 +175,8 @@ const ProfilePage: React.FC = () => {
   const [editingAgent, setEditingAgent] = useState(false);
   const [editedAgent, setEditedAgent] = useState<Partial<AgentProfileData>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [portfolioPhotos, setPortfolioPhotos] = useState<string[]>([]);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
 
   const navigate = useNavigate();
 
@@ -221,7 +224,8 @@ const ProfilePage: React.FC = () => {
         const result = await response.json();
         if (result.success) {
           setAgentData(result.data);
-          setEditedAgent(result.data);
+          setEditedAgent({ ...result.data, portfolioPhotos: result.data.portfolioPhotos || [] });
+          setPortfolioPhotos(result.data.portfolioPhotos || []);
         }
       }
     } catch (error) {
@@ -259,6 +263,49 @@ const ProfilePage: React.FC = () => {
     setUploadingPhoto(false);
   };
 
+  const handleUploadPortfolioPhoto = async (file: File) => {
+    if (!agentData || !editingAgent) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setMessage({ text: 'Требуется авторизация', type: 'error' });
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingPortfolio(true);
+    try {
+      const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}/upload-portfolio`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const result = await response.json();
+      if (response.ok && result.success && result.url) {
+        const newPhotos = [...portfolioPhotos, result.url];
+        setPortfolioPhotos(newPhotos);
+        setEditedAgent(prev => ({ ...prev, portfolioPhotos: newPhotos }));
+        setMessage({ text: 'Фото добавлено', type: 'success' });
+        setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
+      } else {
+        setMessage({ text: result.message || 'Ошибка загрузки', type: 'error' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ text: 'Ошибка соединения', type: 'error' });
+    } finally {
+      setUploadingPortfolio(false);
+    }
+  };
+
+  const handleRemovePortfolioPhoto = async (index: number) => {
+    if (!agentData || !editingAgent) return;
+    const newPhotos = portfolioPhotos.filter((_, i) => i !== index);
+    setPortfolioPhotos(newPhotos);
+    setEditedAgent(prev => ({ ...prev, portfolioPhotos: newPhotos }));
+    setMessage({ text: 'Фото удалено из списка (сохраните изменения)', type: 'success' });
+    setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
+  };
+
   const handleAgentSave = async () => {
     if (!agentData) return;
     try {
@@ -269,7 +316,8 @@ const ProfilePage: React.FC = () => {
         Specialization: editedAgent.specialization,
         Experience: editedAgent.experience,
         Photo: editedAgent.photo,
-        DisplayName: editedAgent.displayName
+        DisplayName: editedAgent.displayName,
+        PortfolioPhotos: portfolioPhotos
       };
       
       const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}`, {
@@ -796,7 +844,6 @@ const ProfilePage: React.FC = () => {
               <div className="profilepage-info-section">
                 <h3 className="profilepage-section-title">Личная информация</h3>
                 <div className="profilepage-info-stack">
-                  {/* Email */}
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Email</label>
@@ -819,7 +866,6 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div className="profilepage-stack-divider"></div>
 
-                  {/* ФИО */}
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Имя и фамилия</label>
@@ -839,7 +885,6 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div className="profilepage-stack-divider"></div>
 
-                  {/* Телефон */}
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Телефон</label>
@@ -976,11 +1021,61 @@ const ProfilePage: React.FC = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Портфолио работ */}
+                    <div className="profilepage-info-stack-item">
+                      <div className="profilepage-stack-header">
+                        <label className="profilepage-stack-label">Фотографии работ (портфолио)</label>
+                        {editingAgent && (
+                          <div className="portfolio-upload-area">
+                            <label htmlFor="portfolioUpload" className="profilepage-btn-secondary" style={{ display: 'inline-flex', gap: '8px', cursor: 'pointer' }}>
+                              <FontAwesomeIcon icon={faUpload} /> Добавить фото
+                            </label>
+                            <input
+                              type="file"
+                              id="portfolioUpload"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadPortfolioPhoto(e.target.files[0]);
+                                e.target.value = '';
+                              }}
+                              disabled={uploadingPortfolio}
+                            />
+                            {uploadingPortfolio && <div className="profilepage-spinner-small"></div>}
+                          </div>
+                        )}
+                      </div>
+                      {portfolioPhotos.length === 0 ? (
+                        <div className="profilepage-stack-value" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Нет добавленных работ</div>
+                      ) : (
+                        <div className="portfolio-grid-mini">
+                          {portfolioPhotos.map((url, idx) => (
+                            <div key={idx} className="portfolio-item-mini">
+                              <img src={url} alt={`Работа ${idx+1}`} />
+                              {editingAgent && (
+                                <button
+                                  type="button"
+                                  className="portfolio-remove-mini"
+                                  onClick={() => handleRemovePortfolioPhoto(idx)}
+                                  title="Удалить"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {editingAgent && (
+                        <div className="profilepage-stack-hint">Добавьте фотографии ваших лучших работ (свадьбы, корпоративы и т.д.)</div>
+                      )}
+                    </div>
                   </div>
                   {editingAgent ? (
                     <div className="profilepage-actions" style={{ marginTop: '30px', textAlign: 'right' }}>
                       <button className="profilepage-btn-primary" onClick={handleAgentSave}>Сохранить</button>
-                      <button className="profilepage-btn-secondary" onClick={() => { setEditingAgent(false); setEditedAgent(agentData); }} style={{ marginLeft: '12px' }}>Отмена</button>
+                      <button className="profilepage-btn-secondary" onClick={() => { setEditingAgent(false); setEditedAgent(agentData); setPortfolioPhotos(agentData.portfolioPhotos || []); }} style={{ marginLeft: '12px' }}>Отмена</button>
                     </div>
                   ) : (
                     <div className="profilepage-organizer-edit-button">

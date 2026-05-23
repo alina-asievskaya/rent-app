@@ -5,7 +5,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using RentApp.API.Data;
 using RentApp.API.Services;
-using RentApp.API.DTOs;   // добавлено
+using RentApp.API.DTOs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-builder.Services.AddScoped<CloudinaryService>();
+
+// Исправлено: регистрация интерфейса, а не конкретного класса
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAgentService, AgentService>();
 
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
@@ -58,16 +63,12 @@ Console.WriteLine($"Connection String: {connectionString}");
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseSqlServer(connectionString);
-    options.LogTo(Console.WriteLine, 
+    options.LogTo(Console.WriteLine,
         new[] { DbLoggerCategory.Database.Command.Name },
         LogLevel.Information)
         .EnableSensitiveDataLogging()
         .EnableDetailedErrors();
 });
-
-// Add Services
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IAgentService, AgentService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

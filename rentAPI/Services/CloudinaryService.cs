@@ -5,7 +5,7 @@ using RentApp.API.DTOs;
 
 namespace RentApp.API.Services
 {
-    public class CloudinaryService
+    public class CloudinaryService : ICloudinaryService   // добавить ICloudinaryService
     {
         private readonly Cloudinary _cloudinary;
 
@@ -19,31 +19,30 @@ namespace RentApp.API.Services
             _cloudinary = new Cloudinary(account);
         }
 
-       public async Task<CloudinaryUploadResult?> UploadImageAsync(IFormFile file)
-{
-    if (file == null || file.Length == 0)
-        return null;
+        public async Task<CloudinaryUploadResult?> UploadImageAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return null;
 
-    await using var stream = file.OpenReadStream();
-    var uploadParams = new ImageUploadParams
-    {
-        File = new FileDescription(file.FileName, stream),
-        Folder = "rentapp_chat_images"
-        // Transformation убран – подпись не требуется
-    };
+            await using var stream = file.OpenReadStream();
+            var uploadParams = new ImageUploadParams
+            {
+                File = new FileDescription(file.FileName, stream),
+                Folder = "agent_portfolio"   // изменим папку для портфолио
+            };
 
-    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-    if (uploadResult.Error != null)
-        throw new Exception(uploadResult.Error.Message);
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            if (uploadResult.Error != null)
+                throw new Exception(uploadResult.Error.Message);
 
-    return new CloudinaryUploadResult
-    {
-        Secure_url = uploadResult.SecureUrl.ToString(),
-        Public_id = uploadResult.PublicId,
-        Width = uploadResult.Width,
-        Height = uploadResult.Height,
-        Format = uploadResult.Format
-    };
-}
+            return new CloudinaryUploadResult
+            {
+                Secure_url = uploadResult.SecureUrl.ToString(),
+                Public_id = uploadResult.PublicId,
+                Width = uploadResult.Width,
+                Height = uploadResult.Height,
+                Format = uploadResult.Format
+            };
+        }
     }
 }

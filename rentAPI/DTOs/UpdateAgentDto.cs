@@ -25,5 +25,7 @@ namespace RentApp.API.DTOs
 
         [MaxLength(2000)] // увеличьте длину, если нужно много текста
         public string? DisplayName { get; set; }
+
+        public List<string>? PortfolioPhotos { get; set; }
     }
 }

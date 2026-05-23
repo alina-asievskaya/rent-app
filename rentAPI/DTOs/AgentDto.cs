@@ -45,9 +45,10 @@ namespace RentApp.API.DTOs
         
         public bool IsAgent { get; set; } = true;
         
-        // НОВОЕ ПОЛЕ - DisplayName из БД
         [MaxLength(2000)]
         public string DisplayName { get; set; } = string.Empty;
+
+         public List<string> PortfolioPhotos { get; set; } = new();
     }
 
     public class AgentCatalogDto

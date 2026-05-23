@@ -5,6 +5,7 @@ using RentApp.API.Services;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using RentApp.API.Data;
+using System.Text.Json;   // NEW
 
 namespace RentApp.API.Controllers
 {
@@ -15,12 +16,14 @@ namespace RentApp.API.Controllers
         private readonly IAgentService _agentService;
         private readonly AppDbContext _context;
         private readonly ILogger<AgentsController> _logger;
+        private readonly ICloudinaryService _cloudinaryService;   // NEW
 
-        public AgentsController(IAgentService agentService, AppDbContext context, ILogger<AgentsController> logger)
+        public AgentsController(IAgentService agentService, AppDbContext context, ILogger<AgentsController> logger, ICloudinaryService cloudinaryService)
         {
             _agentService = agentService;
             _context = context;
             _logger = logger;
+            _cloudinaryService = cloudinaryService;   // NEW
         }
 
         [HttpGet("catalog")]
@@ -153,14 +156,12 @@ namespace RentApp.API.Controllers
                             .Select(e => e.ErrorMessage) 
                     });
 
-                // Получаем ID текущего пользователя из токена
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 var roleClaim = User.FindFirst(ClaimTypes.Role);
                 
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId) || userId == 0)
                     return Unauthorized(new { success = false, message = "Пользователь не авторизован" });
                 
-                // Проверяем, не является ли пользователь администратором
                 if (roleClaim != null && roleClaim.Value == "Admin")
                     return BadRequest(new { 
                         success = false, 
@@ -224,21 +225,19 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // Изменённый метод UpdateAgent с проверкой прав
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdateAgent(int id, [FromBody] UpdateAgentDto updateDto)
         {
             if (!ModelState.IsValid)
-    {
-        var errors = ModelState.Values
-            .SelectMany(v => v.Errors)
-            .Select(e => e.ErrorMessage);
-        _logger.LogError("ModelState invalid: {Errors}", string.Join(", ", errors));
-        return BadRequest(new { success = false, message = "Ошибка валидации", errors });
-    }
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage);
+                _logger.LogError("ModelState invalid: {Errors}", string.Join(", ", errors));
+                return BadRequest(new { success = false, message = "Ошибка валидации", errors });
+            }
 
-            // Загружаем агента вместе с пользователем
             var agent = await _context.Agents
                 .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.Id == id);
@@ -252,7 +251,7 @@ namespace RentApp.API.Controllers
 
             var isAdmin = User.IsInRole("Admin");
             if (!isAdmin && agent.UserId != userId)
-                return Forbid();  // Только владелец или админ
+                return Forbid();
 
             var result = await _agentService.UpdateAgentAsync(id, updateDto);
             if (!result)
@@ -269,7 +268,6 @@ namespace RentApp.API.Controllers
             {
                 _logger.LogInformation($"Получение деталей агента с ID: {id}");
                 
-                // Используем сервис для получения деталей
                 var agent = await _agentService.GetAgentDetailsAsync(id);
 
                 if (agent == null)
@@ -316,7 +314,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // Эндпоинт для получения профиля текущего пользователя-агента
         [HttpGet("my-profile")]
         [Authorize]
         public async Task<IActionResult> GetMyAgentProfile()
@@ -332,10 +329,65 @@ namespace RentApp.API.Controllers
             if (agent == null)
                 return NotFound(new { success = false, message = "Вы не являетесь агентом" });
 
-            var dto = await _agentService.GetAgentDetailsAsync(agent.Id);
+            // Используем GetAgentByIdAsync, который возвращает AgentDto (включает PortfolioPhotos)
+            var dto = await _agentService.GetAgentByIdAsync(agent.Id);
             return Ok(new { success = true, data = dto });
         }
 
-        
+        // NEW: загрузка фото в портфолио агента
+        [HttpPost("{id}/upload-portfolio")]
+        [Authorize]
+        public async Task<IActionResult> UploadPortfolioPhoto(int id, IFormFile file)
+        {
+            try
+            {
+                var agent = await _context.Agents
+                    .Include(a => a.User)
+                    .FirstOrDefaultAsync(a => a.Id == id);
+                if (agent == null)
+                    return NotFound(new { success = false, message = "Агент не найден" });
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+                    return Unauthorized();
+
+                var isAdmin = User.IsInRole("Admin");
+                if (!isAdmin && agent.UserId != userId)
+                    return Forbid();
+
+                if (file == null || file.Length == 0)
+                    return BadRequest(new { success = false, message = "Файл не выбран" });
+
+                var uploadResult = await _cloudinaryService.UploadImageAsync(file);
+                if (uploadResult == null || string.IsNullOrEmpty(uploadResult.Secure_url))
+                    return StatusCode(500, new { success = false, message = "Ошибка загрузки изображения в Cloudinary" });
+
+                List<string> currentPhotos;
+                if (string.IsNullOrWhiteSpace(agent.PortfolioPhotos))
+                    currentPhotos = new List<string>();
+                else
+                {
+                    try
+                    {
+                        currentPhotos = JsonSerializer.Deserialize<List<string>>(agent.PortfolioPhotos) ?? new List<string>();
+                    }
+                    catch
+                    {
+                        currentPhotos = new List<string>();
+                    }
+                }
+
+                currentPhotos.Add(uploadResult.Secure_url);
+                agent.PortfolioPhotos = JsonSerializer.Serialize(currentPhotos);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, url = uploadResult.Secure_url });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка загрузки портфолио для агента {Id}", id);
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

@@ -22,6 +22,7 @@ namespace RentApp.API.Data
         public DbSet<Chat> Chats { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<Booking> Bookings { get; set; }
+        
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -112,7 +113,7 @@ namespace RentApp.API.Data
                 entity.HasIndex(f => new { f.UserId, f.HouseId }).IsUnique();
             });
 
-            // Конфигурация Agents
+            // Конфигурация Agents (ДОБАВЛЕНЫ поля DisplayName и PortfolioPhotos)
             modelBuilder.Entity<Agent>(entity =>
             {
                 entity.ToTable("Agents");
@@ -143,12 +144,23 @@ namespace RentApp.API.Data
                 entity.Property(a => a.Rating)
                     .HasColumnName("rating")
                     .HasColumnType("decimal(3,2)")
-                    .HasDefaultValue(0.0)
-                    .HasAnnotation("CheckConstraint", "rating >= 0 AND rating <= 5");
+                    .HasDefaultValue(0.0);
                 
                 entity.Property(a => a.ReviewsCount)
                     .HasColumnName("reviews_count")
                     .HasDefaultValue(0);
+                
+                // NEW: DisplayName
+                entity.Property(a => a.DisplayName)
+                    .HasColumnName("display_name")
+                    .HasMaxLength(2000)
+                    .HasDefaultValue("");
+                
+                // NEW: PortfolioPhotos (JSON)
+                entity.Property(a => a.PortfolioPhotos)
+                    .HasColumnName("portfolio_photos")
+                    .HasMaxLength(4000)
+                    .HasDefaultValue("[]");
 
                 // Внешний ключ к Users
                 entity.HasOne(a => a.User)
@@ -577,9 +589,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(b => b.BookingDate);
                 entity.HasIndex(b => new { b.HouseId, b.BookingDate }).IsUnique(); // одна дата - одно бронирование на дом
             });
-
-
-
 
             modelBuilder.Entity<Message>(entity =>
             {

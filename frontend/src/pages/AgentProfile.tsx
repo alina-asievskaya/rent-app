@@ -453,7 +453,30 @@ const AgentProfile: React.FC = () => {
       </>
     );
   }
+const renderDescription = (text: string) => {
+  if (!text) return <p>Информация отсутствует</p>;
 
+  // Разбиваем по двойному переносу строки (пустая строка)
+  const paragraphs = text.split(/\n\s*\n/);
+
+  return paragraphs.map((para, idx) => {
+    // Для каждого абзаца заменяем одиночные переносы на <br /> (если нужно)
+    const lines = para.split(/\n/);
+    if (lines.length === 1) {
+      return <p key={idx}>{para}</p>;
+    }
+    return (
+      <p key={idx}>
+        {lines.map((line, i) => (
+          <React.Fragment key={i}>
+            {line}
+            {i < lines.length - 1 && <br />}
+          </React.Fragment>
+        ))}
+      </p>
+    );
+  });
+};
   const formatExperience = (years: number) => {
     if (years === 1) return '1 год';
     if (years >= 2 && years <= 4) return `${years} года`;
@@ -552,9 +575,9 @@ const AgentProfile: React.FC = () => {
             <div className="agent-profile-content">
               <div className="about-section">
                 <h2>Обо мне</h2>
-                <p className="agent-description">
-                  {agent.displayName && agent.displayName.trim() !== "" ? agent.displayName : agent.description}
-                </p>
+                <div className="agent-description">
+  {renderDescription(agent.displayName && agent.displayName.trim() !== "" ? agent.displayName : agent.description)}
+</div>
                 {agent.specialties && agent.specialties.length > 0 && (
                   <div className="specialties-section">
                     <h3>Специализация</h3>

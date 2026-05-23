@@ -147,61 +147,85 @@ namespace RentApp.API.Controllers
         }
 
         [HttpPut("update-profile")]
-        [Authorize]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
+[Authorize]
+public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
+{
+    try
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
         {
-            try
-            {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return Unauthorized(new { success = false, message = "Неверный токен" });
-                }
-
-                var user = await _context.Users.FindAsync(userId);
-                if (user == null)
-                {
-                    return NotFound(new { success = false, message = "Пользователь не найден" });
-                }
-
-                if (!string.IsNullOrEmpty(updateDto.Phone_num) && 
-                    updateDto.Phone_num != user.Phone_num)
-                {
-                    var existingPhone = await _context.Users
-                        .AnyAsync(u => u.Phone_num == updateDto.Phone_num && u.Id != userId);
-                    
-                    if (existingPhone)
-                    {
-                        return BadRequest(new { success = false, message = "Этот номер телефона уже используется" });
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(updateDto.Fio))
-                {
-                    user.Fio = updateDto.Fio;
-                }
-                
-                if (!string.IsNullOrEmpty(updateDto.Phone_num))
-                {
-                    user.Phone_num = updateDto.Phone_num;
-                }
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Fio,
-                    user.Phone_num,
-                    user.Id_agent
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при обновлении профиля: {ex.Message}");
-                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
-            }
+            return Unauthorized(new { success = false, message = "Неверный токен" });
         }
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { success = false, message = "Пользователь не найден" });
+        }
+
+        bool hasChanges = false;
+    
+        if (!string.IsNullOrEmpty(updateDto.Fio) && updateDto.Fio != user.Fio)
+        {
+            user.Fio = updateDto.Fio;
+            hasChanges = true;
+        }
+
+        // Обновление телефона с проверкой уникальности (если требуется)
+        if (!string.IsNullOrEmpty(updateDto.Phone_num) && updateDto.Phone_num != user.Phone_num)
+        {
+            var phoneExists = await _context.Users
+                .AnyAsync(u => u.Phone_num == updateDto.Phone_num && u.Id != userId);
+            if (phoneExists)
+            {
+                return BadRequest(new { success = false, message = "Этот номер телефона уже используется" });
+            }
+            user.Phone_num = updateDto.Phone_num;
+            hasChanges = true;
+        }
+
+        // Обновление email с проверкой уникальности
+        if (!string.IsNullOrEmpty(updateDto.Email) && updateDto.Email != user.Email)
+        {
+            var emailExists = await _context.Users
+                .AnyAsync(u => u.Email == updateDto.Email && u.Id != userId);
+            if (emailExists)
+            {
+                return BadRequest(new { success = false, message = "Этот email уже используется" });
+            }
+            user.Email = updateDto.Email;
+            hasChanges = true;
+        }
+
+        if (!hasChanges)
+        {
+            return Ok(new
+            {
+                user.Id,
+                user.Email,
+                user.Fio,
+                user.Phone_num,
+                user.Id_agent
+            });
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            user.Id,
+            user.Email,
+            user.Fio,
+            user.Phone_num,
+            user.Id_agent
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Ошибка при обновлении профиля: {ex.Message}");
+        return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+    }
+}
     }
 }

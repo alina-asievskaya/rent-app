@@ -54,35 +54,7 @@ namespace RentApp.API.Controllers
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
-                if (dto.FoodItems != null && dto.FoodItems.Any())
-                {
-                    foreach (var food in dto.FoodItems)
-                    {
-                        _context.BookingFoodItems.Add(new BookingFoodItem
-                        {
-                            BookingId = booking.Id,
-                            RestaurantName = food.RestaurantName,
-                            ItemName = food.ItemName,
-                            Price = food.Price,
-                            Quantity = food.Quantity
-                        });
-                    }
-                }
-
-                if (dto.DecorationItems != null && dto.DecorationItems.Any())
-                {
-                    foreach (var dec in dto.DecorationItems)
-                    {
-                        _context.BookingDecorationItems.Add(new BookingDecorationItem
-                        {
-                            BookingId = booking.Id,
-                            Category = dec.Category,
-                            ItemName = dec.ItemName,
-                            Price = dec.Price,
-                            Quantity = dec.Quantity
-                        });
-                    }
-                }
+                
 
                 await _context.SaveChangesAsync();
 

@@ -427,7 +427,7 @@ const Header: React.FC = () => {
           <ul className="nav-links">
             <li><Link to="/" className={isActive("/") ? "active" : ""}>Главная</Link></li>
             <li><Link to="/catalog" className={isActive("/catalog") ? "active" : ""}>Каталог</Link></li>
-            <li><Link to="/agents" className={isActive("/agents") ? "active" : ""}>Агенты</Link></li>
+            <li><Link to="/agents" className={isActive("/agents") ? "active" : ""}>Услуги</Link></li>
             <li><Link to="/about" className={isActive("/about") ? "active" : ""}>О нас</Link></li>
           </ul>
           <div className="nav-auth">

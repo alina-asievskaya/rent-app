@@ -33,8 +33,5 @@ namespace RentApp.API.Models
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Навигационные свойства для составных частей бронирования
-        public ICollection<BookingFoodItem> FoodItems { get; set; }
-        public ICollection<BookingDecorationItem> DecorationItems { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import './CreateAd.css';
@@ -42,11 +42,11 @@ const CreateAd: React.FC = () => {
     bathrooms: '1',
     floor: '1',
     houseType: 'Коттедж',
-    rentType: 'month', // 'day' или 'month'
+    rentType: 'month',
     region: 'Минская область',
-    city: 'Минск',
-    district: '',
+    city: '',
     street: '',
+    houseNumber: '',
     description: '',
     conditioner: false,
     furniture: false,
@@ -111,6 +111,7 @@ const CreateAd: React.FC = () => {
     'Могилёвская область', 'Брестская область', 'Витебская область'
   ];
 
+  // Справочник городов по областям (для валидации)
   const citiesByRegion: Record<string, string[]> = {
     'Минская область': ['Минск', 'Борисов', 'Солигорск', 'Молодечно', 'Жодино', 'Слуцк', 'Вилейка', 'Дзержинск', 'Марьина Горка', 'Столбцы', 'Несвиж', 'Клецк', 'Любань', 'Старые Дороги', 'Узда', 'Червень', 'Березино', 'Крупки', 'Смолевичи', 'Логойск', 'Воложин', 'Мядель'],
     'Гомельская область': ['Гомель', 'Мозырь', 'Жлобин', 'Светлогорск', 'Речица', 'Калинковичи', 'Рогачёв', 'Добруш', 'Петриков', 'Ельск', 'Наровля', 'Хойники', 'Брагин', 'Лельчицы', 'Октябрьский', 'Ветка', 'Чечерск', 'Буда-Кошелёво', 'Корма'],
@@ -120,32 +121,13 @@ const CreateAd: React.FC = () => {
     'Витебская область': ['Витебск', 'Орша', 'Новополоцк', 'Полоцк', 'Глубокое', 'Лепель', 'Поставы', 'Миоры', 'Верхнедвинск', 'Браслав', 'Докшицы', 'Дубровно', 'Сенно', 'Толочин', 'Шарковщина', 'Ушачи', 'Россоны', 'Бешенковичи', 'Лиозно']
   };
 
-  const getAllCities = () => Object.values(citiesByRegion).flat();
-
-  const roomsOptions = [
-    { value: '1', label: '1 комната' }, { value: '2', label: '2 комнаты' },
-    { value: '3', label: '3 комнаты' }, { value: '4', label: '4 комнаты' },
-    { value: '5', label: '5 комнат' }, { value: '6', label: '6+ комнат' }
-  ];
-
-  const bathroomsOptions = [
-    { value: '1', label: '1 санузел' }, { value: '2', label: '2 санузла' },
-    { value: '3', label: '3 санузла' }, { value: '4', label: '4+ санузла' }
-  ];
-
-  const availableCities = useMemo(() => {
-    if (!formData.region) return getAllCities();
-    return citiesByRegion[formData.region] || getAllCities();
-  }, [formData.region]);
-
-  useEffect(() => {
-    if (formData.region && formData.city) {
-      const allowed = citiesByRegion[formData.region];
-      if (allowed && !allowed.includes(formData.city)) {
-        setFormData(prev => ({ ...prev, city: '' }));
-      }
+  // Построим обратный словарь: город -> область
+  const cityToRegion: Record<string, string> = {};
+  for (const [region, cities] of Object.entries(citiesByRegion)) {
+    for (const city of cities) {
+      cityToRegion[city] = region;
     }
-  }, [formData.region]);
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -221,6 +203,17 @@ const CreateAd: React.FC = () => {
     }
   };
 
+  const validateCityByRegion = (city: string, region: string): boolean => {
+    const trimmedCity = city.trim();
+    if (!trimmedCity) return true; // пустое проверится отдельно
+    // Если город есть в справочнике cityToRegion, проверяем соответствие области
+    if (cityToRegion[trimmedCity] && cityToRegion[trimmedCity] !== region) {
+      return false;
+    }
+    // Если города нет в справочнике (деревня, хутор и т.п.) – пропускаем
+    return true;
+  };
+
   const validateForm = (step: number): boolean => {
     if (step === 1) {
       if (!formData.price || parseFloat(formData.price) <= 0) {
@@ -247,9 +240,15 @@ const CreateAd: React.FC = () => {
       return true;
     }
     if (step === 2) {
-      if (!formData.region.trim()) { showNotification('Введите область', 'error'); return false; }
-      if (!formData.city.trim()) { showNotification('Введите город', 'error'); return false; }
-      if (!formData.street.trim()) { showNotification('Введите адрес', 'error'); return false; }
+      if (!formData.region.trim()) { showNotification('Выберите область', 'error'); return false; }
+      if (!formData.city.trim()) { showNotification('Введите населённый пункт', 'error'); return false; }
+      // Валидация города по области
+      if (!validateCityByRegion(formData.city, formData.region)) {
+        showNotification(`Город "${formData.city}" не относится к области "${formData.region}". Пожалуйста, выберите правильную область или уточните населённый пункт.`, 'error');
+        return false;
+      }
+      if (!formData.street.trim()) { showNotification('Введите улицу', 'error'); return false; }
+      if (!formData.houseNumber.trim()) { showNotification('Введите номер дома', 'error'); return false; }
       if (!formData.description.trim() || formData.description.length < 50) {
         showNotification('Описание должно содержать минимум 50 символов', 'error');
         return false;
@@ -321,6 +320,7 @@ const CreateAd: React.FC = () => {
         Region: formData.region,
         City: formData.city,
         Street: formData.street,
+        HouseNumber: formData.houseNumber,
         Rooms: parseInt(formData.rooms),
         Bathrooms: parseInt(formData.bathrooms),
         Floor: parseInt(formData.floor),
@@ -471,7 +471,12 @@ const CreateAd: React.FC = () => {
                         <label className="createad-form-label"><span>Количество комнат</span><span className="createad-required">*</span></label>
                         <div className="createad-select-wrapper">
                           <select name="rooms" value={formData.rooms} onChange={handleInputChange} required className="createad-form-select">
-                            {roomsOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            <option value="1">1 комната</option>
+                            <option value="2">2 комнаты</option>
+                            <option value="3">3 комнаты</option>
+                            <option value="4">4 комнаты</option>
+                            <option value="5">5 комнат</option>
+                            <option value="6">6+ комнат</option>
                           </select>
                           <i className="createad-select-arrow fas fa-chevron-down"></i>
                         </div>
@@ -480,7 +485,10 @@ const CreateAd: React.FC = () => {
                         <label className="createad-form-label"><span>Количество санузлов</span><span className="createad-required">*</span></label>
                         <div className="createad-select-wrapper">
                           <select name="bathrooms" value={formData.bathrooms} onChange={handleInputChange} required className="createad-form-select">
-                            {bathroomsOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            <option value="1">1 санузел</option>
+                            <option value="2">2 санузла</option>
+                            <option value="3">3 санузла</option>
+                            <option value="4">4+ санузла</option>
                           </select>
                           <i className="createad-select-arrow fas fa-chevron-down"></i>
                         </div>
@@ -496,7 +504,6 @@ const CreateAd: React.FC = () => {
 
               {formStep === 2 && (
                 <div className="createad-form-step">
-                  {/* Местоположение */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-map-marker-alt"></i> Местоположение</h3>
                     <div className="createad-form-grid">
@@ -510,23 +517,20 @@ const CreateAd: React.FC = () => {
                         </div>
                       </div>
                       <div className="createad-form-group">
-                        <label className="createad-form-label"><span>Город</span><span className="createad-required">*</span></label>
-                        <div className="createad-select-wrapper">
-                          <select name="city" value={formData.city} onChange={handleInputChange} required className="createad-form-select">
-                            <option value="">Выберите город</option>
-                            {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
-                          </select>
-                          <i className="createad-select-arrow fas fa-chevron-down"></i>
-                        </div>
+                        <label className="createad-form-label"><span>Населённый пункт (город, деревня, посёлок)</span><span className="createad-required">*</span></label>
+                        <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="Минск, Столбцы, Сула, Боровляны..." className="createad-form-input" />
                       </div>
-                      <div className="createad-form-group createad-full-width">
-                        <label className="createad-form-label"><span>Адрес дома</span><span className="createad-required">*</span></label>
-                        <input type="text" name="street" value={formData.street} onChange={handleInputChange} required placeholder="ул. Ленина, д. 15" className="createad-form-input" />
+                      <div className="createad-form-group">
+                        <label className="createad-form-label"><span>Улица</span><span className="createad-required">*</span></label>
+                        <input type="text" name="street" value={formData.street} onChange={handleInputChange} required placeholder="ул. Ленина" className="createad-form-input" />
+                      </div>
+                      <div className="createad-form-group">
+                        <label className="createad-form-label"><span>Номер дома</span><span className="createad-required">*</span></label>
+                        <input type="text" name="houseNumber" value={formData.houseNumber} onChange={handleInputChange} required placeholder="15, 15А, 15/2" className="createad-form-input" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Описание */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-pencil-alt"></i> Описание дома</h3>
                     <p className="createad-section-description">Расскажите подробнее о вашем доме</p>
@@ -539,7 +543,6 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Удобства */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-star"></i> Удобства и особенности</h3>
                     <p className="createad-section-description">Выберите доступные удобства</p>
@@ -581,7 +584,6 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Фотографии */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-camera"></i> Фотографии дома</h3>
                     <p className="createad-section-description">Загрузите фотографии вашего дома</p>

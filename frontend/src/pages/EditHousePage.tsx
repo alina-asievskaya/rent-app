@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import './CreateAd.css';
@@ -47,6 +47,7 @@ interface HouseData {
     region: string;
     city: string;
     street: string;
+    houseNumber: string;
     rooms: number;
     bathrooms: number;
     floor: number;
@@ -87,8 +88,9 @@ const EditHousePage: React.FC = () => {
     houseType: 'Коттедж',
     rentType: 'month',
     region: 'Минская область',
-    city: 'Минск',
+    city: '',
     street: '',
+    houseNumber: '',
     description: '',
     conditioner: false,
     furniture: false,
@@ -107,6 +109,29 @@ const EditHousePage: React.FC = () => {
     existingPhotos: [] as string[],
     newPhotos: [] as File[],
   });
+
+  // Справочник городов по областям (для валидации)
+  const citiesByRegion: Record<string, string[]> = {
+    'Минская область': ['Минск', 'Борисов', 'Солигорск', 'Молодечно', 'Жодино', 'Слуцк', 'Вилейка', 'Дзержинск', 'Марьина Горка', 'Столбцы', 'Несвиж', 'Клецк', 'Любань', 'Старые Дороги', 'Узда', 'Червень', 'Березино', 'Крупки', 'Смолевичи', 'Логойск', 'Воложин', 'Мядель'],
+    'Гомельская область': ['Гомель', 'Мозырь', 'Жлобин', 'Светлогорск', 'Речица', 'Калинковичи', 'Рогачёв', 'Добруш', 'Петриков', 'Ельск', 'Наровля', 'Хойники', 'Брагин', 'Лельчицы', 'Октябрьский', 'Ветка', 'Чечерск', 'Буда-Кошелёво', 'Корма'],
+    'Гродненская область': ['Гродно', 'Лида', 'Слоним', 'Волковыск', 'Сморгонь', 'Новогрудок', 'Ошмяны', 'Щучин', 'Мосты', 'Берёзовка', 'Ивье', 'Дятлово', 'Зельва', 'Свислочь', 'Островец'],
+    'Могилёвская область': ['Могилёв', 'Бобруйск', 'Горки', 'Осиповичи', 'Кричев', 'Быхов', 'Климовичи', 'Шклов', 'Чаусы', 'Костюковичи', 'Мстиславль', 'Чериков', 'Славгород', 'Кировск', 'Краснополье', 'Дрибин'],
+    'Брестская область': ['Брест', 'Барановичи', 'Пинск', 'Кобрин', 'Берёза', 'Лунинец', 'Ивацевичи', 'Пружаны', 'Дрогичин', 'Ганцевичи', 'Жабинка', 'Столин', 'Каменец', 'Малорита', 'Антополь', 'Микашевичи', 'Высокое'],
+    'Витебская область': ['Витебск', 'Орша', 'Новополоцк', 'Полоцк', 'Глубокое', 'Лепель', 'Поставы', 'Миоры', 'Верхнедвинск', 'Браслав', 'Докшицы', 'Дубровно', 'Сенно', 'Толочин', 'Шарковщина', 'Ушачи', 'Россоны', 'Бешенковичи', 'Лиозно']
+  };
+
+  // Обратный словарь: город -> область
+  const cityToRegion: Record<string, string> = {};
+  for (const [region, cities] of Object.entries(citiesByRegion)) {
+    for (const city of cities) {
+      cityToRegion[city] = region;
+    }
+  }
+
+  const belarusianRegions = [
+    'Минская область', 'Гомельская область', 'Гродненская область',
+    'Могилёвская область', 'Брестская область', 'Витебская область'
+  ];
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
     setNotification({ message, type });
@@ -152,6 +177,7 @@ const EditHousePage: React.FC = () => {
       Region?: string; region?: string;
       City?: string; city?: string;
       Street?: string; street?: string;
+      HouseNumber?: string; houseNumber?: string;
       Rooms?: number; rooms?: number;
       Bathrooms?: number; bathrooms?: number;
       Floor?: number; floor?: number;
@@ -160,6 +186,7 @@ const EditHousePage: React.FC = () => {
       Region?: string; region?: string;
       City?: string; city?: string;
       Street?: string; street?: string;
+      HouseNumber?: string; houseNumber?: string;
       Rooms?: number; rooms?: number;
       Bathrooms?: number; bathrooms?: number;
       Floor?: number; floor?: number;
@@ -215,8 +242,9 @@ const EditHousePage: React.FC = () => {
               Array.isArray(apiData.photos) ? apiData.photos : [],
       houseInfo: {
         region: String(houseInfoData.Region || houseInfoData.region || 'Минская область'),
-        city: String(houseInfoData.City || houseInfoData.city || 'Минск'),
+        city: String(houseInfoData.City || houseInfoData.city || ''),
         street: String(houseInfoData.Street || houseInfoData.street || ''),
+        houseNumber: String(houseInfoData.HouseNumber || houseInfoData.houseNumber || ''),
         rooms: Number(houseInfoData.Rooms || houseInfoData.rooms || 1),
         bathrooms: Number(houseInfoData.Bathrooms || houseInfoData.bathrooms || 1),
         floor: Number(houseInfoData.Floor || houseInfoData.floor || 1),
@@ -262,6 +290,7 @@ const EditHousePage: React.FC = () => {
           region: houseData.houseInfo.region,
           city: houseData.houseInfo.city,
           street: houseData.houseInfo.street,
+          houseNumber: houseData.houseInfo.houseNumber,
           description: houseData.description,
           conditioner: houseData.convenience.conditioner,
           furniture: houseData.convenience.furniture,
@@ -297,35 +326,6 @@ const EditHousePage: React.FC = () => {
     if (!token) navigate('/login');
     else if (id) fetchHouseData(token);
   }, [id, navigate, fetchHouseData]);
-
-  const belarusianRegions = [
-    'Минская область', 'Гомельская область', 'Гродненская область',
-    'Могилёвская область', 'Брестская область', 'Витебская область'
-  ];
-
-  const citiesByRegion: Record<string, string[]> = {
-    'Минская область': ['Минск', 'Борисов', 'Солигорск', 'Молодечно', 'Жодино', 'Слуцк', 'Вилейка', 'Дзержинск', 'Марьина Горка', 'Столбцы', 'Несвиж', 'Клецк', 'Любань', 'Старые Дороги', 'Узда', 'Червень', 'Березино', 'Крупки', 'Смолевичи', 'Логойск', 'Воложин', 'Мядель'],
-    'Гомельская область': ['Гомель', 'Мозырь', 'Жлобин', 'Светлогорск', 'Речица', 'Калинковичи', 'Рогачёв', 'Добруш', 'Петриков', 'Ельск', 'Наровля', 'Хойники', 'Брагин', 'Лельчицы', 'Октябрьский', 'Ветка', 'Чечерск', 'Буда-Кошелёво', 'Корма'],
-    'Гродненская область': ['Гродно', 'Лида', 'Слоним', 'Волковыск', 'Сморгонь', 'Новогрудок', 'Ошмяны', 'Щучин', 'Мосты', 'Берёзовка', 'Ивье', 'Дятлово', 'Зельва', 'Свислочь', 'Островец'],
-    'Могилёвская область': ['Могилёв', 'Бобруйск', 'Горки', 'Осиповичи', 'Кричев', 'Быхов', 'Климовичи', 'Шклов', 'Чаусы', 'Костюковичи', 'Мстиславль', 'Чериков', 'Славгород', 'Кировск', 'Краснополье', 'Дрибин'],
-    'Брестская область': ['Брест', 'Барановичи', 'Пинск', 'Кобрин', 'Берёза', 'Лунинец', 'Ивацевичи', 'Пружаны', 'Дрогичин', 'Ганцевичи', 'Жабинка', 'Столин', 'Каменец', 'Малорита', 'Антополь', 'Микашевичи', 'Высокое'],
-    'Витебская область': ['Витебск', 'Орша', 'Новополоцк', 'Полоцк', 'Глубокое', 'Лепель', 'Поставы', 'Миоры', 'Верхнедвинск', 'Браслав', 'Докшицы', 'Дубровно', 'Сенно', 'Толочин', 'Шарковщина', 'Ушачи', 'Россоны', 'Бешенковичи', 'Лиозно']
-  };
-
-  const getAllCities = () => Object.values(citiesByRegion).flat();
-  const availableCities = useMemo(() => {
-    if (!formData.region) return getAllCities();
-    return citiesByRegion[formData.region] || getAllCities();
-  }, [formData.region]);
-
-  useEffect(() => {
-    if (formData.region && formData.city) {
-      const allowed = citiesByRegion[formData.region];
-      if (allowed && !allowed.includes(formData.city)) {
-        setFormData(prev => ({ ...prev, city: '' }));
-      }
-    }
-  }, [formData.region]);
 
   const houseTypes = [
     { value: 'Коттедж', label: 'Коттедж', description: 'Отдельный дом с участком' },
@@ -424,14 +424,28 @@ const EditHousePage: React.FC = () => {
     }
   };
 
+  const validateCityByRegion = (city: string, region: string): boolean => {
+    const trimmedCity = city.trim();
+    if (!trimmedCity) return true;
+    if (cityToRegion[trimmedCity] && cityToRegion[trimmedCity] !== region) {
+      return false;
+    }
+    return true;
+  };
+
   const validateForm = (): boolean => {
     if (!formData.price || parseFloat(formData.price) <= 0) { showNotification('Введите корректную цену', 'error'); return false; }
     if (!formData.area || parseFloat(formData.area) <= 0) { showNotification('Введите корректную площадь', 'error'); return false; }
     if (!formData.houseType) { showNotification('Выберите тип дома', 'error'); return false; }
     if (!formData.rentType) { showNotification('Выберите тип аренды', 'error'); return false; }
-    if (!formData.region.trim()) { showNotification('Введите область', 'error'); return false; }
-    if (!formData.city.trim()) { showNotification('Введите город', 'error'); return false; }
-    if (!formData.street.trim()) { showNotification('Введите адрес', 'error'); return false; }
+    if (!formData.region.trim()) { showNotification('Выберите область', 'error'); return false; }
+    if (!formData.city.trim()) { showNotification('Введите населённый пункт', 'error'); return false; }
+    if (!validateCityByRegion(formData.city, formData.region)) {
+      showNotification(`Город "${formData.city}" не относится к области "${formData.region}". Пожалуйста, выберите правильную область или уточните населённый пункт.`, 'error');
+      return false;
+    }
+    if (!formData.street.trim()) { showNotification('Введите улицу', 'error'); return false; }
+    if (!formData.houseNumber.trim()) { showNotification('Введите номер дома', 'error'); return false; }
     if (!formData.description.trim() || formData.description.length < 50) { showNotification('Описание должно содержать минимум 50 символов', 'error'); return false; }
     if (formData.existingPhotos.length + formData.newPhotos.length === 0) { showNotification('Добавьте хотя бы одну фотографию', 'error'); return false; }
     return true;
@@ -482,6 +496,7 @@ const EditHousePage: React.FC = () => {
         Region: formData.region,
         City: formData.city,
         Street: formData.street,
+        HouseNumber: formData.houseNumber,
         Rooms: parseInt(formData.rooms) || 1,
         Bathrooms: parseInt(formData.bathrooms) || 1,
         Floor: parseInt(formData.floor) || 1,
@@ -662,18 +677,16 @@ const EditHousePage: React.FC = () => {
                     </div>
                   </div>
                   <div className="createad-form-group">
-                    <label className="createad-form-label"><span>Город</span><span className="createad-required">*</span></label>
-                    <div className="createad-select-wrapper">
-                      <select name="city" value={formData.city} onChange={handleInputChange} required className="createad-form-select">
-                        <option value="">Выберите город</option>
-                        {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
-                      </select>
-                      <i className="createad-select-arrow fas fa-chevron-down"></i>
-                    </div>
+                    <label className="createad-form-label"><span>Населённый пункт (город, деревня, посёлок)</span><span className="createad-required">*</span></label>
+                    <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="Минск, Столбцы, Сула, Боровляны..." className="createad-form-input" />
                   </div>
-                  <div className="createad-form-group createad-full-width">
-                    <label className="createad-form-label"><span>Адрес дома</span><span className="createad-required">*</span></label>
-                    <input type="text" name="street" value={formData.street} onChange={handleInputChange} required placeholder="ул. Ленина, д. 15" className="createad-form-input" />
+                  <div className="createad-form-group">
+                    <label className="createad-form-label"><span>Улица</span><span className="createad-required">*</span></label>
+                    <input type="text" name="street" value={formData.street} onChange={handleInputChange} required placeholder="ул. Ленина" className="createad-form-input" />
+                  </div>
+                  <div className="createad-form-group">
+                    <label className="createad-form-label"><span>Номер дома</span><span className="createad-required">*</span></label>
+                    <input type="text" name="houseNumber" value={formData.houseNumber} onChange={handleInputChange} required placeholder="15, 15А, 15/2" className="createad-form-input" />
                   </div>
                 </div>
               </div>
@@ -691,7 +704,7 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Удобства */}
+              {/* Удобства и особенности */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-star"></i> Удобства и особенности</h3>
                 <p className="createad-section-description">Выберите доступные удобства</p>

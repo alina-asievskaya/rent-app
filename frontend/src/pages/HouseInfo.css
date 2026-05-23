@@ -314,6 +314,7 @@
   color: #1B4332;
   margin-bottom: 1.25rem;
   font-size: 1.05rem;
+  white-space: pre-wrap;
 }
 
 /* Особенности */
@@ -1483,3 +1484,32 @@
   font-size: 1.1rem;
 }
 
+.map-container-house {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.location-info-house {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .location-info-house {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .map-container-house {
+    order: -1;
+  }
+}
+
+.location-features-house {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

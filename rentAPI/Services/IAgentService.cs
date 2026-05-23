@@ -6,7 +6,7 @@ namespace RentApp.API.Services
     {
         Task<AgentCatalogDto> GetAgentsAsync(AgentFilterDto filter);
         Task<AgentDto?> GetAgentByIdAsync(int id);
-        Task<AgentDetailsDto?> GetAgentDetailsAsync(int id); // Изменяем тип возврата
+        Task<AgentDetailsDto?> GetAgentDetailsAsync(int id);
         Task<bool> CreateAgentAsync(CreateAgentDto createDto);
         Task<bool> UpdateAgentAsync(int id, UpdateAgentDto updateDto);
         Task<List<string>> GetCitiesAsync();

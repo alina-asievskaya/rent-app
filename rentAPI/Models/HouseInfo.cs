@@ -31,6 +31,11 @@ namespace RentApp.API.Models
         public string Street { get; set; } = string.Empty;
 
         [Required]
+        [Column("house_number")]
+        [MaxLength(20)]
+        public string HouseNumber { get; set; } = string.Empty;
+
+        [Required]
         [Column("rooms")]
         public int Rooms { get; set; }
 

@@ -38,6 +38,10 @@ namespace RentApp.API.DTOs
         [MaxLength(200)]
         public string Street { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Дом обязателен")]
+        [MaxLength(2000)]
+        public string HouseNumber { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Количество комнат обязательно")]
         [Range(1, 50, ErrorMessage = "Количество комнат должно быть от 1 до 50")]
         public int Rooms { get; set; }

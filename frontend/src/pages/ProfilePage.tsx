@@ -6,7 +6,7 @@ import {
   faHistory, faHeadset, faSignOutAlt, faEdit, faTimes,
   faSave, faPlus, faPaperPlane, faEraser, faCheckDouble,
   faCheck, faTrash, faBed, faRulerCombined, faMapMarkerAlt,
-  faPause, faPlay, faClock, faCheckCircle
+  faPause, faPlay, faClock, faCheckCircle, faTag
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
 
@@ -40,6 +40,8 @@ interface ApiHouse {
     city?: string;
     Street?: string;
     street?: string;
+    HouseNumber?: string;
+    houseNumber?: string;
     Rooms?: number;
     rooms?: number;
   };
@@ -48,6 +50,8 @@ interface ApiHouse {
     city?: string;
     Street?: string;
     street?: string;
+    HouseNumber?: string;
+    houseNumber?: string;
     Rooms?: number;
     rooms?: number;
   };
@@ -67,6 +71,7 @@ interface AdData {
   HouseInfo: {
     City: string;
     Street: string;
+    HouseNumber: string;
     Rooms: number;
   };
   RentType?: string;
@@ -127,7 +132,6 @@ interface ChatApiResponse {
   data?: ChatData[];
 }
 
-// Новый интерфейс для профиля агента
 interface AgentProfileData {
   id: number;
   userId: number;
@@ -166,7 +170,6 @@ const ProfilePage: React.FC = () => {
   const [historyBookings, setHistoryBookings] = useState<UserBooking[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Состояния для редактирования профиля агента
   const [agentData, setAgentData] = useState<AgentProfileData | null>(null);
   const [editingAgent, setEditingAgent] = useState(false);
   const [editedAgent, setEditedAgent] = useState<Partial<AgentProfileData>>({});
@@ -257,40 +260,40 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleAgentSave = async () => {
-  if (!agentData) return;
-  try {
-    const token = localStorage.getItem('token');
-    const payload = {
-      Fio: editedAgent.fio,
-      Phone: editedAgent.phone,
-      Specialization: editedAgent.specialization,
-      Experience: editedAgent.experience,
-      Photo: editedAgent.photo,
-      DisplayName: editedAgent.displayName
-    };
-    
-    const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload)
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok && result.success) {
-      setMessage({ text: 'Данные агента обновлены', type: 'success' });
-      setEditingAgent(false);
-      fetchAgentProfile();
-      fetchUserData();
-      setTimeout(() => setMessage({ text: '', type: 'success' }), 3000);
-    } else {
-      setMessage({ text: result.message || 'Ошибка обновления', type: 'error' });
+    if (!agentData) return;
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        Fio: editedAgent.fio,
+        Phone: editedAgent.phone,
+        Specialization: editedAgent.specialization,
+        Experience: editedAgent.experience,
+        Photo: editedAgent.photo,
+        DisplayName: editedAgent.displayName
+      };
+      
+      const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        setMessage({ text: 'Данные организатора обновлены', type: 'success' });
+        setEditingAgent(false);
+        fetchAgentProfile();
+        fetchUserData();
+        setTimeout(() => setMessage({ text: '', type: 'success' }), 3000);
+      } else {
+        setMessage({ text: result.message || 'Ошибка обновления', type: 'error' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ text: 'Ошибка соединения', type: 'error' });
     }
-  } catch (error) {
-    console.error(error);
-    setMessage({ text: 'Ошибка соединения', type: 'error' });
-  }
-};
+  };
 
   const fetchUserAds = async () => {
     try {
@@ -318,6 +321,7 @@ const ProfilePage: React.FC = () => {
             HouseInfo: {
               City: house.houseInfo?.City || house.HouseInfo?.city || house.houseInfo?.city || house.HouseInfo?.City || '',
               Street: house.houseInfo?.Street || house.HouseInfo?.street || house.houseInfo?.street || house.HouseInfo?.Street || '',
+              HouseNumber: house.houseInfo?.HouseNumber || house.HouseInfo?.houseNumber || house.houseInfo?.houseNumber || house.HouseInfo?.HouseNumber || '',
               Rooms: house.houseInfo?.Rooms || house.HouseInfo?.rooms || house.houseInfo?.rooms || house.HouseInfo?.Rooms || 1,
             },
             RentType: house.rentType || house.RentType || 'day',
@@ -441,15 +445,15 @@ const ProfilePage: React.FC = () => {
     }
   };
 
- const formatPriceWithIcon = (price: number, rentType?: string): React.ReactNode => {
-  const numberStr = price?.toLocaleString('ru-RU') || '0';
-  const suffix = rentType === 'month' ? '/мес' : '/сутки';
-  return (
-    <>
-      {numberStr} <i className="nbrb-icon">&#xe901;</i>{suffix}
-    </>
-  );
-};
+  const formatPriceWithIcon = (price: number, rentType?: string): React.ReactNode => {
+    const numberStr = price?.toLocaleString('ru-RU') || '0';
+    const suffix = rentType === 'month' ? '/мес' : '/сутки';
+    return (
+      <>
+        {numberStr} <i className="nbrb-icon">&#xe901;</i>{suffix}
+      </>
+    );
+  };
 
   // ========== Обработчики ==========
   const handleApproveRequest = async (requestId: number) => {
@@ -510,17 +514,24 @@ const ProfilePage: React.FC = () => {
       const response = await fetch('http://localhost:5213/api/auth/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fio: editedData.fio, phone_num: editedData.phone_num }),
+        body: JSON.stringify({
+          fio: editedData.fio,
+          email: editedData.email,
+          phone_num: editedData.phone_num,
+        }),
       });
       if (response.ok) {
         const data = await response.json();
         setUserData(data);
+        setEditedData(data);
         setIsEditing(false);
         setMessage({ text: 'Профиль успешно обновлен!', type: 'success' });
+
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const user = JSON.parse(storedUser);
           user.fio = data.fio;
+          user.email = data.email;
           user.phone_num = data.phone_num;
           localStorage.setItem('user', JSON.stringify(user));
         }
@@ -719,7 +730,7 @@ const ProfilePage: React.FC = () => {
           <p className="profilepage-email">{userData.email}</p>
           <div className={`profilepage-role ${userData.id_agent ? 'profilepage-agent' : 'profilepage-user'}`}>
             <span className="profilepage-role-dot"></span>
-            {userData.id_agent ? 'Агент недвижимости' : 'Пользователь'}
+            {userData.id_agent ? 'Организатор праздников' : 'Пользователь'}
           </div>
         </div>
         <nav className="profilepage-nav">
@@ -785,46 +796,76 @@ const ProfilePage: React.FC = () => {
               <div className="profilepage-info-section">
                 <h3 className="profilepage-section-title">Личная информация</h3>
                 <div className="profilepage-info-stack">
+                  {/* Email */}
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Email</label>
-                      <div className="profilepage-stack-value">{userData.email}</div>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          name="email"
+                          value={editedData?.email || ''}
+                          onChange={handleInputChange}
+                          className="profilepage-stack-input"
+                          placeholder="example@mail.com"
+                        />
+                      ) : (
+                        <div className="profilepage-stack-value">{userData.email}</div>
+                      )}
                     </div>
-                    <div className="profilepage-stack-hint">Email нельзя изменить</div>
+                    <div className="profilepage-stack-hint">
+                      {isEditing ? 'Введите новый email' : ''}
+                    </div>
                   </div>
                   <div className="profilepage-stack-divider"></div>
+
+                  {/* ФИО */}
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Имя и фамилия</label>
                       {isEditing ? (
-                        <input type="text" name="fio" value={editedData?.fio || ''} onChange={handleInputChange} className="profilepage-stack-input" placeholder="Введите ФИО" />
+                        <input
+                          type="text"
+                          name="fio"
+                          value={editedData?.fio || ''}
+                          onChange={handleInputChange}
+                          className="profilepage-stack-input"
+                          placeholder="Иванов Иван"
+                        />
                       ) : (
                         <div className="profilepage-stack-value">{userData.fio}</div>
                       )}
                     </div>
                   </div>
                   <div className="profilepage-stack-divider"></div>
+
+                  {/* Телефон */}
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Телефон</label>
                       {isEditing ? (
-                        <input type="tel" name="phone_num" value={editedData?.phone_num || ''} onChange={handleInputChange} className="profilepage-stack-input" placeholder="+375 (XX) XXX-XX-XX" />
+                        <input
+                          type="tel"
+                          name="phone_num"
+                          value={editedData?.phone_num || ''}
+                          onChange={handleInputChange}
+                          className="profilepage-stack-input"
+                          placeholder="+375 (XX) XXX-XX-XX"
+                        />
                       ) : (
                         <div className="profilepage-stack-value">{userData.phone_num || 'Не указан'}</div>
                       )}
                     </div>
                   </div>
                   <div className="profilepage-stack-divider"></div>
+
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Статус аккаунта</label>
                       <div className={`profilepage-stack-value profilepage-role-badge ${userData.id_agent ? 'profilepage-agent' : 'profilepage-user'}`}>
                         <span className="profilepage-badge-dot"></span>
-                        {userData.id_agent ? 'Агент недвижимости' : 'Обычный пользователь'}
+                        {userData.id_agent ? 'Организатор праздников' : 'Обычный пользователь'}
                       </div>
-                    </div>
-                    <div className="profilepage-stack-hint">
-                      {userData.id_agent ? 'Вы можете публиковать объявления от имени агентства' : 'Вы можете публиковать объявления как частное лицо'}
                     </div>
                   </div>
                 </div>
@@ -837,25 +878,23 @@ const ProfilePage: React.FC = () => {
                 </div>
               )}
 
-              {/* Блок редактирования профиля агента – появляется только если пользователь является агентом */}
-              
               {userData.id_agent && agentData && (
                 <div className="profilepage-info-section" style={{ marginTop: '40px' }}>
-                  <h3 className="profilepage-section-title">Профиль агента</h3>
+                  <h3 className="profilepage-section-title">Профиль организатора</h3>
                   <div className="profilepage-info-stack">
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
-                        <label className="profilepage-stack-label">О себе / Специализация</label>
+                        <label className="profilepage-stack-label">О себе</label>
                         {editingAgent ? (
                           <textarea
                             value={editedAgent.displayName || ''}
                             onChange={(e) => setEditedAgent({ ...editedAgent, displayName: e.target.value })}
-                            className="profilepage-stack-input"
-                            rows={6}
-                            placeholder="Расскажите о себе, своём опыте, специализации..."
+                            className="profilepage-stack-input profilepage-bio-textarea"
+                            rows={10}
+                            placeholder="Расскажите о себе, вашем опыте организации праздников, специализации..."
                           />
                         ) : (
-                          <div className="profilepage-stack-value" style={{ whiteSpace: 'pre-wrap' }}>
+                          <div className="profilepage-stack-value profilepage-bio-text" style={{ whiteSpace: 'pre-wrap' }}>
                             {agentData.displayName || 'Не указано'}
                           </div>
                         )}
@@ -863,7 +902,27 @@ const ProfilePage: React.FC = () => {
                     </div>
                     <div className="profilepage-stack-divider" />
                     
-                    {/* Опыт (можно оставить, если нужно) */}
+                    <div className="profilepage-info-stack-item">
+                      <div className="profilepage-stack-header">
+                        <label className="profilepage-stack-label">Специализация</label>
+                        {editingAgent ? (
+                          <input
+                            type="text"
+                            value={editedAgent.specialization || ''}
+                            onChange={(e) => setEditedAgent({ ...editedAgent, specialization: e.target.value })}
+                            className="profilepage-stack-input"
+                            placeholder="Например: Организация корпоративов, Свадьбы, Детские праздники"
+                          />
+                        ) : (
+                          <div className="profilepage-stack-value">
+                            <FontAwesomeIcon icon={faTag} style={{ marginRight: '8px', opacity: 0.7 }} />
+                            {agentData.specialization || 'Не указана'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="profilepage-stack-divider" />
+
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
                         <label className="profilepage-stack-label">Опыт (лет)</label>
@@ -881,16 +940,21 @@ const ProfilePage: React.FC = () => {
                     </div>
                     <div className="profilepage-stack-divider" />
                     
-                    {/* Фото агента */}
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
-                        <label className="profilepage-stack-label">Фото агента</label>
+                        <label className="profilepage-stack-label">Фото</label>
                         {editingAgent ? (
                           <div className="profilepage-photo-edit">
                             {editedAgent.photo ? (
                               <div className="profilepage-photo-preview">
-                                <img src={editedAgent.photo} alt="Фото агента" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
-                                <button type="button" onClick={() => setEditedAgent({ ...editedAgent, photo: '' })} style={{ marginLeft: '10px' }}>Удалить</button>
+                                <img src={editedAgent.photo} alt="Фото организатора" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
+                                <button 
+                                  type="button" 
+                                  className="profilepage-btn-delete-photo"
+                                  onClick={() => setEditedAgent({ ...editedAgent, photo: '' })}
+                                >
+                                  <FontAwesomeIcon icon={faTrash} /> Удалить
+                                </button>
                               </div>
                             ) : (
                               <input
@@ -906,7 +970,7 @@ const ProfilePage: React.FC = () => {
                         ) : (
                           <div className="profilepage-stack-value">
                             {agentData.photo ? (
-                              <img src={agentData.photo} alt="Фото агента" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
+                              <img src={agentData.photo} alt="Фото организатора" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
                             ) : 'Нет фото'}
                           </div>
                         )}
@@ -914,12 +978,16 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
                   {editingAgent ? (
-                    <div className="profilepage-actions">
+                    <div className="profilepage-actions" style={{ marginTop: '30px', textAlign: 'right' }}>
                       <button className="profilepage-btn-primary" onClick={handleAgentSave}>Сохранить</button>
-                      <button className="profilepage-btn-secondary" onClick={() => { setEditingAgent(false); setEditedAgent(agentData); }}>Отмена</button>
+                      <button className="profilepage-btn-secondary" onClick={() => { setEditingAgent(false); setEditedAgent(agentData); }} style={{ marginLeft: '12px' }}>Отмена</button>
                     </div>
                   ) : (
-                    <button className="profilepage-btn-secondary" onClick={() => setEditingAgent(true)}>Редактировать профиль агента</button>
+                    <div className="profilepage-organizer-edit-button">
+                      <button className="profilepage-btn-secondary" onClick={() => setEditingAgent(true)}>
+                        <FontAwesomeIcon icon={faEdit} /> Редактировать профиль организатора
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -974,7 +1042,9 @@ const ProfilePage: React.FC = () => {
                           <div className="profilepage-ad-type">{ad.HouseType}</div>
                         </div>
                         <div className="profilepage-ad-item-address">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} /> {ad.HouseInfo?.City}, {ad.HouseInfo?.Street}
+                          <FontAwesomeIcon icon={faMapMarkerAlt} /> 
+                          {ad.HouseInfo?.City}, {ad.HouseInfo?.Street} 
+                          {ad.HouseInfo?.HouseNumber && `, ${ad.HouseInfo.HouseNumber}`}
                         </div>
                         <div className="profilepage-ad-item-info">
                           <span><FontAwesomeIcon icon={faBed} /> {ad.HouseInfo?.Rooms} комн.</span>

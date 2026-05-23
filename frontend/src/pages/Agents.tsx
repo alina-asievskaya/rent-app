@@ -11,7 +11,7 @@ import {
   faChevronDown,
   faTimes,
   faStar,
-  faHome,
+  faBriefcase,
   faClock,
   faExclamationTriangle,
   faSyncAlt,
@@ -35,7 +35,7 @@ interface AgentApiResponse {
   description: string;
   position: string;
   satisfactionRate: number;
-  userId?: number; // Добавляем поле userId
+  userId?: number;
 }
 
 interface ApiResponse {
@@ -98,7 +98,7 @@ const Agents: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeSearchQuery, setActiveSearchQuery] = useState(""); // Активный поисковый запрос
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('rating-desc');
   const [showFilters, setShowFilters] = useState(false);
@@ -116,8 +116,16 @@ const Agents: React.FC = () => {
     rating: ''
   });
 
-  // Данные для фильтров
-  const [specialties, setSpecialties] = useState(["Все", "Загородные дома", "Коттеджи", "Усадьбы", "Дома с участком", "Эко-дома", "Дома у озера"]);
+  // Данные для фильтров – ОБНОВЛЕННЫЕ СПЕЦИАЛИЗАЦИИ
+  const [specialties, setSpecialties] = useState([
+    "Все",
+    "Организация корпоративных мероприятий",
+    "Организация детских праздников",
+    "Организация фото- и видеосъемок",
+    "Организация вечеринок",
+    "Организация гастро-ужинов (private dining)",
+    "Организация мальчишников / девичников премиум-сегмента"
+  ]);
   const experienceOptions = ["Любой", "1-3 года", "3-5 лет", "5-10 лет", "10+ лет"];
   const ratingOptions = ["Любой", "4.0+", "4.5+", "4.8+"];
 
@@ -205,7 +213,6 @@ const Agents: React.FC = () => {
           return result.data.userId;
         }
       }
-      // Если не удалось получить UserId, используем agentId как fallback
       console.log(`⚠️ Не удалось получить UserId агента ${agentId}, использую agentId как fallback`);
       return agentId;
     } catch (error) {
@@ -266,8 +273,8 @@ const Agents: React.FC = () => {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          agentId: agentUserId, // Отправляем UserId агента
-          initialMessage: "Здравствуйте! Мне нужна консультация по подбору жилья."
+          agentId: agentUserId,
+          initialMessage: "Здравствуйте! Мне нужна консультация по организации мероприятия."
         })
       });
 
@@ -310,7 +317,6 @@ const Agents: React.FC = () => {
       return;
     }
 
-    // Проверяем, не является ли текущий пользователь администратором
     if (isAdmin) {
       if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
         alert('Администратор не может писать сообщения');
@@ -318,14 +324,12 @@ const Agents: React.FC = () => {
       }
     }
 
-    // Находим агента для проверки его email
     const agent = agents.find(a => a.id === agentId);
     if (!agent) {
       alert('Агент не найден');
       return;
     }
 
-    // Проверяем, не является ли агент администратором
     if (agent.contact.email.toLowerCase() === 'admin@gmail.com') {
       alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
       return;
@@ -341,13 +345,11 @@ const Agents: React.FC = () => {
         agentName: agent.name
       });
 
-      // Проверяем, не пытается ли пользователь написать самому себе
       if (currentUserId && agentUserId === currentUserId) {
         alert('Вы не можете создать чат с самим собой');
         return;
       }
       
-      // Проверяем существующий чат
       const existingChatId = await checkExistingChat(agentUserId);
       
       if (existingChatId) {
@@ -356,7 +358,6 @@ const Agents: React.FC = () => {
         return;
       }
 
-      // Создаем новый чат
       console.log('➕ Создаем новый чат с агентом (UserId):', agentUserId);
       const newChatId = await createNewChatWithAgent(agentUserId);
       
@@ -379,7 +380,6 @@ const Agents: React.FC = () => {
       setApiError(null);
       setApiDetails(null);
       
-      // Формируем параметры запроса
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (filters.specialty && filters.specialty !== "Все") params.append('specialty', filters.specialty);
@@ -405,12 +405,10 @@ const Agents: React.FC = () => {
 
       console.log('📊 Статус ответа:', response.status, response.statusText);
       
-      // Пробуем получить текст ответа для отладки
       const responseText = await response.text();
       console.log('📝 Текст ответа (первые 1000 символов):', responseText.substring(0, 1000));
       
       if (!response.ok) {
-        // Пытаемся парсить как JSON для деталей ошибки
         let errorData: ApiErrorDetails | null = null;
         try {
           errorData = JSON.parse(responseText) as ApiErrorDetails;
@@ -418,23 +416,14 @@ const Agents: React.FC = () => {
           setApiDetails(errorData);
           throw new Error(`API ошибка: ${errorData.message || response.statusText}`);
         } catch {
-          // Если не JSON, используем текст
           throw new Error(`HTTP ${response.status}: ${response.statusText}\nОтвет: ${responseText.substring(0, 200)}`);
         }
       }
 
-      // Парсим JSON
       const result: ApiResponse = JSON.parse(responseText);
       console.log('✅ Данные агентов получены. Успех:', result.success);
-      console.log('📊 Структура данных:', {
-        hasData: !!result.data,
-        agentsCount: result.data?.agents?.length || 0,
-        totalCount: result.data?.totalCount || 0,
-        filters: result.data?.filters || {}
-      });
       
       if (result.success && result.data && Array.isArray(result.data.agents)) {
-        // Получаем UserId для каждого агента
         const agentsWithUserId = await Promise.all(
           result.data.agents.map(async (agent: AgentApiResponse) => {
             try {
@@ -447,56 +436,51 @@ const Agents: React.FC = () => {
               console.error(`Ошибка при получении UserId для агента ${agent.id}:`, error);
               return {
                 ...agent,
-                userId: agent.id // Fallback
+                userId: agent.id
               };
             }
           })
         );
 
-        // Функция для очистки текста позиции
         const cleanPositionText = (text: string): string => {
-          // Удаляем "Агент по", "Агент", "по" в разных комбинациях
           const cleaned = text
-            .replace(/^Агент\s+(по\s+)?/i, '') // Удаляет "Агент по " или "Агент "
-            .replace(/^\s+по\s+/i, '') // Удаляет "по " в начале, если осталось
+            .replace(/^Агент\s+(по\s+)?/i, '')
+            .replace(/^\s+по\s+/i, '')
             .trim();
           
-          // Если после очистки строка пустая, возвращаем значение по умолчанию
           if (!cleaned) {
-            return "Специалист по недвижимости";
+            return "Организатор мероприятий";
           }
           
-          // Делаем первую букву заглавной
           return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
         };
-        // Преобразуем данные из API в формат Agent
-          const transformedAgents: Agent[] = agentsWithUserId.map((agent: AgentApiResponse & { userId: number }) => ({
-            id: agent.id,
-            userId: agent.userId, // Сохраняем UserId
-            name: agent.fio || "Неизвестный агент",
-            position: cleanPositionText(agent.position || agent.specialization || "Специалист по недвижимости"),
-            avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-            rating: agent.rating || 0,
-            reviewsCount: agent.reviewsCount || 0,
-            experience: agent.experience || 0,
-            propertiesManaged: agent.propertiesManaged || 0,
-            description: agent.description || `Специализируюсь на ${agent.specialization || "недвижимости"}. Опыт работы ${agent.experience || 0} лет.`,
-            satisfactionRate: agent.satisfactionRate || 90,
-            contact: {
-              phone: agent.phone || "+375 (29) 000-00-00",
-              email: agent.email || "agent@example.com"
-            },
-            specialties: agent.specialties || [agent.specialization || "Недвижимость"],
-            stats: {
-              avgResponseTime: "15 мин",
-              dealSuccessRate: 95,
-              avgDaysToRent: 7
-            }
-          }));
+
+        const transformedAgents: Agent[] = agentsWithUserId.map((agent: AgentApiResponse & { userId: number }) => ({
+          id: agent.id,
+          userId: agent.userId,
+          name: agent.fio || "Неизвестный организатор",
+          position: cleanPositionText(agent.position || agent.specialization || "Организатор мероприятий"),
+          avatar: agent.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+          rating: agent.rating || 0,
+          reviewsCount: agent.reviewsCount || 0,
+          experience: agent.experience || 0,
+          propertiesManaged: agent.propertiesManaged || 0,
+          description: agent.description || `Специализируюсь на ${agent.specialization || "организации мероприятий"}. Опыт работы ${agent.experience || 0} лет.`,
+          satisfactionRate: agent.satisfactionRate || 90,
+          contact: {
+            phone: agent.phone || "+375 (29) 000-00-00",
+            email: agent.email || "organizer@example.com"
+          },
+          specialties: agent.specialties || [agent.specialization || "Мероприятия"],
+          stats: {
+            avgResponseTime: "15 мин",
+            dealSuccessRate: 95,
+            avgDaysToRent: 7
+          }
+        }));
         
         setAgents(transformedAgents);
         
-        // Обновляем список специализаций из API если они есть
         if (result.data.filters?.specialties && Array.isArray(result.data.filters.specialties)) {
           const apiSpecialties = result.data.filters.specialties;
           console.log('📋 Специализации из API:', apiSpecialties);
@@ -511,7 +495,7 @@ const Agents: React.FC = () => {
     } catch (error) {
       console.error('❌ Полная ошибка при загрузке агентов:', error);
       
-      let errorMessage = 'Не удалось загрузить данные агентов';
+      let errorMessage = 'Не удалось загрузить данные организаторов';
       
       if (error instanceof TypeError && error.message.includes('fetch')) {
         errorMessage = 'Ошибка сети. Проверьте:\n' +
@@ -523,8 +507,6 @@ const Agents: React.FC = () => {
       }
       
       setApiError(errorMessage);
-      
-      // Очищаем список агентов при ошибке
       setAgents([]);
     } finally {
       setLoading(false);
@@ -535,34 +517,26 @@ const Agents: React.FC = () => {
     fetchAgents();
   }, [fetchAgents]);
 
-  // Функция для выполнения поиска
   const handleSearch = () => {
     if (searchQuery.trim() !== activeSearchQuery) {
-      setActiveSearchQuery(searchQuery.trim()); // Устанавливаем активный запрос
-      // fetchAgents будет вызван автоматически благодаря useEffect
+      setActiveSearchQuery(searchQuery.trim());
     }
   };
 
-  // Обработчик нажатия Enter в поле поиска
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
   };
 
- 
-
-  // Обработчик очистки поиска
   const handleClearSearch = () => {
     setSearchQuery('');
     setActiveSearchQuery('');
   };
 
-  // Фильтрация + поиск + сортировка через useMemo
   const filteredAgents = useMemo(() => {
     let result = [...agents];
 
-    // Поиск на клиенте (вдобавок к серверному поиску)
     if (activeSearchQuery) {
       const q = activeSearchQuery.toLowerCase();
       result = result.filter(agent =>
@@ -572,12 +546,10 @@ const Agents: React.FC = () => {
       );
     }
 
-    // Фильтр по специализации
     if (filters.specialty && filters.specialty !== "Все") {
       result = result.filter(agent => agent.specialties.includes(filters.specialty));
     }
 
-    // Фильтр по опыту
     if (filters.experience && filters.experience !== "Любой") {
       const expRanges = {
         "1-3 года": { min: 1, max: 3 },
@@ -594,7 +566,6 @@ const Agents: React.FC = () => {
       }
     }
 
-    // Фильтр по рейтингу
     if (filters.rating && filters.rating !== "Любой") {
       const minRating = parseFloat(filters.rating);
       if (!isNaN(minRating)) {
@@ -602,7 +573,6 @@ const Agents: React.FC = () => {
       }
     }
 
-    // Сортировка
     result.sort((a, b) => {
       switch (sortBy) {
         case "rating-desc":
@@ -641,7 +611,7 @@ const Agents: React.FC = () => {
         <Header />
         <div className="agents-loading-agent">
           <div className="spinner-agent"></div>
-          <p>Загрузка агентов...</p>
+          <p>Загрузка организаторов...</p>
         </div>
       </>
     );
@@ -654,12 +624,11 @@ const Agents: React.FC = () => {
         <section className="agents-hero-agent">
           <div className="container">
             <div className="agents-hero-content-agent">
-              <h1>Наши профессиональные агенты по домам</h1>
+              <h1>Профессиональные организаторы мероприятий</h1>
               <p>
-                Наши специалисты готовы помочь вам с арендой домов в Беларуси
+                Лучшие специалисты по проведению корпоративов, праздников, съёмок и вечеринок в Беларуси
               </p>
 
-              {/* Показать ошибку если есть */}
               {apiError && (
                 <div className="api-error-message" style={{
                   backgroundColor: '#ffe6e6',
@@ -735,7 +704,7 @@ const Agents: React.FC = () => {
                   <FontAwesomeIcon icon={faSearch} className="search-icon-agent" />
                   <input
                     type="text"
-                    placeholder="Поиск агента по имени или специализации..."
+                    placeholder="Поиск организатора по имени или специализации..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -794,7 +763,6 @@ const Agents: React.FC = () => {
 
         <div className="container">
           <div className="agents-content-agent">
-            {/* Фильтры */}
             <aside className={`agents-filters-agent ${showFilters ? "show" : ""}`}>
               <div className="filters-header-agent">
                 <h3><FontAwesomeIcon icon={faFilter}/> Фильтры</h3>
@@ -803,62 +771,62 @@ const Agents: React.FC = () => {
                 </button>
               </div>
 
-              {/* Специализация */}
+              {/* Специализация – ОБНОВЛЕНО */}
               <div className="filter-group-agent">
-              <label className="filter-label-agent">
-                <FontAwesomeIcon icon={faHome}/> Тип домов
-              </label>
-              <div className="agents-select-wrapper">
-                <select
-                  className="filter-select-agent"
-                  value={filters.specialty}
-                  onChange={(e) => handleFilterChange("specialty", e.target.value)}
-                >
-                  {specialties.map(spec => (
-                    <option key={spec} value={spec}>{spec}</option>
-                  ))}
-                </select>
-                <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faBriefcase}/> Специализация
+                </label>
+                <div className="agents-select-wrapper">
+                  <select
+                    className="filter-select-agent"
+                    value={filters.specialty}
+                    onChange={(e) => handleFilterChange("specialty", e.target.value)}
+                  >
+                    {specialties.map(spec => (
+                      <option key={spec} value={spec}>{spec}</option>
+                    ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
+                </div>
               </div>
-            </div>
 
               {/* Опыт */}
               <div className="filter-group-agent">
-              <label className="filter-label-agent">
-                <FontAwesomeIcon icon={faClock}/> Опыт
-              </label>
-              <div className="agents-select-wrapper">
-                <select
-                  className="filter-select-agent"
-                  value={filters.experience}
-                  onChange={(e) => handleFilterChange("experience", e.target.value)}
-                >
-                  {experienceOptions.map(exp => (
-                    <option key={exp} value={exp}>{exp}</option>
-                  ))}
-                </select>
-                <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faClock}/> Опыт
+                </label>
+                <div className="agents-select-wrapper">
+                  <select
+                    className="filter-select-agent"
+                    value={filters.experience}
+                    onChange={(e) => handleFilterChange("experience", e.target.value)}
+                  >
+                    {experienceOptions.map(exp => (
+                      <option key={exp} value={exp}>{exp}</option>
+                    ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
+                </div>
               </div>
-            </div>
 
               {/* Рейтинг */}
               <div className="filter-group-agent">
-              <label className="filter-label-agent">
-                <FontAwesomeIcon icon={faStar}/> Рейтинг
-              </label>
-              <div className="agents-select-wrapper">
-                <select
-                  className="filter-select-agent"
-                  value={filters.rating}
-                  onChange={(e) => handleFilterChange("rating", e.target.value)}
-                >
-                  {ratingOptions.map(rating => (
-                    <option key={rating} value={rating}>{rating}</option>
-                  ))}
-                </select>
-                <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
+                <label className="filter-label-agent">
+                  <FontAwesomeIcon icon={faStar}/> Рейтинг
+                </label>
+                <div className="agents-select-wrapper">
+                  <select
+                    className="filter-select-agent"
+                    value={filters.rating}
+                    onChange={(e) => handleFilterChange("rating", e.target.value)}
+                  >
+                    {ratingOptions.map(rating => (
+                      <option key={rating} value={rating}>{rating}</option>
+                    ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="agents-select-arrow" />
+                </div>
               </div>
-            </div>
 
               <div className="filter-actions-agent">
                 <button className="btn-secondary filter-reset-agent" onClick={resetFilters}>
@@ -867,7 +835,6 @@ const Agents: React.FC = () => {
               </div>
             </aside>
 
-            {/* Основной контент */}
             <main className="agents-main-agent">
               <div className="agents-controls-agent">
                 <div className="controls-left-agent">
@@ -912,7 +879,7 @@ const Agents: React.FC = () => {
                   </div>
 
                   <div className="results-count-agent">
-                    Найдено: <strong>{filteredAgents.length}</strong> агентов
+                    Найдено: <strong>{filteredAgents.length}</strong> организаторов
                     {activeSearchQuery && (
                       <span style={{ marginLeft: '1rem', fontSize: '0.85rem', color: '#78909c' }}>
                         по запросу "{activeSearchQuery}"
@@ -922,11 +889,10 @@ const Agents: React.FC = () => {
                 </div>
               </div>
 
-              {/* Список агентов */}
               {filteredAgents.length === 0 ? (
                 <div className="no-results-agent">
                   <FontAwesomeIcon icon={faSearch} size="3x"/>
-                  <h3>{apiError ? "Не удалось загрузить данные" : "Агенты не найдены"}</h3>
+                  <h3>{apiError ? "Не удалось загрузить данные" : "Организаторы не найдены"}</h3>
                   <p>
                     {activeSearchQuery 
                       ? `По запросу "${activeSearchQuery}" ничего не найдено`

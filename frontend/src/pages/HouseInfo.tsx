@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import BookingModal from '../components/BookingModal';
+import YandexCityMap from "../components/YandexMap";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMapMarkerAlt,
@@ -51,6 +52,7 @@ interface ApiHouseInfo {
     region?: string;
     city?: string;
     street?: string;
+    houseNumber?: string;   // <-- добавлено
     rooms?: number;
     bathrooms?: number;
     floor?: number;
@@ -92,6 +94,7 @@ interface HouseInfo {
   region?: string;
   city?: string;
   street?: string;
+  houseNumber?: string;    // <-- добавлено
   rooms?: number;
   bathrooms?: number;
   floor?: number;
@@ -680,6 +683,7 @@ const HouseInfo: React.FC = () => {
       region: apiData.houseInfo?.region,
       city: apiData.houseInfo?.city,
       street: apiData.houseInfo?.street,
+      houseNumber: apiData.houseInfo?.houseNumber,   // <-- добавлено
       rooms: apiData.houseInfo?.rooms,
       bathrooms: apiData.houseInfo?.bathrooms,
       floor: apiData.houseInfo?.floor,
@@ -1161,16 +1165,22 @@ const HouseInfo: React.FC = () => {
 
   const features = getFeaturesList();
   const images = house.photos && house.photos.length > 0 ? house.photos : ["https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop"];
-  const address = house.city && house.street ? `${house.city}, ${house.street}` : 'Адрес не указана';
+  
+  // Формируем полный адрес для отображения и для карты
+  const fullAddress = house.city && house.street
+  ? `${house.city}, ${house.street} ${house.houseNumber || ''}`.trim()
+  : 'Адрес не указан';
+  console.log('📦 Сформирован полный адрес:', fullAddress);
+  
   const info = `${house.houseType || 'Дом'}, ${house.area} м²`;
   const formatPriceWithIcon = (price: number): React.ReactNode => {
-  const numberStr = price?.toLocaleString('ru-RU') || '0';
-  return (
-    <>
-      {numberStr} <i className="nbrb-icon">&#xe901;</i>/сутки
-    </>
-  );
-};
+    const numberStr = price?.toLocaleString('ru-RU') || '0';
+    return (
+      <>
+        {numberStr} <i className="nbrb-icon">&#xe901;</i>/сутки
+      </>
+    );
+  };
   const announcementDate = formatAnnouncementDate(house.announcementData);
   const hasManyPhotos = images.length > 5;
   const displayedThumbnails = showAllThumbnails ? images : images.slice(0, 5);
@@ -1293,7 +1303,7 @@ const HouseInfo: React.FC = () => {
                   <h1>{info}</h1>
                   <p className="property-address-house">
                     <FontAwesomeIcon icon={faMapMarkerAlt} />
-                    {address}
+                    {fullAddress}
                   </p>
                   <div className="price-section-house">
                     <h2>{formatPriceWithIcon(house.price)}</h2>
@@ -1363,42 +1373,51 @@ const HouseInfo: React.FC = () => {
                   </div>
                 )}
 
-                {house.convenience?.transport || house.convenience?.education || house.convenience?.shops ? (
-                  <div className="location-section-house">
-                    <h3>Инфраструктура поблизости</h3>
-                    <div className="location-info-house">
-                      <div className="location-features-house">
-                        {house.convenience.transport && (
-                          <div className="location-item-house">
-                            <FontAwesomeIcon icon={faSubway} />
-                            <div>
-                              <strong>Транспорт:</strong>
-                              <span>{house.convenience.transport}</span>
-                            </div>
+                {/* БЛОК С КАРТОЙ И ИНФРАСТРУКТУРОЙ */}
+                <div className="location-section-house">
+                  <h3>Расположение на карте</h3>
+                  
+                  <div className="location-info-house">
+                    <div className="map-container-house">
+                      
+                      <YandexCityMap
+                        fullAddress={fullAddress}
+                        placeName={`${house.houseType || 'Дом'}`}
+                        zoom={15}
+                        height="350px"
+                      />
+                    </div>
+                    <div className="location-features-house">
+                      {house.convenience?.transport && (
+                        <div className="location-item-house">
+                          <FontAwesomeIcon icon={faSubway} />
+                          <div>
+                            <strong>Транспорт:</strong>
+                            <span>{house.convenience.transport}</span>
                           </div>
-                        )}
-                        {house.convenience.education && (
-                          <div className="location-item-house">
-                            <FontAwesomeIcon icon={faSchool} />
-                            <div>
-                              <strong>Образование:</strong>
-                              <span>{house.convenience.education}</span>
-                            </div>
+                        </div>
+                      )}
+                      {house.convenience?.education && (
+                        <div className="location-item-house">
+                          <FontAwesomeIcon icon={faSchool} />
+                          <div>
+                            <strong>Образование:</strong>
+                            <span>{house.convenience.education}</span>
                           </div>
-                        )}
-                        {house.convenience.shops && (
-                          <div className="location-item-house">
-                            <FontAwesomeIcon icon={faStore} />
-                            <div>
-                              <strong>Магазины:</strong>
-                              <span>{house.convenience.shops}</span>
-                            </div>
+                        </div>
+                      )}
+                      {house.convenience?.shops && (
+                        <div className="location-item-house">
+                          <FontAwesomeIcon icon={faStore} />
+                          <div>
+                            <strong>Магазины:</strong>
+                            <span>{house.convenience.shops}</span>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : null}
+                </div>
 
                 <div className="reviews-section-house">
                   <h3>Отзывы о доме</h3>
@@ -1547,7 +1566,6 @@ const HouseInfo: React.FC = () => {
                       </button>
                     )}
                     <button 
-                    
                       className="btn-primary-house full-width-house" 
                       onClick={() => setIsBookingModalOpen(true)}
                     >
@@ -1621,8 +1639,7 @@ const HouseInfo: React.FC = () => {
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         houseId={house.id}
-        onBookingSuccess={() => {
-        }}
+        onBookingSuccess={() => {}}
       />
     </>
   );

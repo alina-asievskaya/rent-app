@@ -140,6 +140,7 @@ namespace RentApp.API.Controllers
                     Region = houseDto.Region,
                     City = houseDto.City,
                     Street = houseDto.Street,
+                    HouseNumber = houseDto.HouseNumber, 
                     Rooms = houseDto.Rooms,
                     Bathrooms = houseDto.Bathrooms,
                     Floor = houseDto.Floor
@@ -333,13 +334,14 @@ namespace RentApp.API.Controllers
                     h.Description,
                     h.Active,
                     h.HouseType,
-                    h.RentType, // <-- ДОБАВЛЕНО RentType
+                    h.RentType, 
                     AnnouncementData = h.AnnouncementData.ToString("yyyy-MM-dd"),
                     MainPhoto = h.Photos.FirstOrDefault()?.Photo ?? null,
                     HouseInfo = new
                     {
                         City = h.HouseInfo?.City ?? string.Empty,
                         Street = h.HouseInfo?.Street ?? string.Empty,
+                        HouseNumber = h.HouseInfo?.HouseNumber ?? string.Empty,
                         Rooms = h.HouseInfo?.Rooms ?? 1
                     }
                 }).ToList();
@@ -561,6 +563,7 @@ namespace RentApp.API.Controllers
                     house.HouseInfo.Region = houseDto.Region;
                     house.HouseInfo.City = houseDto.City;
                     house.HouseInfo.Street = houseDto.Street;
+                     house.HouseInfo.HouseNumber = houseDto.HouseNumber; 
                     house.HouseInfo.Rooms = houseDto.Rooms;
                     house.HouseInfo.Bathrooms = houseDto.Bathrooms;
                     house.HouseInfo.Floor = houseDto.Floor;
@@ -882,6 +885,7 @@ namespace RentApp.API.Controllers
                         house.HouseInfo.Region,
                         house.HouseInfo.City,
                         house.HouseInfo.Street,
+                        house.HouseInfo.HouseNumber,
                         house.HouseInfo.Rooms,
                         house.HouseInfo.Bathrooms,
                         house.HouseInfo.Floor
@@ -927,7 +931,23 @@ namespace RentApp.API.Controllers
                 });
             }
         }
+[HttpGet("geocode")]
+[AllowAnonymous]
+public async Task<IActionResult> Geocode([FromQuery] string address)
+{
+    if (string.IsNullOrWhiteSpace(address))
+        return BadRequest(new { success = false, message = "Адрес не указан" });
 
+    var apiKey = "99ce5728-f41e-40c2-a29c-ac52aeaffa5c"; // ваш ключ геокодера
+    var encodedAddress = Uri.EscapeDataString(address + ", Беларусь");
+    var url = $"https://geocode-maps.yandex.ru/1.x/?apikey={apiKey}&geocode={encodedAddress}&format=json&results=1";
+
+    using var http = new HttpClient();
+    var response = await http.GetAsync(url);
+    var content = await response.Content.ReadAsStringAsync();
+
+    return Content(content, "application/json");
+}
         // АДМИН-МЕТОДЫ
 
         [Authorize(Roles = "Admin")]

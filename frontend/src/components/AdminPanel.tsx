@@ -105,18 +105,15 @@ const AdminPanel: React.FC = () => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
     
-    // Автоматическое удаление через 5 секунд
     setTimeout(() => {
       removeToast(id);
     }, 5000);
   };
 
-  // Функция для удаления всплывающего сообщения
   const removeToast = (id: number) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // Функция для показа модального окна подтверждения
   const showConfirmation = (title: string, message: string, type: 'danger' | 'warning' | 'info', onConfirm: () => void) => {
     setConfirmationModal({
       isOpen: true,
@@ -127,12 +124,10 @@ const AdminPanel: React.FC = () => {
     });
   };
 
-  // Функция для закрытия модального окна
   const closeConfirmation = () => {
     setConfirmationModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Функция для загрузки фото в Cloudinary
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -158,7 +153,6 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  // Функция для получения статистики
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
@@ -186,7 +180,6 @@ const AdminPanel: React.FC = () => {
     }
   }, [token, API_BASE_URL]);
 
-  // Функция для получения данных
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -196,7 +189,6 @@ const AdminPanel: React.FC = () => {
         feedback: `${API_BASE_URL}/api/admin/feedback`
       };
 
-      // Для вкладки статистики не делаем запрос к API
       if (activeTab === 'stats') {
         await fetchStats();
         setLoading(false);
@@ -236,7 +228,6 @@ const AdminPanel: React.FC = () => {
     }
   }, [activeTab, token, API_BASE_URL, fetchStats]);
 
-  // Проверка на админа при загрузке
   useEffect(() => {
     if (!token || user?.email !== 'admin@gmail.com') {
       navigate('/');
@@ -251,7 +242,6 @@ const AdminPanel: React.FC = () => {
     }
   }, [activeTab, fetchData, token, user?.email]);
 
-  // Функция для подтверждения выхода
   const handleLogoutConfirmation = () => {
     showConfirmation(
       'Выход из системы',
@@ -303,8 +293,8 @@ const AdminPanel: React.FC = () => {
 
   const handleDeleteAgent = (agentId: number, agentName: string) => {
     showConfirmation(
-      'Удаление агента',
-      `Вы собираетесь удалить агента:\n\n${agentName}\n\nВы уверены что хотите удалить агента?`,
+      'Удаление организатора',
+      `Вы собираетесь удалить организатора:\n\n${agentName}\n\nВы уверены что хотите удалить организатора?`,
       'danger',
       async () => {
         try {
@@ -324,14 +314,14 @@ const AdminPanel: React.FC = () => {
           const data = await response.json();
           if (data.success) {
             setAgents(agents.filter(agent => agent.id !== agentId));
-            showToast('Агент успешно удален', 'success');
+            showToast('Организатор успешно удален', 'success');
             fetchStats();
           } else {
-            showToast(data.message || 'Ошибка при удалении агента', 'error');
+            showToast(data.message || 'Ошибка при удалении организатора', 'error');
           }
         } catch (error) {
-          console.error('Ошибка удаления агента:', error);
-          showToast('Ошибка при удалении агента', 'error');
+          console.error('Ошибка удаления организатора:', error);
+          showToast('Ошибка при удалении организатора', 'error');
         }
       }
     );
@@ -394,7 +384,6 @@ const AdminPanel: React.FC = () => {
   const handleCreateAgent = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Валидация формы
     if (!agentForm.email || !agentForm.fio || !agentForm.password || !agentForm.phone_num || !agentForm.specialization) {
       showToast('Заполните все обязательные поля', 'warning');
       return;
@@ -405,7 +394,6 @@ const AdminPanel: React.FC = () => {
       return;
     }
 
-    // Если есть файл для загрузки, сначала загружаем его
     let finalPhotoUrl = agentForm.photo;
     if (agentForm.photoFile) {
       setUploadingPhoto(true);
@@ -446,7 +434,7 @@ const AdminPanel: React.FC = () => {
       const data = await response.json();
       
       if (data.success) {
-        showToast('Агент успешно создан', 'success');
+        showToast('Организатор успешно создан', 'success');
         setAgentForm({
           email: '',
           fio: '',
@@ -460,7 +448,6 @@ const AdminPanel: React.FC = () => {
         });
         fetchData();
       } else {
-        // Обработка различных ошибок
         if (data.message?.includes('already exists') || data.message?.includes('уже существует')) {
           showToast('Пользователь с таким email уже существует', 'error');
         } else if (data.message?.includes('password') || data.message?.includes('пароль')) {
@@ -470,8 +457,8 @@ const AdminPanel: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Ошибка создания агента:', error);
-      showToast('Ошибка при создании агента', 'error');
+      console.error('Ошибка создания организатора:', error);
+      showToast('Ошибка при создании организатора', 'error');
     } finally {
       setUploadingPhoto(false);
     }
@@ -532,7 +519,6 @@ const AdminPanel: React.FC = () => {
     <div className="adminpage-wrapper">
       <Header />
       
-      {/* Всплывающие сообщения */}
       <div className="toast-container">
         {toasts.map(toast => (
           <div 
@@ -562,7 +548,6 @@ const AdminPanel: React.FC = () => {
         ))}
       </div>
 
-      {/* Модальное окно подтверждения */}
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
         title={confirmationModal.title}
@@ -612,7 +597,7 @@ const AdminPanel: React.FC = () => {
               onClick={() => setActiveTab('agents')}
             >
               <i className="adminpage-nav-icon adminpage-agents-icon"></i>
-              <span>Агенты</span>
+              <span>Организаторы</span>
               <span className="adminpage-nav-badge">{adminStats.totalAgents}</span>
             </button>
             <button 
@@ -680,7 +665,7 @@ const AdminPanel: React.FC = () => {
                   </div>
                   <div className="adminpage-stat-content">
                     <div className="adminpage-stat-number">{adminStats.totalAgents}</div>
-                    <div className="adminpage-stat-label">Агентов</div>
+                    <div className="adminpage-stat-label">Организаторов</div>
                     <div className="adminpage-stat-sub">в системе</div>
                   </div>
                 </div>
@@ -695,7 +680,6 @@ const AdminPanel: React.FC = () => {
                     <div className="adminpage-stat-sub">в поддержку</div>
                   </div>
                 </div>
-
               </div>
 
               <div className="adminpage-quick-actions">
@@ -718,7 +702,7 @@ const AdminPanel: React.FC = () => {
                     <div className="adminpage-action-icon">
                       <i className="fas fa-user-tie"></i>
                     </div>
-                    <div className="adminpage-action-text">Создать агента</div>
+                    <div className="adminpage-action-text">Создать организатора</div>
                   </button>
 
                   <button 
@@ -730,8 +714,6 @@ const AdminPanel: React.FC = () => {
                     </div>
                     <div className="adminpage-action-text">Просмотреть обращения</div>
                   </button>
-
-                  
                 </div>
               </div>
             </div>
@@ -774,7 +756,7 @@ const AdminPanel: React.FC = () => {
                             <td>{user.phone_num}</td>
                             <td>
                               <span className={`adminpage-status-badge ${user.id_agent ? 'adminpage-status-agent' : 'adminpage-status-user'}`}>
-                                {user.id_agent ? 'Агент' : 'Пользователь'}
+                                {user.id_agent ? 'Организатор' : 'Пользователь'}
                               </span>
                             </td>
                             <td>
@@ -798,7 +780,7 @@ const AdminPanel: React.FC = () => {
                                       });
                                       setActiveTab('agents');
                                     }}
-                                    title="Сделать агентом"
+                                    title="Сделать организатором"
                                   >
                                     <i className="fas fa-user-tie"></i>
                                   </button>
@@ -827,14 +809,14 @@ const AdminPanel: React.FC = () => {
             <div className="adminpage-tab">
               <div className="adminpage-header">
                 <div className="adminpage-header-title">
-                  <h2>Управление агентами</h2>
-                  <p>Создание и управление агентами недвижимости</p>
+                  <h2>Управление организаторами</h2>
+                  <p>Создание и управление организаторами праздников</p>
                 </div>
               </div>
 
               <div className="adminpage-agents-section">
                 <div className="adminpage-agents-form">
-                  <h3 className="adminpage-section-title">Создать нового агента</h3>
+                  <h3 className="adminpage-section-title">Создать нового организатора</h3>
                   <form onSubmit={handleCreateAgent}>
                     <div className="adminpage-form-row">
                       <div className="adminpage-form-group">
@@ -844,7 +826,7 @@ const AdminPanel: React.FC = () => {
                           value={agentForm.email}
                           onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
                           required
-                          placeholder="Email агента"
+                          placeholder="Email организатора"
                         />
                       </div>
                       <div className="adminpage-form-group">
@@ -868,7 +850,7 @@ const AdminPanel: React.FC = () => {
                           value={agentForm.fio}
                           onChange={(e) => setAgentForm({...agentForm, fio: e.target.value})}
                           required
-                          placeholder="Фамилия и имя агента"
+                          placeholder="Фамилия и имя организатора"
                         />
                       </div>
                       <div className="adminpage-form-group">
@@ -920,7 +902,7 @@ const AdminPanel: React.FC = () => {
                         />
                       </div>
                       <div className="adminpage-form-group">
-                        <label>Фото агента</label>
+                        <label>Фото организатора</label>
                         <div 
                           className="adminpage-photo-upload"
                           onDragOver={(e) => e.preventDefault()}
@@ -989,7 +971,7 @@ const AdminPanel: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <i className="fas fa-plus"></i> Создать агента
+                          <i className="fas fa-plus"></i> Создать организатора
                         </>
                       )}
                     </button>
@@ -997,12 +979,12 @@ const AdminPanel: React.FC = () => {
                 </div>
 
                 <div className="adminpage-agents-list">
-                  <h3 className="adminpage-section-title">Список агентов ({agents.length})</h3>
+                  <h3 className="adminpage-section-title">Список организаторов ({agents.length})</h3>
                   
                   {loading ? (
                     <div className="adminpage-loading-inner">
                       <div className="adminpage-loading-spinner adminpage-small"></div>
-                      <p>Загрузка агентов...</p>
+                      <p>Загрузка организаторов...</p>
                     </div>
                   ) : agents.length > 0 ? (
                     <div className="adminpage-agents-grid">
@@ -1046,24 +1028,7 @@ const AdminPanel: React.FC = () => {
                             >
                               <i className="fas fa-trash"></i> Удалить
                             </button>
-                            <button 
-                              className="adminpage-action-btn adminpage-action-secondary"
-                              onClick={() => {
-                                setAgentForm({
-                                  email: agent.user.email,
-                                  fio: agent.user.fio,
-                                  password: '',
-                                  phone_num: agent.user.phone_num,
-                                  specialization: agent.specialization,
-                                  experience: agent.experience,
-                                  photo: agent.photo,
-                                  rating: agent.rating,
-                                  photoFile: null
-                                });
-                              }}
-                            >
-                              <i className="fas fa-edit"></i> Редактировать
-                            </button>
+                            {/* Кнопка "Редактировать" удалена по требованию */}
                           </div>
                         </div>
                       ))}
@@ -1073,8 +1038,8 @@ const AdminPanel: React.FC = () => {
                       <div className="adminpage-empty-illustration">
                         <i className="fas fa-user-tie fa-3x"></i>
                       </div>
-                      <h3>Нет агентов</h3>
-                      <p>В системе пока нет зарегистрированных агентов</p>
+                      <h3>Нет организаторов</h3>
+                      <p>В системе пока нет зарегистрированных организаторов</p>
                     </div>
                   )}
                 </div>

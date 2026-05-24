@@ -52,7 +52,7 @@ interface ApiHouseInfo {
     region?: string;
     city?: string;
     street?: string;
-    houseNumber?: string;   // <-- добавлено
+    houseNumber?: string;
     rooms?: number;
     bathrooms?: number;
     floor?: number;
@@ -94,7 +94,7 @@ interface HouseInfo {
   region?: string;
   city?: string;
   street?: string;
-  houseNumber?: string;    // <-- добавлено
+  houseNumber?: string;
   rooms?: number;
   bathrooms?: number;
   floor?: number;
@@ -683,7 +683,7 @@ const HouseInfo: React.FC = () => {
       region: apiData.houseInfo?.region,
       city: apiData.houseInfo?.city,
       street: apiData.houseInfo?.street,
-      houseNumber: apiData.houseInfo?.houseNumber,   // <-- добавлено
+      houseNumber: apiData.houseInfo?.houseNumber,
       rooms: apiData.houseInfo?.rooms,
       bathrooms: apiData.houseInfo?.bathrooms,
       floor: apiData.houseInfo?.floor,
@@ -796,6 +796,8 @@ const HouseInfo: React.FC = () => {
           if (data.success) {
             setIsFavorite(false);
             console.log('✅ Удалено из избранного:', id);
+            // Уведомляем другие компоненты (шапку, каталог) об изменении
+            window.dispatchEvent(new CustomEvent('favoritesUpdated'));
           } else {
             alert(data.message || 'Ошибка при удалении из избранного');
           }
@@ -816,6 +818,8 @@ const HouseInfo: React.FC = () => {
           if (data.success) {
             setIsFavorite(true);
             console.log('✅ Добавлено в избранное:', id);
+            // Уведомляем другие компоненты (шапку, каталог) об изменении
+            window.dispatchEvent(new CustomEvent('favoritesUpdated'));
           } else {
             alert(data.message || 'Ошибка при добавлении в избранное');
           }
@@ -1166,7 +1170,6 @@ const HouseInfo: React.FC = () => {
   const features = getFeaturesList();
   const images = house.photos && house.photos.length > 0 ? house.photos : ["https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&h=800&fit=crop"];
   
-  // Формируем полный адрес для отображения и для карты
   const fullAddress = house.city && house.street
   ? `${house.city}, ${house.street} ${house.houseNumber || ''}`.trim()
   : 'Адрес не указан';
@@ -1373,13 +1376,11 @@ const HouseInfo: React.FC = () => {
                   </div>
                 )}
 
-                {/* БЛОК С КАРТОЙ И ИНФРАСТРУКТУРОЙ */}
                 <div className="location-section-house">
                   <h3>Расположение на карте</h3>
                   
                   <div className="location-info-house">
                     <div className="map-container-house">
-                      
                       <YandexCityMap
                         fullAddress={fullAddress}
                         placeName={`${house.houseType || 'Дом'}`}

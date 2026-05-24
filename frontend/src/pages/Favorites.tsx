@@ -24,11 +24,10 @@ import {
 import { faHeart as faHeartOutlineRegular } from '@fortawesome/free-regular-svg-icons';
 import "./Favorites.css";
 
-// Интерфейсы для данных из API
 interface FavoriteItem {
   id: number;
   price: number;
-  priceString?: string;          // исходная строка цены (например "120 BYN/сутки")
+  priceString?: string;
   area: number;
   description: string;
   fullDescription: string;
@@ -45,7 +44,7 @@ interface FavoriteItem {
   year?: number;
   addedToFavorites?: string;
   ownerId?: number;
-  rentType?: 'day' | 'month';    // тип аренды
+  rentType?: 'day' | 'month';
 }
 
 interface ApiResponse<T> {
@@ -54,7 +53,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-// Интерфейсы для чата
 interface ChatItem {
   id: number;
   user_id: number;
@@ -111,7 +109,6 @@ const Favorites: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
-  // Декодирование токена
   const decodeToken = (token: string) => {
     try {
       const base64Url = token.split('.')[1];
@@ -126,7 +123,6 @@ const Favorites: React.FC = () => {
     }
   };
 
-  // Проверка авторизации и ролей
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem('token');
@@ -156,7 +152,15 @@ const Favorites: React.FC = () => {
     fetchFavorites();
   }, []);
 
-  // Функция для получения информации о владельце дома
+  // Подписка на глобальное событие обновления избранного
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      fetchFavorites();
+    };
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    return () => window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+  }, []);
+
   const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
     try {
       const response = await fetch(`http://localhost:5213/api/houses/${houseId}/owner-info`, {
@@ -167,7 +171,7 @@ const Favorites: React.FC = () => {
         const result: OwnerInfoResponse = await response.json();
         if (result.success && result.data) {
           if (result.data.email?.toLowerCase() === 'admin@gmail.com') {
-            alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
+            console.warn('Вы не можете написать администратору');
             return null;
           }
           return result.data.id;
@@ -183,7 +187,6 @@ const Favorites: React.FC = () => {
     }
   };
 
-  // Функция для проверки существующего чата
   const checkExistingChat = async (ownerId: number, houseId: number): Promise<number | null> => {
     try {
       const token = localStorage.getItem('token');
@@ -211,7 +214,6 @@ const Favorites: React.FC = () => {
     }
   };
 
-  // Функция для создания нового чата
   const createNewChat = async (ownerId: number, houseId: number): Promise<number | null> => {
     try {
       const token = localStorage.getItem('token');
@@ -234,28 +236,24 @@ const Favorites: React.FC = () => {
       } else {
         const errorData = await response.json();
         console.error('Ошибка создания чата:', errorData);
-        alert(errorData.message || 'Ошибка при создании чата');
       }
       return null;
     } catch (error) {
       console.error('Ошибка при создании чата:', error);
-      alert('Не удалось создать чат. Попробуйте позже.');
       return null;
     }
   };
 
-  // Основная функция для открытия/создания чата
   const handleOpenChat = async (propertyId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Для начала чата необходимо авторизоваться');
       navigate('/login');
       return;
     }
     if (isAdmin) {
       if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
-        alert('Администратор может писать только в ответ на сообщения пользователей');
+        console.warn('Администратор может писать только в ответ на сообщения пользователей');
         return;
       }
     }
@@ -263,7 +261,7 @@ const Favorites: React.FC = () => {
     try {
       const ownerId = await getHouseOwnerInfo(propertyId);
       if (!ownerId) {
-        alert('Не удалось определить владельца объявления');
+        console.warn('Не удалось определить владельца объявления');
         return;
       }
       const existingChatId = await checkExistingChat(ownerId, propertyId);
@@ -275,61 +273,52 @@ const Favorites: React.FC = () => {
       if (newChatId) navigate(`/chat/${newChatId}`);
     } catch (error) {
       console.error('Ошибка при открытии чата:', error);
-      alert('Произошла ошибка при открытии чата. Попробуйте позже.');
     } finally {
       setCreatingChatForProperty(null);
     }
   };
 
-  // Загрузка избранного с определением rentType
   const fetchFavorites = async () => {
-  try {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setFavorites([]);
-      return;
-    }
-    const response = await fetch('http://localhost:5213/api/favorites/my', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setFavorites([]);
+        return;
       }
-    });
-    if (!response.ok) {
+      const response = await fetch('http://localhost:5213/api/favorites/my', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        setFavorites([]);
+        return;
+      }
+      const data: ApiResponse<FavoriteItem[]> = await response.json();
+      if (data.success && data.data) {
+        const items = data.data.map(item => ({
+          ...item,
+          rentType: item.rentType || 'day'
+        }));
+        setFavorites(items);
+      } else {
+        setFavorites([]);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке избранного:', error);
       setFavorites([]);
-      return;
+    } finally {
+      setLoading(false);
     }
-    const data: ApiResponse<FavoriteItem[]> = await response.json();
-    if (data.success && data.data) {
-      // Просто используем rentType, который пришёл с бэка
-      // Если по какой-то причине rentType отсутствует, можно задать 'day' как fallback,
-      // но лучше попросить бэкенд присылать всегда.
-      const items = data.data.map(item => ({
-        ...item,
-        rentType: item.rentType || 'day'   // fallback на 'day', если поле не пришло
-      }));
-      setFavorites(items);
-    } else {
-      setFavorites([]);
-    }
-  } catch (error) {
-    console.error('Ошибка при загрузке избранного:', error);
-    setFavorites([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-  // Удаление из избранного
   const removeFromFavorites = async (id: number) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Вы не авторизованы');
-        return;
-      }
+      if (!token) return;
       setIsRemoving(true);
       const response = await fetch(`http://localhost:5213/api/favorites/remove/${id}`, {
         method: 'DELETE',
@@ -347,27 +336,21 @@ const Favorites: React.FC = () => {
             newSet.delete(id);
             return newSet;
           });
+          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         }
-      } else {
-        alert('Не удалось удалить из избранного');
       }
     } catch (error) {
       console.error('Ошибка при удалении из избранного:', error);
-      alert('Ошибка при удалении из избранного');
     } finally {
       setIsRemoving(false);
     }
   };
 
-  // Очистка всего избранного
   const clearAllFavorites = async () => {
     if (!window.confirm('Вы уверены, что хотите очистить всё избранное?')) return;
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Вы не авторизованы');
-        return;
-      }
+      if (!token) return;
       const response = await fetch('http://localhost:5213/api/favorites/clear', {
         method: 'DELETE',
         headers: {
@@ -380,16 +363,14 @@ const Favorites: React.FC = () => {
         if (data.success) {
           setFavorites([]);
           setSelectedItems(new Set());
-          alert('Избранное очищено');
+          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         }
       }
     } catch (error) {
       console.error('Ошибка при очистке избранного:', error);
-      alert('Ошибка при очистке избранного');
     }
   };
 
-  // Удаление выбранных элементов
   const removeSelected = async () => {
     if (selectedItems.size === 0) return;
     if (!window.confirm(`Вы уверены, что хотите удалить ${selectedItems.size} выбранных домов?`)) return;
@@ -399,7 +380,6 @@ const Favorites: React.FC = () => {
     }
   };
 
-  // Выбор/снятие выбора элемента
   const toggleSelectItem = (id: number) => {
     setSelectedItems(prev => {
       const newSet = new Set(prev);
@@ -409,7 +389,6 @@ const Favorites: React.FC = () => {
     });
   };
 
-  // Выбор всех элементов
   const selectAllItems = () => {
     if (selectedItems.size === favorites.length) {
       setSelectedItems(new Set());
@@ -418,7 +397,6 @@ const Favorites: React.FC = () => {
     }
   };
 
-  // Форматирование цены с иконкой BYN и суффиксом
   const formatPriceWithIcon = (price: number, rentType?: string): React.ReactNode => {
     const numberStr = price?.toLocaleString('ru-RU') || '0';
     const suffix = rentType === 'month' ? '/мес' : '/сутки';
@@ -512,7 +490,7 @@ const Favorites: React.FC = () => {
                 </Link>
                 <Link to="/agents" className="btn-secondary-favorit">
                   <FontAwesomeIcon icon={faFilter} />
-                  Выбрать агента
+                  Выбрать организатора
                 </Link>
               </div>
               <div className="favorites-tips-favorit">
@@ -587,11 +565,8 @@ const Favorites: React.FC = () => {
                       <button className="btn-primary-favorit" onClick={() => {
                         const selectedTitles = favorites.filter(item => selectedItems.has(item.id))
                           .map(item => `${item.houseType} - ${item.city}, ${item.street}`);
-                        if (selectedTitles.length === 0) {
-                          alert("Выберите дома для отправки!");
-                          return;
-                        }
-                        alert(`Готово для отправки:\n\n${selectedTitles.join('\n')}`);
+                        if (selectedTitles.length === 0) return;
+                        console.log('Выбрано для отправки:', selectedTitles);
                       }}>
                         <FontAwesomeIcon icon={faShare} /> Поделиться
                       </button>

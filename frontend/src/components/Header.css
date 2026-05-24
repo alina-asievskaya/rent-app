@@ -1380,3 +1380,53 @@ body:not(.profile-page) .page-content {
 .user-dropdown.show {
   animation: slideDown 0.3s ease;
 }
+
+/* Иконка сообщений */
+.nav-messages {
+  position: relative;
+  margin-right: 0.5rem;
+}
+
+.nav-messages-btn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.nav-messages-btn:hover {
+  background: rgba(45, 106, 79, 0.05);
+}
+
+.nav-messages-btn svg {
+  color: #2D6A4F;
+  font-size: 1.25rem;
+  transition: color 0.3s;
+}
+
+.nav-messages-btn:hover svg {
+  color: #D4AF37;
+}
+
+.messages-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #D4AF37;
+  color: #1B4332;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}

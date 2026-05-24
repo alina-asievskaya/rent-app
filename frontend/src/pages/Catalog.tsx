@@ -41,8 +41,6 @@ import {
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 
-
-
 // Типы для фильтров
 interface FilterOptions {
   city: string;
@@ -53,7 +51,7 @@ interface FilterOptions {
   areaMin: string;
   areaMax: string;
   features: string[];
-  rentType: string; // 'day' | 'month' | ''
+  rentType: string;
 }
 
 interface SortOption {
@@ -90,7 +88,7 @@ interface Property {
   ownerEmail?: string;
   announcementData?: string;
   ownerId?: number;
-  rentType?: string; // 'day' или 'month'
+  rentType?: string;
 }
 
 interface ApiResponse {
@@ -172,7 +170,7 @@ const Catalog: React.FC = () => {
     areaMin: '',
     areaMax: '',
     features: [],
-    rentType: ''   // '' = все типы аренды
+    rentType: ''
   });
 
   // Данные для фильтров - города и типы из БД
@@ -216,20 +214,18 @@ const Catalog: React.FC = () => {
   ];
 
   const formatPriceWithIcon = (priceStr: string): React.ReactNode => {
-  const match = priceStr.match(/^([\d\s]+)\s*Br\s*(.*)$/i);
-  if (match) {
-    const number = match[1].trim(); 
-    const suffix = match[2];        
-    return (
-      <>
-        {number} <i className="nbrb-icon">&#xe901;</i>{suffix}
-      </>
-    );
-  }
-
-  return priceStr;
-};
-
+    const match = priceStr.match(/^([\d\s]+)\s*Br\s*(.*)$/i);
+    if (match) {
+      const number = match[1].trim(); 
+      const suffix = match[2];        
+      return (
+        <>
+          {number} <i className="nbrb-icon">&#xe901;</i>{suffix}
+        </>
+      );
+    }
+    return priceStr;
+  };
 
   // Функция для получения информации о владельце дома
   const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
@@ -245,7 +241,6 @@ const Catalog: React.FC = () => {
         const result: OwnerInfoResponse = await response.json();
         if (result.success && result.data) {
           if (result.data.email?.toLowerCase() === 'admin@gmail.com') {
-            alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
             return null;
           }
           return result.data.id;
@@ -323,12 +318,10 @@ const Catalog: React.FC = () => {
       } else {
         const errorData = await response.json();
         console.error('Ошибка создания чата:', errorData);
-        alert(errorData.message || 'Ошибка при создании чата');
       }
       return null;
     } catch (error) {
       console.error('Ошибка при создании чата:', error);
-      alert('Не удалось создать чат. Попробуйте позже.');
       return null;
     }
   };
@@ -339,7 +332,6 @@ const Catalog: React.FC = () => {
     
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Для начала чата необходимо авторизоваться');
       navigate('/login');
       return;
     }
@@ -348,7 +340,6 @@ const Catalog: React.FC = () => {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
       if (userEmail?.toLowerCase() === 'admin@gmail.com') {
-        alert('Администратор может писать только в ответ на сообщения пользователей');
         return;
       }
     } catch (error) {
@@ -360,7 +351,6 @@ const Catalog: React.FC = () => {
     try {
       const ownerId = await getHouseOwnerInfo(propertyId);
       if (!ownerId) {
-        alert('Не удалось определить владельца объявления');
         return;
       }
 
@@ -378,7 +368,6 @@ const Catalog: React.FC = () => {
       }
     } catch (error) {
       console.error('Ошибка при открытии чата:', error);
-      alert('Произошла ошибка при открытии чата. Попробуйте позже.');
     } finally {
       setCreatingChatForProperty(null);
     }
@@ -439,7 +428,6 @@ const Catalog: React.FC = () => {
           
           const ownerId = house.ownerId || house.id || 0;
           
-          // Определяем тип аренды по цене (запасной вариант, если в API нет rentType)
           let rentType = house.rentType;
           if (!rentType) {
             rentType = priceStr.includes('сутки') ? 'day' : 'month';
@@ -531,6 +519,15 @@ const Catalog: React.FC = () => {
     loadUserFavorites();
   }, [location.search]);
 
+  // Синхронизация избранного с шапкой
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      loadUserFavorites();
+    };
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    return () => window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+  }, []);
+
   const loadUserFavorites = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -576,7 +573,6 @@ const Catalog: React.FC = () => {
     
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Для добавления в избранное необходимо войти в систему');
       navigate('/login');
       return;
     }
@@ -598,7 +594,6 @@ const Catalog: React.FC = () => {
       }
       
       if (isAdmin) {
-        alert('Администраторы не могут добавлять дома в избранное');
         return;
       }
     } catch (error) {
@@ -623,9 +618,10 @@ const Catalog: React.FC = () => {
             newSet.delete(id);
             return newSet;
           });
-          alert('Удалено из избранного');
+          // Уведомляем другие компоненты (шапку) об изменении
+          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         } else {
-          alert('Ошибка при удалении из избранного');
+          console.error('Ошибка при удалении из избранного');
         }
       } else {
         const addResponse = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
@@ -642,14 +638,14 @@ const Catalog: React.FC = () => {
             newSet.add(id);
             return newSet;
           });
-          alert('Добавлено в избранное');
+          // Уведомляем другие компоненты (шапку) об изменении
+          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         } else {
-          alert('Ошибка при добавлении в избранное');
+          console.error('Ошибка при добавлении в избранное');
         }
       }
     } catch (error) {
       console.error('Ошибка при обновлении избранного:', error);
-      alert('Произошла ошибка при обновлении избранного');
     }
   };
 
@@ -678,7 +674,6 @@ const Catalog: React.FC = () => {
       }
     }
 
-    // Фильтр по типу аренды
     if (filters.rentType) {
       result = result.filter(prop => prop.rentType === filters.rentType);
     }
@@ -842,285 +837,284 @@ const Catalog: React.FC = () => {
   }
 
   return (
-  <>
-    <Header />
-    
-    <main className="catalog-page">
-      <section className="catalog-hero-premium">
-        <div className="catalog-hero-premium-bg"></div>
-        <div className="catalog-hero-premium-overlay"></div>
-        <div className="catalog-hero-premium-content">
-          <h1>Каталог жилья для аренды</h1>
-          <div className="catalog-hero-premium-divider"></div>
-          <p>
-            {totalProperties} предложений {filters.city && `в ${filters.city}`}
-          </p>
-          
-          {propertyTypes.length > 1 && (
-            <div className="quick-filters-premium">
-              {propertyTypes.slice(1, 5).map(type => (
-                <button 
-                  key={type}
-                  className={`quick-filter-premium ${filters.propertyType === type ? 'active' : ''}`}
-                  onClick={() => quickFilterByType(type)}
-                >
-                  {type}
-                </button>
-              ))}
-              <button 
-                className="quick-filter-premium reset"
-                onClick={resetFilters}
-              >
-                Сбросить фильтры
-              </button>
-            </div>
-          )}
-
-          {apiError && (
-            <div className="error-message-premium">
-              <FontAwesomeIcon icon={faExclamationTriangle} /> {apiError}
-              <button onClick={retryFetch} style={{ marginLeft: '1rem' }}>Повторить</button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <div className="catalog-container">
-        <div className="catalog-layout">
-          <aside className={`catalog-filters ${showFilters ? "show" : ""}`}>
-            <div className="filters-header">
-              <h3><FontAwesomeIcon icon={faFilter} /> Фильтры</h3>
-              <button className="close-filters" onClick={() => setShowFilters(false)}>
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-
-            <div className="filter-group">
-            <label className="filter-label"><FontAwesomeIcon icon={faMapMarkerAlt} /> Город</label>
-            <div className="catalog-select-wrapper">
-              <select className="filter-select" value={filters.city} onChange={(e) => handleFilterChange("city", e.target.value)}>
-                {cities.map(city => (
-                  <option key={city} value={city === "Все города" ? "" : city}>{city}</option>
-                ))}
-              </select>
-              <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
-            </div>
-          </div>
-
-            <div className="filter-group">
-            <label className="filter-label"><FontAwesomeIcon icon={faHome} /> Тип</label>
-            <div className="catalog-select-wrapper">
-              <select className="filter-select" value={filters.propertyType} onChange={(e) => handleFilterChange("propertyType", e.target.value)}>
-                {propertyTypes.map(type => (
-                  <option key={type} value={type === "Все типы" ? "" : type}>{type}</option>
-                ))}
-              </select>
-              <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
-            </div>
-          </div>
-
-            <div className="filter-group">
-            <label className="filter-label"><FontAwesomeIcon icon={faBed} /> Комнаты</label>
-            <div className="catalog-select-wrapper">
-              <select className="filter-select" value={filters.rooms} onChange={(e) => handleFilterChange("rooms", e.target.value)}>
-                {roomOptions.map(room => (
-                  <option key={room} value={room === "Любое" ? "" : room}>{room}</option>
-                ))}
-              </select>
-              <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
-            </div>
-          </div>
-
-            {/* НОВЫЙ БЛОК: Тип аренды */}
-            <div className="filter-group">
-              <label className="filter-label">Тип аренды</label>
-              <div className="catalog-rent-type-group">
-                <label className={`catalog-rent-option ${filters.rentType === 'day' ? 'active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="rentTypeFilter"
-                    value="day"
-                    checked={filters.rentType === 'day'}
-                    onChange={(e) => handleFilterChange('rentType', e.target.value)}
-                  />
-                  <FontAwesomeIcon icon={faSun} className="catalog-rent-icon" />
-                  <div className="catalog-rent-text">
-                    <strong>Посутчно</strong>
-                    <small>Аренда на короткий срок</small>
-                  </div>
-                </label>
-                <label className={`catalog-rent-option ${filters.rentType === 'month' ? 'active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="rentTypeFilter"
-                    value="month"
-                    checked={filters.rentType === 'month'}
-                    onChange={(e) => handleFilterChange('rentType', e.target.value)}
-                  />
-                  <FontAwesomeIcon icon={faCalendarAlt} className="catalog-rent-icon" />
-                  <div className="catalog-rent-text">
-                    <strong>Помесячно</strong>
-                    <small>Долгосрочная аренда</small>
-                  </div>
-                </label>
-                {filters.rentType && (
-                  <button
-                    className="catalog-rent-clear"
-                    onClick={() => handleFilterChange('rentType', '')}
+    <>
+      <Header />
+      
+      <main className="catalog-page">
+        <section className="catalog-hero-premium">
+          <div className="catalog-hero-premium-bg"></div>
+          <div className="catalog-hero-premium-overlay"></div>
+          <div className="catalog-hero-premium-content">
+            <h1>Каталог жилья для аренды</h1>
+            <div className="catalog-hero-premium-divider"></div>
+            <p>
+              {totalProperties} предложений {filters.city && `в ${filters.city}`}
+            </p>
+            
+            {propertyTypes.length > 1 && (
+              <div className="quick-filters-premium">
+                {propertyTypes.slice(1, 5).map(type => (
+                  <button 
+                    key={type}
+                    className={`quick-filter-premium ${filters.propertyType === type ? 'active' : ''}`}
+                    onClick={() => quickFilterByType(type)}
                   >
-                    <FontAwesomeIcon icon={faTimes} /> Сбросить
+                    {type}
                   </button>
-                )}
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label className="filter-label">Цена, <i className="nbrb-icon">&#xe901;</i></label>
-              <div className="price-range">
-                <input type="number" className="filter-input" placeholder="от" value={filters.priceMin} onChange={(e) => handleFilterChange("priceMin", e.target.value)} />
-                <span className="price-separator">—</span>
-                <input type="number" className="filter-input" placeholder="до" value={filters.priceMax} onChange={(e) => handleFilterChange("priceMax", e.target.value)} />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label className="filter-label"><FontAwesomeIcon icon={faRulerCombined} /> Площадь, м²</label>
-              <div className="area-range">
-                <input type="number" className="filter-input" placeholder="от" value={filters.areaMin} onChange={(e) => handleFilterChange("areaMin", e.target.value)} />
-                <span className="area-separator">—</span>
-                <input type="number" className="filter-input" placeholder="до" value={filters.areaMax} onChange={(e) => handleFilterChange("areaMax", e.target.value)} />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label className="filter-label"><FontAwesomeIcon icon={faCheckCircle} /> Особенности</label>
-              <div className="features-grid">
-                {featuresOptions.map(feature => (
-                  <label key={feature} className="feature-item">
-                    <input type="checkbox" checked={filters.features.includes(feature)} onChange={() => handleFeatureToggle(feature)} />
-                    <span className="feature-checkmark"></span>
-                    <span><FontAwesomeIcon icon={getFeatureIcon(feature)} style={{ marginRight: '0.5rem' }} /> {feature}</span>
-                  </label>
                 ))}
-              </div>
-            </div>
-
-            <button className="filter-reset-btn" onClick={resetFilters}>Сбросить фильтры</button>
-          </aside>
-
-          <main className="catalog-main">
-            <div className="catalog-toolbar">
-              <div className="toolbar-left">
-                <button className="toggle-filters" onClick={() => setShowFilters(!showFilters)}>
-                  <FontAwesomeIcon icon={faSlidersH} /> Фильтры
+                <button 
+                  className="quick-filter-premium reset"
+                  onClick={resetFilters}
+                >
+                  Сбросить фильтры
                 </button>
-                <div className="sort-wrapper">
-                  <FontAwesomeIcon icon={faSortAmountDown} style={{ color: 'var(--catalog-accent)' }} />
-                  <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                    {sortOptions.map(option => (
-                      <option key={option.id} value={option.id}>{option.label}</option>
+              </div>
+            )}
+
+            {apiError && (
+              <div className="error-message-premium">
+                <FontAwesomeIcon icon={faExclamationTriangle} /> {apiError}
+                <button onClick={retryFetch} style={{ marginLeft: '1rem' }}>Повторить</button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <div className="catalog-container">
+          <div className="catalog-layout">
+            <aside className={`catalog-filters ${showFilters ? "show" : ""}`}>
+              <div className="filters-header">
+                <h3><FontAwesomeIcon icon={faFilter} /> Фильтры</h3>
+                <button className="close-filters" onClick={() => setShowFilters(false)}>
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label"><FontAwesomeIcon icon={faMapMarkerAlt} /> Город</label>
+                <div className="catalog-select-wrapper">
+                  <select className="filter-select" value={filters.city} onChange={(e) => handleFilterChange("city", e.target.value)}>
+                    {cities.map(city => (
+                      <option key={city} value={city === "Все города" ? "" : city}>{city}</option>
                     ))}
                   </select>
-                  <FontAwesomeIcon icon={faChevronDown} className="sort-arrow" />
+                  <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
                 </div>
               </div>
-              <div className="toolbar-right">
-                <div className="view-toggle">
-                  <button className={`view-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>▦</button>
-                  <button className={`view-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}>☰</button>
-                </div>
-                <div className="results-count">
-                  Найдено: <strong>{totalProperties}</strong> {totalPages > 1 && `(стр. ${currentPage} из ${totalPages})`}
-                </div>
-              </div>
-            </div>
 
-            {loading ? (
-              <div className="loading-premium">
-                <div className="spinner-premium"></div>
-                <p>Загрузка предложений...</p>
+              <div className="filter-group">
+                <label className="filter-label"><FontAwesomeIcon icon={faHome} /> Тип</label>
+                <div className="catalog-select-wrapper">
+                  <select className="filter-select" value={filters.propertyType} onChange={(e) => handleFilterChange("propertyType", e.target.value)}>
+                    {propertyTypes.map(type => (
+                      <option key={type} value={type === "Все типы" ? "" : type}>{type}</option>
+                    ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
+                </div>
               </div>
-            ) : currentProperties.length === 0 ? (
-              <div className="no-results-premium">
-                <FontAwesomeIcon icon={faFilter} size="3x" />
-                <h3>Предложения не найдены</h3>
-                <p>Попробуйте изменить параметры фильтрации</p>
-                <button className="btn-premium-primary" onClick={resetFilters}>Сбросить фильтры</button>
+
+              <div className="filter-group">
+                <label className="filter-label"><FontAwesomeIcon icon={faBed} /> Комнаты</label>
+                <div className="catalog-select-wrapper">
+                  <select className="filter-select" value={filters.rooms} onChange={(e) => handleFilterChange("rooms", e.target.value)}>
+                    {roomOptions.map(room => (
+                      <option key={room} value={room === "Любое" ? "" : room}>{room}</option>
+                    ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="catalog-select-arrow" />
+                </div>
               </div>
-            ) : (
-              <>
-                <div className={viewMode === "grid" ? "properties-grid-premium" : "properties-list-premium"}>
-                  {currentProperties.map(property => (
-                    <div 
-                      key={property.id} 
-                      className={viewMode === "grid" ? "property-card-premium" : "property-card-list"}
-                      onClick={() => navigate(`/house/${property.id}`)}
-                    >
-                      <div className="property-image">
-                        <img src={property.imageUrl} alt={property.address} onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop")} />
-                        <div className="property-badges">
-                        </div>
-                        <button className={`favorite-btn-premium ${favorites.has(property.id) ? "active" : ""}`} onClick={(e) => handleFavoriteClick(property.id, e)}>
-                          <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
-                        </button>
-                      </div>
-                      <div className="property-details">
-                        <div className="property-header-row">
-                          <div className="property-price">{formatPriceWithIcon(property.price)}</div>
-                          <div className="property-rating">
-                            <FontAwesomeIcon icon={faStar} />
-                            <span>{property.rating || 0}</span>
-                            {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
-                          </div>
-                        </div>
-                        <div className="property-address"><FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}</div>
-                        <div className="property-features">
-                          <span><FontAwesomeIcon icon={faBed} /> {property.beds} комн.</span>
-                          <span><FontAwesomeIcon icon={faBath} /> {property.baths}</span>
-                          <span><FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²</span>
-                          <span><FontAwesomeIcon icon={faClock} /> {property.year}</span>
-                        </div>
-                        <p className="property-description">{property.description}</p>
-                        <div className="property-tags">
-                          {property.features.map((feat, idx) => (
-                            <span key={idx} className="tag-premium">
-                              <FontAwesomeIcon icon={getFeatureIcon(feat)} /> {feat}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="property-actions">
-                          <button className="btn-premium-primary" onClick={(e) => { e.stopPropagation(); navigate(`/house/${property.id}`); }}>Подробнее</button>
-                          <button className="btn-premium-outline" onClick={(e) => handleOpenChat(property.id, e)} disabled={creatingChatForProperty === property.id}>
-                            {creatingChatForProperty === property.id ? <FontAwesomeIcon icon={faSpinner} spin /> : <><FontAwesomeIcon icon={faComment} /> Чат</>}
-                          </button>
-                        </div>
-                      </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Тип аренды</label>
+                <div className="catalog-rent-type-group">
+                  <label className={`catalog-rent-option ${filters.rentType === 'day' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="rentTypeFilter"
+                      value="day"
+                      checked={filters.rentType === 'day'}
+                      onChange={(e) => handleFilterChange('rentType', e.target.value)}
+                    />
+                    <FontAwesomeIcon icon={faSun} className="catalog-rent-icon" />
+                    <div className="catalog-rent-text">
+                      <strong>Посутчно</strong>
+                      <small>Аренда на короткий срок</small>
                     </div>
+                  </label>
+                  <label className={`catalog-rent-option ${filters.rentType === 'month' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="rentTypeFilter"
+                      value="month"
+                      checked={filters.rentType === 'month'}
+                      onChange={(e) => handleFilterChange('rentType', e.target.value)}
+                    />
+                    <FontAwesomeIcon icon={faCalendarAlt} className="catalog-rent-icon" />
+                    <div className="catalog-rent-text">
+                      <strong>Помесячно</strong>
+                      <small>Долгосрочная аренда</small>
+                    </div>
+                  </label>
+                  {filters.rentType && (
+                    <button
+                      className="catalog-rent-clear"
+                      onClick={() => handleFilterChange('rentType', '')}
+                    >
+                      <FontAwesomeIcon icon={faTimes} /> Сбросить
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Цена, <i className="nbrb-icon">&#xe901;</i></label>
+                <div className="price-range">
+                  <input type="number" className="filter-input" placeholder="от" value={filters.priceMin} onChange={(e) => handleFilterChange("priceMin", e.target.value)} />
+                  <span className="price-separator">—</span>
+                  <input type="number" className="filter-input" placeholder="до" value={filters.priceMax} onChange={(e) => handleFilterChange("priceMax", e.target.value)} />
+                </div>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label"><FontAwesomeIcon icon={faRulerCombined} /> Площадь, м²</label>
+                <div className="area-range">
+                  <input type="number" className="filter-input" placeholder="от" value={filters.areaMin} onChange={(e) => handleFilterChange("areaMin", e.target.value)} />
+                  <span className="area-separator">—</span>
+                  <input type="number" className="filter-input" placeholder="до" value={filters.areaMax} onChange={(e) => handleFilterChange("areaMax", e.target.value)} />
+                </div>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label"><FontAwesomeIcon icon={faCheckCircle} /> Особенности</label>
+                <div className="features-grid">
+                  {featuresOptions.map(feature => (
+                    <label key={feature} className="feature-item">
+                      <input type="checkbox" checked={filters.features.includes(feature)} onChange={() => handleFeatureToggle(feature)} />
+                      <span className="feature-checkmark"></span>
+                      <span><FontAwesomeIcon icon={getFeatureIcon(feature)} style={{ marginRight: '0.5rem' }} /> {feature}</span>
+                    </label>
                   ))}
                 </div>
+              </div>
 
-                {totalPages > 1 && (
-                  <div className="pagination-premium">
-                    <button className="page-btn" onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>
-                      <FontAwesomeIcon icon={faChevronLeft} />
-                    </button>
-                    {getPageNumbers().map((page, idx) => 
-                      page === 'ellipsis' ? <span key={idx} className="ellipsis"><FontAwesomeIcon icon={faEllipsisH} /></span> :
-                      <button key={idx} className={`page-btn ${currentPage === page ? 'active' : ''}`} onClick={() => paginate(page as number)}>{page}</button>
-                    )}
-                    <button className="page-btn" onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}>
-                      <FontAwesomeIcon icon={faChevronRight} />
-                    </button>
+              <button className="filter-reset-btn" onClick={resetFilters}>Сбросить фильтры</button>
+            </aside>
+
+            <main className="catalog-main">
+              <div className="catalog-toolbar">
+                <div className="toolbar-left">
+                  <button className="toggle-filters" onClick={() => setShowFilters(!showFilters)}>
+                    <FontAwesomeIcon icon={faSlidersH} /> Фильтры
+                  </button>
+                  <div className="sort-wrapper">
+                    <FontAwesomeIcon icon={faSortAmountDown} style={{ color: 'var(--catalog-accent)' }} />
+                    <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                      {sortOptions.map(option => (
+                        <option key={option.id} value={option.id}>{option.label}</option>
+                      ))}
+                    </select>
+                    <FontAwesomeIcon icon={faChevronDown} className="sort-arrow" />
                   </div>
-                )}
-              </>
-            )}
-          </main>
+                </div>
+                <div className="toolbar-right">
+                  <div className="view-toggle">
+                    <button className={`view-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>▦</button>
+                    <button className={`view-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}>☰</button>
+                  </div>
+                  <div className="results-count">
+                    Найдено: <strong>{totalProperties}</strong> {totalPages > 1 && `(стр. ${currentPage} из ${totalPages})`}
+                  </div>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="loading-premium">
+                  <div className="spinner-premium"></div>
+                  <p>Загрузка предложений...</p>
+                </div>
+              ) : currentProperties.length === 0 ? (
+                <div className="no-results-premium">
+                  <FontAwesomeIcon icon={faFilter} size="3x" />
+                  <h3>Предложения не найдены</h3>
+                  <p>Попробуйте изменить параметры фильтрации</p>
+                  <button className="btn-premium-primary" onClick={resetFilters}>Сбросить фильтры</button>
+                </div>
+              ) : (
+                <>
+                  <div className={viewMode === "grid" ? "properties-grid-premium" : "properties-list-premium"}>
+                    {currentProperties.map(property => (
+                      <div 
+                        key={property.id} 
+                        className={viewMode === "grid" ? "property-card-premium" : "property-card-list"}
+                        onClick={() => navigate(`/house/${property.id}`)}
+                      >
+                        <div className="property-image">
+                          <img src={property.imageUrl} alt={property.address} onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop")} />
+                          <div className="property-badges">
+                          </div>
+                          <button className={`favorite-btn-premium ${favorites.has(property.id) ? "active" : ""}`} onClick={(e) => handleFavoriteClick(property.id, e)}>
+                            <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
+                          </button>
+                        </div>
+                        <div className="property-details">
+                          <div className="property-header-row">
+                            <div className="property-price">{formatPriceWithIcon(property.price)}</div>
+                            <div className="property-rating">
+                              <FontAwesomeIcon icon={faStar} />
+                              <span>{property.rating || 0}</span>
+                              {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
+                            </div>
+                          </div>
+                          <div className="property-address"><FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}</div>
+                          <div className="property-features">
+                            <span><FontAwesomeIcon icon={faBed} /> {property.beds} комн.</span>
+                            <span><FontAwesomeIcon icon={faBath} /> {property.baths}</span>
+                            <span><FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²</span>
+                            <span><FontAwesomeIcon icon={faClock} /> {property.year}</span>
+                          </div>
+                          <p className="property-description">{property.description}</p>
+                          <div className="property-tags">
+                            {property.features.map((feat, idx) => (
+                              <span key={idx} className="tag-premium">
+                                <FontAwesomeIcon icon={getFeatureIcon(feat)} /> {feat}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="property-actions">
+                            <button className="btn-premium-primary" onClick={(e) => { e.stopPropagation(); navigate(`/house/${property.id}`); }}>Подробнее</button>
+                            <button className="btn-premium-outline" onClick={(e) => handleOpenChat(property.id, e)} disabled={creatingChatForProperty === property.id}>
+                              {creatingChatForProperty === property.id ? <FontAwesomeIcon icon={faSpinner} spin /> : <><FontAwesomeIcon icon={faComment} /> Чат</>}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="pagination-premium">
+                      <button className="page-btn" onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>
+                        <FontAwesomeIcon icon={faChevronLeft} />
+                      </button>
+                      {getPageNumbers().map((page, idx) => 
+                        page === 'ellipsis' ? <span key={idx} className="ellipsis"><FontAwesomeIcon icon={faEllipsisH} /></span> :
+                        <button key={idx} className={`page-btn ${currentPage === page ? 'active' : ''}`} onClick={() => paginate(page as number)}>{page}</button>
+                      )}
+                      <button className="page-btn" onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}>
+                        <FontAwesomeIcon icon={faChevronRight} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </main>
+          </div>
         </div>
-      </div>
-    </main>
-  </>
-);
+      </main>
+    </>
+  );
 };
 
 export default Catalog;

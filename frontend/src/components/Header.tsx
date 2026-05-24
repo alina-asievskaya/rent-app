@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { flushSync } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faHeart as faHeartSolid,
@@ -13,7 +14,8 @@ import {
   faLock,
   faUser as faUserIcon,
   faSignOutAlt,
-  faShieldAlt
+  faShieldAlt,
+  faComment,
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import "./Header.css";
@@ -27,7 +29,6 @@ interface UserData {
   token: string;
 }
 
-// Интерфейс для элемента избранного из API (добавлено rentType)
 interface FavoriteItem {
   id: number;
   price: number;
@@ -46,12 +47,18 @@ interface FavoriteItem {
   isActive: boolean;
   year?: number;
   addedToFavorites?: string;
-  rentType?: 'day' | 'month';   // <-- ДОБАВЛЕНО
+  rentType?: 'day' | 'month';
 }
 
 interface ApiResponse<T> {
   success: boolean;
   data: T;
+  message?: string;
+}
+
+interface CountResponse {
+  success: boolean;
+  count: number;
   message?: string;
 }
 
@@ -68,7 +75,8 @@ const Header: React.FC = () => {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [favoritesList, setFavoritesList] = useState<FavoriteItem[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
-  
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
   const [toasts, setToasts] = useState<Array<{
     id: number;
     text: string;
@@ -83,49 +91,39 @@ const Header: React.FC = () => {
     phone_num: ""
   });
 
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return !!localStorage.getItem('token');
-  });
-
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('token'));
   const [userData, setUserData] = useState<UserData | null>(() => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   });
 
-  const showToast = (text: string, type: 'success' | 'error' | 'info' | 'warning') => {
+  const isAdmin = userData?.email?.toLowerCase() === 'admin@gmail.com';
+  const shouldShowFavorites = isLoggedIn && !isAdmin;
+
+  const favoritesDropdownRef = useRef<HTMLDivElement>(null);
+  const userBtnRef = useRef<HTMLDivElement>(null);
+  const favoritesBtnRef = useRef<HTMLButtonElement>(null);
+  const isFetchingCount = useRef(false);
+  const isFetchingList = useRef(false);
+  const isFetchingUnread = useRef(false);
+
+  const showToast = useCallback((text: string, type: 'success' | 'error' | 'info' | 'warning') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
     setTimeout(() => removeToast(id), 5000);
-  };
+  }, []);
 
-  const removeToast = (id: number) => {
+  const removeToast = useCallback((id: number) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  }, []);
 
-  useEffect(() => {
-    if (isLoggedIn && !isAdmin) {
-      fetchFavoritesCount();
-    } else {
-      setFavoritesCount(0);
-      setFavoritesList([]);
-    }
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (showFavorites && isLoggedIn && !isAdmin) {
-      fetchFavoritesList();
-    }
-  }, [showFavorites]);
-
-  useEffect(() => {
-    setIsProfilePage(location.pathname === '/profile');
-  }, [location]);
-
-  const fetchFavoritesCount = async () => {
+  const fetchFavoritesCount = useCallback(async () => {
+    if (isFetchingCount.current) return;
     try {
+      isFetchingCount.current = true;
       const token = localStorage.getItem('token');
       if (!token) return;
-      const response = await fetch('http://localhost:5213/api/favorites/count', {
+      const response = await fetch(`http://localhost:5213/api/favorites/count?_t=${Date.now()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -133,15 +131,21 @@ const Header: React.FC = () => {
         }
       });
       if (!response.ok) return;
-      const data: ApiResponse<{ count: number }> = await response.json();
-      if (data.success && data.data) setFavoritesCount(data.data.count);
+      const data: CountResponse = await response.json();
+      if (data.success) {
+        setFavoritesCount(data.count);
+      }
     } catch (error) {
       console.error('Ошибка при получении количества избранного:', error);
+    } finally {
+      isFetchingCount.current = false;
     }
-  };
+  }, []);
 
-  const fetchFavoritesList = async () => {
+  const fetchFavoritesList = useCallback(async () => {
+    if (isFetchingList.current) return;
     try {
+      isFetchingList.current = true;
       setIsLoadingFavorites(true);
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -167,10 +171,102 @@ const Header: React.FC = () => {
       setFavoritesCount(0);
     } finally {
       setIsLoadingFavorites(false);
+      isFetchingList.current = false;
     }
-  };
+  }, []);
 
-  const toggleFavorites = async () => {
+  const fetchUnreadMessagesCount = useCallback(async () => {
+    if (!isLoggedIn) return;
+    if (isFetchingUnread.current) return;
+    try {
+      isFetchingUnread.current = true;
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch('http://localhost:5213/api/chats/unread-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setUnreadMessagesCount(data.count);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки непрочитанных сообщений:', error);
+    } finally {
+      isFetchingUnread.current = false;
+    }
+  }, [isLoggedIn]);
+
+  const resetUserData = useCallback(() => {
+    setFavoritesCount(0);
+    setFavoritesList([]);
+    setUnreadMessagesCount(0);
+  }, []);
+
+  // Главный эффект – загрузка/сброс при входе/выходе
+  useEffect(() => {
+    if (isLoggedIn && !isAdmin) {
+      fetchFavoritesCount();
+      fetchUnreadMessagesCount();
+    } else {
+      resetUserData();
+    }
+  }, [isLoggedIn, isAdmin, fetchFavoritesCount, fetchUnreadMessagesCount, resetUserData]);
+
+  // Открытие дропдауна – подгружаем список, если пуст
+  useEffect(() => {
+    if (showFavorites && isLoggedIn && !isAdmin && favoritesList.length === 0) {
+      fetchFavoritesList();
+    }
+  }, [showFavorites, isLoggedIn, isAdmin, favoritesList.length, fetchFavoritesList]);
+
+  useEffect(() => {
+    setIsProfilePage(location.pathname === '/profile');
+  }, [location]);
+
+  // Слушаем глобальное обновление избранного
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      if (isLoggedIn && !isAdmin) fetchFavoritesCount();
+    };
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    return () => window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+  }, [isLoggedIn, isAdmin, fetchFavoritesCount]);
+
+  // Закрытие дропдаунов
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showFavorites && 
+          favoritesDropdownRef.current && 
+          !favoritesDropdownRef.current.contains(event.target as Node) &&
+          favoritesBtnRef.current &&
+          !favoritesBtnRef.current.contains(event.target as Node)) {
+        setShowFavorites(false);
+      }
+      if (userBtnRef.current && !userBtnRef.current.contains(event.target as Node)) {
+        const dropdown = userBtnRef.current.querySelector('.user-dropdown');
+        if (dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show');
+      }
+    };
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (showFavorites) setShowFavorites(false);
+        if (userBtnRef.current) {
+          const dropdown = userBtnRef.current.querySelector('.user-dropdown');
+          if (dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show');
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [showFavorites]);
+
+  const toggleFavorites = useCallback(() => {
     if (!isLoggedIn) {
       openAuthModal(true);
       return;
@@ -179,11 +275,10 @@ const Header: React.FC = () => {
       showToast('Администраторы не могут использовать избранное', 'info');
       return;
     }
-    if (!showFavorites) await fetchFavoritesList();
-    setShowFavorites(!showFavorites);
-  };
+    setShowFavorites(prev => !prev);
+  }, [isLoggedIn, isAdmin, showToast]);
 
-  const removeFromFavorites = async (houseId: number) => {
+  const removeFromFavorites = useCallback(async (houseId: number) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -201,6 +296,8 @@ const Header: React.FC = () => {
           setFavoritesCount(prev => prev - 1);
           if (favoritesCount - 1 === 0) setShowFavorites(false);
           showToast('Удалено из избранного', 'success');
+          // Уведомляем другие компоненты (каталог) об изменении
+          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         }
       } else {
         showToast('Ошибка при удалении из избранного', 'error');
@@ -209,13 +306,12 @@ const Header: React.FC = () => {
       console.error('Ошибка при удалении из избранного:', error);
       showToast('Ошибка при удалении из избранного', 'error');
     }
-  };
+  }, [favoritesCount, showToast]);
 
-  const clearFavorites = async () => {
+  const clearFavorites = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      if (!window.confirm('Вы уверены, что хотите очистить всё избранное?')) return;
       const response = await fetch('http://localhost:5213/api/favorites/clear', {
         method: 'DELETE',
         headers: {
@@ -230,15 +326,16 @@ const Header: React.FC = () => {
           setFavoritesCount(0);
           setShowFavorites(false);
           showToast('Избранное очищено', 'success');
+          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         }
       }
     } catch (error) {
       console.error('Ошибка при очистке избранного:', error);
       showToast('Ошибка при очистке избранного', 'error');
     }
-  };
+  }, [showToast]);
 
-  const openAuthModal = (isLogin: boolean) => {
+  const openAuthModal = useCallback((isLogin: boolean) => {
     setIsLoginForm(isLogin);
     setShowAuthModal(true);
     setFormData({
@@ -249,16 +346,16 @@ const Header: React.FC = () => {
       phone_num: ""
     });
     setShowFavorites(false);
-  };
+  }, []);
 
-  const closeAuthModal = () => setShowAuthModal(false);
+  const closeAuthModal = useCallback(() => setShowAuthModal(false), []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
@@ -275,8 +372,15 @@ const Header: React.FC = () => {
         setUserData(data.data);
         setShowAuthModal(false);
         setFormData({ email: "", fio: "", password: "", confirmPassword: "", phone_num: "" });
-        if (formData.email.toLowerCase() !== 'admin@gmail.com') await fetchFavoritesCount();
-        if (formData.email.toLowerCase() === 'admin@gmail.com') {
+        
+        if (data.data.email.toLowerCase() !== 'admin@gmail.com') {
+          await fetchFavoritesCount();
+          await fetchUnreadMessagesCount();
+        }
+        
+        flushSync(() => {});
+        
+        if (data.data.email.toLowerCase() === 'admin@gmail.com') {
           navigate('/admin');
           showToast('Вход выполнен успешно. Добро пожаловать в административную панель!', 'success');
         } else {
@@ -296,9 +400,9 @@ const Header: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData.email, formData.password, fetchFavoritesCount, fetchUnreadMessagesCount, navigate, showToast]);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     if (!formData.fio.trim()) {
@@ -343,7 +447,11 @@ const Header: React.FC = () => {
           setUserData(loginData.data);
           setShowAuthModal(false);
           setFormData({ email: "", fio: "", password: "", confirmPassword: "", phone_num: "" });
+          
           await fetchFavoritesCount();
+          await fetchUnreadMessagesCount();
+          flushSync(() => {});
+          
           navigate('/profile');
           showToast('Регистрация прошла успешно! Добро пожаловать!', 'success');
         } else {
@@ -362,38 +470,44 @@ const Header: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData, fetchFavoritesCount, fetchUnreadMessagesCount, navigate, showToast]);
 
-  const switchToRegister = () => {
+  const switchToRegister = useCallback(() => {
     setIsLoginForm(false);
     setFormData({ email: "", fio: "", password: "", confirmPassword: "", phone_num: "" });
-  };
+  }, []);
 
-  const switchToLogin = () => {
+  const switchToLogin = useCallback(() => {
     setIsLoginForm(true);
     setFormData({ email: "", fio: "", password: "", confirmPassword: "", phone_num: "" });
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsLoggedIn(false);
     setUserData(null);
-    setFavoritesCount(0);
-    setFavoritesList([]);
+    resetUserData();
     setShowFavorites(false);
     navigate('/');
     showToast('Вы вышли из системы', 'info');
-  };
+  }, [navigate, showToast, resetUserData]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const goToChats = useCallback(() => {
+    navigate('/profile?tab=chats');
+  }, [navigate]);
 
-  const isAdmin = userData?.email?.toLowerCase() === 'admin@gmail.com';
-  const shouldShowFavorites = isLoggedIn && !isAdmin;
+  const toggleUserDropdown = useCallback(() => {
+    if (userBtnRef.current) {
+      const dropdown = userBtnRef.current.querySelector('.user-dropdown');
+      if (dropdown) dropdown.classList.toggle('show');
+    }
+  }, []);
+
+  const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
   const headerClass = `header ${isProfilePage ? 'header-profile' : ''}`;
 
-  // Функция форматирования цены с поддержкой rentType
-  const formatPriceWithIcon = (price: number, rentType?: 'day' | 'month'): React.ReactNode => {
+  const formatPriceWithIcon = useCallback((price: number, rentType?: 'day' | 'month'): React.ReactNode => {
     const numberStr = price.toLocaleString('ru-RU');
     const suffix = rentType === 'month' ? '/мес' : '/сутки';
     return (
@@ -401,18 +515,18 @@ const Header: React.FC = () => {
         {numberStr} <i className="nbrb-icon">&#xe901;</i>{suffix}
       </>
     );
-  };
+  }, []);
 
-  const getMainImage = (photos: string[]): string => {
+  const getMainImage = useCallback((photos: string[]): string => {
     return photos && photos.length > 0 
       ? photos[0] 
       : "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=200&h=150&fit=crop";
-  };
+  }, []);
 
-  const truncateDescription = (description: string, maxLength: number = 30): string => {
+  const truncateDescription = useCallback((description: string, maxLength: number = 30): string => {
     if (description.length <= maxLength) return description;
     return description.substring(0, maxLength) + '...';
-  };
+  }, []);
 
   return (
     <>
@@ -431,17 +545,36 @@ const Header: React.FC = () => {
             <li><Link to="/about" className={isActive("/about") ? "active" : ""}>О нас</Link></li>
           </ul>
           <div className="nav-auth">
+            {/* Иконка сообщений */}
+            {isLoggedIn && !isAdmin && (
+              <div className="nav-messages">
+                <button className="nav-messages-btn" onClick={goToChats} aria-label="Сообщения">
+                  <FontAwesomeIcon icon={faComment} />
+                  {unreadMessagesCount > 0 && (
+                    <span className="messages-badge">{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</span>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Избранное – всегда зелёное сердечко faHeartSolid */}
             {shouldShowFavorites && (
               <div className="nav-favorites">
-                <button className="nav-favorites-btn" onClick={toggleFavorites} aria-label="Избранное" disabled={isLoadingFavorites}>
+                <button 
+                  ref={favoritesBtnRef}
+                  className="nav-favorites-btn" 
+                  onClick={toggleFavorites} 
+                  aria-label="Избранное" 
+                  disabled={isLoadingFavorites}
+                >
                   {isLoadingFavorites ? (
                     <span className="loading-spinner-small"></span>
                   ) : (
-                    <FontAwesomeIcon icon={favoritesCount > 0 ? faHeartSolid : faHeartOutline} />
+                    <FontAwesomeIcon icon={faHeartSolid} />
                   )}
                   {favoritesCount > 0 && <span className="favorites-badge">{favoritesCount}</span>}
                 </button>
-                <div className={`favorites-dropdown ${showFavorites ? 'show' : ''}`}>
+                <div ref={favoritesDropdownRef} className={`favorites-dropdown ${showFavorites ? 'show' : ''}`}>
                   <div className="favorites-dropdown-header">
                     <h4>Избранное ({favoritesCount})</h4>
                     {favoritesCount > 0 && (
@@ -502,35 +635,32 @@ const Header: React.FC = () => {
                 </div>
               </div>
             )}
+
             {!isLoggedIn && (
               <div className="nav-favorites">
                 <button className="nav-favorites-btn" onClick={() => openAuthModal(true)} aria-label="Избранное">
-                  <FontAwesomeIcon icon={faHeartOutline} />
+                  <FontAwesomeIcon icon={faHeartSolid} />
                 </button>
               </div>
             )}
+
+            {/* Профиль пользователя */}
             {isLoggedIn ? (
-              <div className="user-profile-menu">
-                <button className="user-profile-link" onClick={() => isAdmin ? navigate('/admin') : navigate('/profile')}>
+              <div className="user-profile-menu" ref={userBtnRef}>
+                <button className="user-profile-link" onClick={toggleUserDropdown}>
                   <div className="user-avatar">
                     <FontAwesomeIcon icon={faUser} />
                     {isAdmin && <div className="admin-badge" title="Администратор"><FontAwesomeIcon icon={faShieldAlt} /></div>}
                   </div>
                 </button>
-                {!isAdmin && (
-                  <div className="user-dropdown">
-                    <Link to="/profile" className="dropdown-item" onClick={() => setShowFavorites(false)}>
-                      <FontAwesomeIcon icon={faUser} /><span>Мой профиль</span>
-                    </Link>
-                    <Link to="/favorites" className="dropdown-item" onClick={() => setShowFavorites(false)}>
-                      <FontAwesomeIcon icon={faHeartOutline} /><span>Избранное</span>
-                      {favoritesCount > 0 && <span className="dropdown-badge">{favoritesCount}</span>}
-                    </Link>
-                    <button className="dropdown-item logout" onClick={handleLogout}>
-                      <FontAwesomeIcon icon={faSignOutAlt} /><span>Выйти</span>
-                    </button>
-                  </div>
-                )}
+                <div className="user-dropdown">
+                  <Link to="/profile" className="dropdown-item" onClick={() => setShowFavorites(false)}>
+                    <FontAwesomeIcon icon={faUser} /><span>Профиль</span>
+                  </Link>
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    <FontAwesomeIcon icon={faSignOutAlt} /><span>Выйти</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <>

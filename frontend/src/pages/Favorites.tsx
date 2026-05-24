@@ -10,7 +10,6 @@ import {
   faRulerCombined,
   faStar,
   faTrash,
-  faShare,
   faCalendar,
   faSearch,
   faFilter,
@@ -562,14 +561,7 @@ const Favorites: React.FC = () => {
                           <><FontAwesomeIcon icon={faTrash} /> Удалить выбранное</>
                         )}
                       </button>
-                      <button className="btn-primary-favorit" onClick={() => {
-                        const selectedTitles = favorites.filter(item => selectedItems.has(item.id))
-                          .map(item => `${item.houseType} - ${item.city}, ${item.street}`);
-                        if (selectedTitles.length === 0) return;
-                        console.log('Выбрано для отправки:', selectedTitles);
-                      }}>
-                        <FontAwesomeIcon icon={faShare} /> Поделиться
-                      </button>
+                      
                     </>
                   ) : (
                     <button className="btn-secondary-favorit" onClick={clearAllFavorites}>
@@ -583,14 +575,16 @@ const Favorites: React.FC = () => {
               <div className="controls-left-favorit">
                 <div className="sort-control-favorit">
                   <FontAwesomeIcon icon={faSortAmountDown} />
-                  <select className="sort-select-favorit" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                    <option value="date-desc">Сначала новые</option>
-                    <option value="price-asc">Цена: по возрастанию</option>
-                    <option value="price-desc">Цена: по убыванию</option>
-                    <option value="area-desc">Площадь: большая</option>
-                    <option value="rating-desc">Высокий рейтинг</option>
-                  </select>
-                  <FontAwesomeIcon icon={faChevronDown} className="sort-arrow-favorit" />
+                  <div className="favorites-select-wrapper">
+                    <select className="sort-select-favorit" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                      <option value="date-desc">Сначала новые</option>
+                      <option value="price-asc">Цена: по возрастанию</option>
+                      <option value="price-desc">Цена: по убыванию</option>
+                      <option value="area-desc">Площадь: большая</option>
+                      <option value="rating-desc">Высокий рейтинг</option>
+                    </select>
+                    <FontAwesomeIcon icon={faChevronDown} className="favorites-select-arrow" />
+                  </div>
                 </div>
               </div>
               <div className="controls-right-favorit">

@@ -939,7 +939,7 @@ const Catalog: React.FC = () => {
                     />
                     <FontAwesomeIcon icon={faSun} className="catalog-rent-icon" />
                     <div className="catalog-rent-text">
-                      <strong>Посутчно</strong>
+                      <strong>Посуточно</strong>
                       <small>Аренда на короткий срок</small>
                     </div>
                   </label>

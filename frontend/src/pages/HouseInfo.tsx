@@ -1284,17 +1284,7 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="lightbox-thumbnails">
-                  {images.map((img, index) => (
-                    <div 
-                      key={index}
-                      className={`lightbox-thumbnail ${index === lightboxIndex ? 'active' : ''}`}
-                      onClick={() => setLightboxIndex(index)}
-                    >
-                      <img src={img} alt={`Миниатюра ${index + 1}`} />
-                    </div>
-                  ))}
-                </div>
+                
               </div>
             </div>
           )}

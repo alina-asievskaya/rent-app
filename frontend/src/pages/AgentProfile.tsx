@@ -8,7 +8,7 @@ import {
   faCalendarAlt,
   faPhone,
   faEnvelope,
-  faCheck,
+
   faChevronLeft,
   faSpinner,
   faUser,
@@ -52,6 +52,7 @@ interface AgentProfileData {
   isAgent?: boolean;
   displayName: string;
   portfolioPhotos: string[];
+  price?: number | null;
 }
 
 interface AgentReview {
@@ -398,7 +399,8 @@ const AgentProfile: React.FC = () => {
             isAgent: true,
             position: cleanPositionText(result.data.position || result.data.specialization || "Специалист по недвижимости"),
             displayName: result.data.displayName || "",
-            portfolioPhotos: result.data.portfolioPhotos || []
+            portfolioPhotos: result.data.portfolioPhotos || [],
+            price: result.data.price ?? null
           };
           setAgent(agentWithUserId);
           setPortfolioPhotos(agentWithUserId.portfolioPhotos);
@@ -649,19 +651,27 @@ const AgentProfile: React.FC = () => {
                 <div className="agent-description">
                   {renderDescription(agent.displayName && agent.displayName.trim() !== "" ? agent.displayName : agent.description)}
                 </div>
-                {agent.specialties && agent.specialties.length > 0 && (
-                  <div className="specialties-section">
-                    <h3>Специализация</h3>
-                    <div className="specialties-grid">
-                      {agent.specialties.map((specialty, index) => (
-                        <div key={index} className="specialty-item">
-                          <FontAwesomeIcon icon={faCheck} />
-                          <span>{specialty}</span>
-                        </div>
-                      ))}
+                <div className="price-section">
+                  <h3>Стоимость услуг</h3>
+                  <div className="price-card">
+                    <div className="price-icon">
+                      <i className="nbrb-icon">&#xe901;</i>
+                    </div>
+                    <div className="price-info">
+                      <div className="price-value">
+                        {agent.price && agent.price > 0 ? (
+                          <>от {agent.price.toLocaleString('ru-RU')} <i className="nbrb-icon">&#xe901;</i></>
+                        ) : (
+                          'Не указана'
+                        )}
+                      </div>
+                      <div className="price-label">
+                      за организацию мероприятия 
+                      <span className="price-hint"> (без учёта аренды, кейтеринга и дополнительных услуг)</span>
+                    </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* ===== ИСПРАВЛЕННАЯ КАРУСЕЛЬ – СДВИГ НА ОДНО ФОТО ===== */}

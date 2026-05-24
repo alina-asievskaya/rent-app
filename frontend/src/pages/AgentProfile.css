@@ -576,7 +576,15 @@ body {
   color: var(--text-muted);
   font-style: italic;
 }
-
+.price-info-icon {
+  margin-left: 8px;
+  color: var(--text-muted);
+  cursor: help;
+  font-size: 0.85rem;
+}
+.price-info-icon:hover {
+  color: var(--accent);
+}
 /* Лайтбокс */
 .lightbox-overlay {
   position: fixed;

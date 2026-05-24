@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;          // NEW
 
 namespace RentApp.API.Models
 {
@@ -40,10 +39,14 @@ namespace RentApp.API.Models
         [Column("display_name")]
         public string DisplayName { get; set; } = string.Empty;
 
-        // NEW: поле для хранения JSON-массива URL фотографий портфолио
         [MaxLength(4000)]
         [Column("portfolio_photos")]
         public string PortfolioPhotos { get; set; } = "[]";
+
+        // Исправлено: decimal (не nullable) со значением 0 по умолчанию
+        [Column("price")]
+        [Range(0, 999999)]
+        public decimal Price { get; set; } = 0m;
 
         public User User { get; set; } = null!;
         public ICollection<AgentReview> Reviews { get; set; } = new List<AgentReview>();

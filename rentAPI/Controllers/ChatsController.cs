@@ -16,9 +16,9 @@ namespace RentApp.API.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<ChatsController> _logger;
-        private readonly CloudinaryService _cloudinaryService;
+       private readonly ICloudinaryService _cloudinaryService;
 
-        public ChatsController(AppDbContext context, ILogger<ChatsController> logger, CloudinaryService cloudinaryService)
+        public ChatsController(AppDbContext context, ILogger<ChatsController> logger, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _logger = logger;

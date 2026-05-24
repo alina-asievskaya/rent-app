@@ -270,6 +270,12 @@
   cursor: pointer;
   outline: none;
   min-width: 180px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  
+  /* Для Firefox, чтобы убрать дополнительную стрелку внутри поля */
+  text-overflow: '';
 }
 
 .sort-arrow-favorit {

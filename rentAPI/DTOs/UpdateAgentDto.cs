@@ -23,9 +23,13 @@ namespace RentApp.API.DTOs
         [Range(0, 5)]
         public double? Rating { get; set; }
 
-        [MaxLength(2000)] // увеличьте длину, если нужно много текста
+        [MaxLength(2000)]
         public string? DisplayName { get; set; }
 
         public List<string>? PortfolioPhotos { get; set; }
+
+        // НОВОЕ: цена услуг
+        [Range(0, 999999)]
+        public decimal? Price { get; set; }
     }
 }

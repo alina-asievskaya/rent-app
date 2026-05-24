@@ -4,7 +4,7 @@ import {
   faStar,
   faComments,
   faCalendarAlt,
-  faComment
+  faComment,
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import './AgentCard.css';
@@ -31,6 +31,7 @@ export interface Agent {
     dealSuccessRate: number;
     avgDaysToRent: number;
   };
+  price?: number | null;   // цена услуги
 }
 
 interface AgentCardProps {
@@ -49,7 +50,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
   const navigate = useNavigate();
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Если клик был по кнопке или ссылке – не переходим
     const target = e.target as HTMLElement;
     if (target.closest('.agentcard-btn') || target.closest('a')) return;
     navigate(`/agents/${agent.id}`);
@@ -69,10 +69,15 @@ const AgentCard: React.FC<AgentCardProps> = ({
     return 'отзывов';
   };
 
-  // Общий контент карточки (без специализаций)
+  // Функция форматирования цены с "от" и белорусским значком
+  const formatPrice = (price?: number | null) => {
+    if (!price && price !== 0) return '—';
+    return `от ${price.toLocaleString('ru-RU')}`;
+  };
+
+  // Общий контент карточки (для grid)
   const renderContent = () => (
     <>
-      {/* Шапка с аватаром и должностью */}
       <div className="agentcard-header">
         <div className="agentcard-avatar-container">
           <img 
@@ -87,7 +92,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
         </div>
       </div>
 
-      {/* Рейтинг и отзывы */}
       <div className="agentcard-rating">
         <div className="agentcard-stars">
           <div className="agentcard-stars-container">
@@ -107,8 +111,8 @@ const AgentCard: React.FC<AgentCardProps> = ({
         </div>
       </div>
 
-      {/* Статистика: только опыт */}
       <div className="agentcard-stats">
+        {/* Опыт работы */}
         <div className="agentcard-stat-item">
           <div className="agentcard-stat-icon">
             <FontAwesomeIcon icon={faCalendarAlt} />
@@ -118,9 +122,21 @@ const AgentCard: React.FC<AgentCardProps> = ({
             <div className="agentcard-stat-label">опыт работы</div>
           </div>
         </div>
+
+        {/* Цена услуги с "от" */}
+        <div className="agentcard-stat-item">
+          <div className="agentcard-stat-icon">
+            <i className="nbrb-icon" style={{ fontSize: '1.2rem' }}>&#xe901;</i>
+          </div>
+          <div className="agentcard-stat-content">
+            <div className="agentcard-stat-value">
+              {formatPrice(agent.price)}
+            </div>
+            <div className="agentcard-stat-label">стоимость услуги</div>
+          </div>
+        </div>
       </div>
 
-      {/* Кнопки действий: только "Смотреть профиль" и "Чат" */}
       <div className="agentcard-actions">
         <button 
           className="agentcard-btn agentcard-btn-primary"
@@ -145,7 +161,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
     </>
   );
 
-  // Для list-режима структура немного другая (нет сетки специализаций)
+  // list-режим
   if (viewMode === 'list') {
     return (
       <div className={`agentcard ${viewMode}`} onClick={handleCardClick}>
@@ -193,6 +209,17 @@ const AgentCard: React.FC<AgentCardProps> = ({
                 <div className="agentcard-stat-label">опыт</div>
               </div>
             </div>
+            <div className="agentcard-stat-item">
+              <div className="agentcard-stat-icon">
+                <i className="nbrb-icon" style={{ fontSize: '1.2rem' }}>&#xe901;</i>
+              </div>
+              <div className="agentcard-stat-content">
+                <div className="agentcard-stat-value">
+                  {formatPrice(agent.price)}
+                </div>
+                <div className="agentcard-stat-label">цена услуги</div>
+              </div>
+            </div>
           </div>
 
           <div className="agentcard-actions">
@@ -219,7 +246,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
     );
   }
 
-  // Режим grid
+  // grid-режим
   return (
     <div className={`agentcard ${viewMode}`} onClick={handleCardClick}>
       {renderContent()}

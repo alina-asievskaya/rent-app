@@ -132,6 +132,7 @@ interface ChatApiResponse {
   data?: ChatData[];
 }
 
+// НОВОЕ: интерфейс агента с полем price
 interface AgentProfileData {
   id: number;
   userId: number;
@@ -145,6 +146,7 @@ interface AgentProfileData {
   reviewsCount: number;
   displayName: string;
   portfolioPhotos?: string[];
+  price?: number | null;   // ✅ добавлено
 }
 
 const ProfilePage: React.FC = () => {
@@ -317,7 +319,8 @@ const ProfilePage: React.FC = () => {
         Experience: editedAgent.experience,
         Photo: editedAgent.photo,
         DisplayName: editedAgent.displayName,
-        PortfolioPhotos: portfolioPhotos
+        PortfolioPhotos: portfolioPhotos,
+        Price: editedAgent.price   // ✅ отправляем цену
       };
       
       const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}`, {
@@ -981,6 +984,39 @@ const ProfilePage: React.FC = () => {
                         ) : (
                           <div className="profilepage-stack-value">{agentData.experience} лет</div>
                         )}
+                      </div>
+                    </div>
+                    <div className="profilepage-stack-divider" />
+
+                    {/* ✅ НОВЫЙ БЛОК: Цена услуг */}
+                    <div className="profilepage-info-stack-item">
+                      <div className="profilepage-stack-header">
+                        <label className="profilepage-stack-label">Цена услуги (BYN)</label>
+                        {editingAgent ? (
+                          <input
+                            type="number"
+                            value={editedAgent.price ?? ''}
+                            onChange={(e) => setEditedAgent({ 
+                              ...editedAgent, 
+                              price: e.target.value ? parseFloat(e.target.value) : null 
+                            })}
+                            className="profilepage-stack-input"
+                            placeholder="Например: 500"
+                            step="50"
+                            min="0"
+                          />
+                        ) : (
+                          <div className="profilepage-stack-value">
+                            {agentData.price ? (
+                              <>
+                                {agentData.price.toLocaleString('ru-RU')} <i className="nbrb-icon">&#xe901;</i>
+                              </>
+                            ) : 'Не указана'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="profilepage-stack-hint">
+                        Стоимость организации мероприятия (свадьба, корпоратив, детский праздник)
                       </div>
                     </div>
                     <div className="profilepage-stack-divider" />

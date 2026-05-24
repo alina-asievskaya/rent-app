@@ -36,6 +36,7 @@ interface AgentApiResponse {
   position: string;
   satisfactionRate: number;
   userId?: number;
+  price?: number | null;
 }
 
 interface ApiResponse {
@@ -476,7 +477,8 @@ const Agents: React.FC = () => {
             avgResponseTime: "15 мин",
             dealSuccessRate: 95,
             avgDaysToRent: 7
-          }
+          },
+          price: agent.price ?? null
         }));
         
         setAgents(transformedAgents);

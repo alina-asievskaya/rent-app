@@ -150,25 +150,26 @@ namespace RentApp.API.Data
                     .HasColumnName("reviews_count")
                     .HasDefaultValue(0);
                 
-                // NEW: DisplayName
                 entity.Property(a => a.DisplayName)
                     .HasColumnName("display_name")
                     .HasMaxLength(2000)
                     .HasDefaultValue("");
                 
-                // NEW: PortfolioPhotos (JSON)
                 entity.Property(a => a.PortfolioPhotos)
                     .HasColumnName("portfolio_photos")
                     .HasMaxLength(4000)
                     .HasDefaultValue("[]");
+                
+                // Исправлено: не используем HasDefaultValue, т.к. значение задаётся в свойстве модели
+                entity.Property(a => a.Price)
+                    .HasColumnName("price")
+                    .HasColumnType("decimal(18,2)");
 
-                // Внешний ключ к Users
                 entity.HasOne(a => a.User)
                     .WithOne(u => u.AgentInfo)
                     .HasForeignKey<Agent>(a => a.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Индексы
                 entity.HasIndex(a => a.UserId);
             });
 

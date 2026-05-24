@@ -33,8 +33,11 @@ namespace RentApp.API.DTOs
         [Range(0, 5, ErrorMessage = "Рейтинг должен быть от 0 до 5")]
         public double Rating { get; set; } = 0;
 
-         // НОВОЕ ПОЛЕ (опционально)
         [MaxLength(2000)]
         public string? DisplayName { get; set; }
+
+        // НОВОЕ: цена услуг (по умолчанию 0, если не указана)
+        [Range(0, 999999)]
+        public decimal? Price { get; set; }
     }
 }

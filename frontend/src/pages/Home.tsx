@@ -41,17 +41,13 @@ const partners = [
   { name: "Louis Prima", logo: "https://www.mastercard.by/content/dam/public/mastercardcom/by/ru/offers/mc_by_offers_800x448-ember.jpg" },
 ];
 
-// Функция для безопасного декодирования JWT (base64url -> base64)
 const parseJwt = (token: string) => {
   try {
     const base64Url = token.split('.')[1];
     if (!base64Url) throw new Error('Неверный формат токена');
-    
     let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const pad = base64.length % 4;
-    if (pad) {
-      base64 += '='.repeat(4 - pad);
-    }
+    if (pad) base64 += '='.repeat(4 - pad);
     return JSON.parse(atob(base64));
   } catch (error) {
     console.error('Ошибка декодирования токена:', error);
@@ -59,7 +55,6 @@ const parseJwt = (token: string) => {
   }
 };
 
-// Функция форматирования цены с иконкой
 const formatPriceWithIcon = (price: number, rentType?: string): React.ReactNode => {
   const unit = rentType === 'month' ? 'месяц' : 'сутки';
   const numberStr = price.toLocaleString('ru-RU');
@@ -131,13 +126,21 @@ const Home: React.FC = () => {
     init();
   }, []);
 
+  // Подписка на глобальное обновление избранного
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      loadUserFavorites();
+    };
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    return () => window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+  }, []);
+
   const handleSearchClick = () => navigate("/catalog");
   const handleListProperty = () => {
     const token = localStorage.getItem('token');
     if (token) {
       navigate("/profile?tab=add-property");
     } else {
-      alert("Войдите в систему");
       navigate("/login");
     }
   };
@@ -148,7 +151,6 @@ const Home: React.FC = () => {
     e.stopPropagation();
     const token = localStorage.getItem('token');
     if (!token) {
-      alert("Войдите в систему");
       navigate("/login");
       return;
     }
@@ -156,13 +158,13 @@ const Home: React.FC = () => {
     try {
       const payload = parseJwt(token);
       if (!payload) {
-        alert("Ошибка авторизации. Попробуйте выйти и зайти снова.");
+        console.error('Ошибка авторизации');
         return;
       }
 
       const role = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
       if (role === 'Admin') {
-        alert('Администраторы не могут добавлять в избранное');
+        console.warn('Администраторы не могут добавлять в избранное');
         return;
       }
 
@@ -187,15 +189,16 @@ const Home: React.FC = () => {
           else newSet.add(id);
           return newSet;
         });
+        // Уведомляем другие компоненты (шапку, каталог, избранное, страницу дома)
+        window.dispatchEvent(new CustomEvent('favoritesUpdated'));
       } else if (response.status === 403) {
-        alert('У вас нет прав на это действие');
+        console.warn('У вас нет прав на это действие');
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'Произошла ошибка');
+        console.error(errorData.message || 'Произошла ошибка');
       }
     } catch (error) {
       console.error('Ошибка при работе с избранным:', error);
-      alert('Произошла ошибка. Попробуйте позже.');
     }
   };
 

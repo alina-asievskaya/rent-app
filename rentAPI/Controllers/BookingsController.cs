@@ -47,15 +47,12 @@ namespace RentApp.API.Controllers
                     HouseId = dto.HouseId,
                     UserId = userId,
                     BookingDate = bookingDate,
-                    Approved = false, // Ожидает подтверждения владельцем
+                    Approved = false,
+                    RejectedAt = null,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 _context.Bookings.Add(booking);
-                await _context.SaveChangesAsync();
-
-                
-
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Создано бронирование (ожидает): {BookingId} для дома {HouseId} пользователем {UserId}",
@@ -70,7 +67,7 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/bookings/check-availability?houseId=1&date=2026-04-17
+        // GET: api/bookings/check-availability
         [HttpGet("check-availability")]
         [AllowAnonymous]
         public async Task<IActionResult> CheckAvailability([FromQuery] int houseId, [FromQuery] DateTime date)
@@ -80,7 +77,6 @@ namespace RentApp.API.Controllers
                 var bookingDate = DateOnly.FromDateTime(date);
                 var isAvailable = !await _context.Bookings
                     .AnyAsync(b => b.HouseId == houseId && b.BookingDate == bookingDate && b.Approved);
-
                 return Ok(new { isAvailable });
             }
             catch (Exception ex)
@@ -101,7 +97,6 @@ namespace RentApp.API.Controllers
                     .Where(b => b.HouseId == houseId && b.Approved)
                     .Select(b => b.BookingDate)
                     .ToListAsync();
-
                 return Ok(new { bookedDates = bookedDates.Select(d => d.ToString("yyyy-MM-dd")) });
             }
             catch (Exception ex)
@@ -111,7 +106,7 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/bookings/incoming-requests – заявки для владельца (неподтверждённые)
+        // GET: api/bookings/incoming-requests
         [HttpGet("incoming-requests")]
         public async Task<IActionResult> GetIncomingRequests()
         {
@@ -126,7 +121,7 @@ namespace RentApp.API.Controllers
             var requests = await _context.Bookings
                 .Include(b => b.House).ThenInclude(h => h.Photos)
                 .Include(b => b.User)
-                .Where(b => myHouseIds.Contains(b.HouseId) && !b.Approved)
+                .Where(b => myHouseIds.Contains(b.HouseId) && !b.Approved && b.RejectedAt == null)
                 .OrderByDescending(b => b.CreatedAt)
                 .Select(b => new
                 {
@@ -159,6 +154,7 @@ namespace RentApp.API.Controllers
             if (booking.House.IdOwner != userId) return Forbid();
 
             booking.Approved = true;
+            booking.RejectedAt = null;
             await _context.SaveChangesAsync();
             return Ok(new { success = true });
         }
@@ -175,13 +171,13 @@ namespace RentApp.API.Controllers
             if (booking == null) return NotFound();
             if (booking.House.IdOwner != userId) return Forbid();
 
-            // Удаляем отклонённую заявку
-            _context.Bookings.Remove(booking);
+            booking.Approved = false;
+            booking.RejectedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return Ok(new { success = true });
         }
 
-        // GET: api/bookings/user-bookings – все бронирования текущего пользователя
+        // GET: api/bookings/user-bookings
         [HttpGet("user-bookings")]
         public async Task<IActionResult> GetUserBookings()
         {
@@ -202,6 +198,7 @@ namespace RentApp.API.Controllers
                     MainPhoto = b.House.Photos.FirstOrDefault().Photo,
                     b.BookingDate,
                     b.Approved,
+                    RejectedAt = b.RejectedAt,
                     b.CreatedAt
                 })
                 .ToListAsync();
@@ -209,7 +206,7 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true, data = bookings });
         }
 
-        // GET: api/bookings/history – прошедшие бронирования пользователя
+        // GET: api/bookings/history
         [HttpGet("history")]
         public async Task<IActionResult> GetBookingHistory()
         {
@@ -218,7 +215,8 @@ namespace RentApp.API.Controllers
 
             var pastBookings = await _context.Bookings
                 .Include(b => b.House).ThenInclude(h => h.Photos)
-                .Where(b => b.UserId == userId && b.BookingDate < today)
+                .Where(b => b.UserId == userId &&
+                            (b.BookingDate < today || (b.RejectedAt != null && b.BookingDate >= today)))
                 .OrderByDescending(b => b.BookingDate)
                 .Select(b => new
                 {
@@ -230,6 +228,7 @@ namespace RentApp.API.Controllers
                     MainPhoto = b.House.Photos.FirstOrDefault().Photo,
                     b.BookingDate,
                     b.Approved,
+                    RejectedAt = b.RejectedAt,
                     b.CreatedAt
                 })
                 .ToListAsync();
@@ -237,7 +236,7 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true, data = pastBookings });
         }
 
-        // GET: api/bookings/upcoming – будущие подтверждённые бронирования для владельца
+        // GET: api/bookings/upcoming
         [HttpGet("upcoming")]
         public async Task<IActionResult> GetUpcomingBookings()
         {

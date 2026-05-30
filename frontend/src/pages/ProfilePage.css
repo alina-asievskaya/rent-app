@@ -693,14 +693,17 @@ body {
 }
 .profilepage-ad-item-image {
   width: 280px;
-  position: relative;
+  height: 200px;           /* фиксированная высота */
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
 }
 .profilepage-ad-item-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover;      /* заполняет блок, сохраняя пропорции */
 }
+
 .profilepage-ad-status {
   position: absolute;
   top: 15px;

@@ -1430,3 +1430,109 @@ body:not(.profile-page) .page-content {
   justify-content: center;
   padding: 0 4px;
 }
+/* Уведомления */
+.nav-notifications {
+  position: relative;
+  margin-right: 0.5rem;
+}
+.nav-notifications-btn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+.nav-notifications-btn:hover {
+  background: rgba(45,106,79,0.05);
+}
+.nav-notifications-btn svg {
+  color: #2D6A4F;
+  font-size: 1.25rem;
+}
+.notifications-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #D4AF37;
+  color: #1B4332;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(45,106,79,0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s;
+  z-index: 100;
+  border: 1px solid rgba(212,175,55,0.2);
+  padding: 1rem;
+}
+.notifications-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.notifications-dropdown-header h4 {
+  color: #1B4332;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(212,175,55,0.2);
+  padding-bottom: 0.5rem;
+}
+.notifications-items {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.notification-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.notification-item:hover {
+  background: #F0F7F4;
+}
+.notification-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  background: rgba(45,106,79,0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2D6A4F;
+}
+.notification-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1B4332;
+}
+.notification-time {
+  font-size: 0.75rem;
+  color: #888;
+}
+.notifications-empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: #aaa;
+}

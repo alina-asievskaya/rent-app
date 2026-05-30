@@ -28,10 +28,12 @@ namespace RentApp.API.Models
         public DateOnly BookingDate { get; set; }
 
         [Column("approved")]
-        public bool Approved { get; set; } = true; // пока всегда true
+        public bool Approved { get; set; } = false;  // изменено: по умолчанию false (ожидает)
+
+        [Column("rejected_at")]                     // новое поле
+        public DateTime? RejectedAt { get; set; }    // null - не отклонено
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     }
 }

@@ -16,6 +16,8 @@ import {
   faSignOutAlt,
   faShieldAlt,
   faComment,
+  faBell,
+  faCalendarAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import "./Header.css";
@@ -62,6 +64,48 @@ interface CountResponse {
   message?: string;
 }
 
+interface Notification {
+  id: number;
+  type: 'message' | 'booking' | 'bookingStatus';
+  referenceId: number;
+  text: string;
+  createdAt: string;
+}
+
+interface RawChat {
+  id: number;
+  unread_count?: number;
+  user_name?: string;
+  ad_title?: string;
+  last_message_time?: string;
+}
+
+interface RawBooking {
+  id: number;
+  userName?: string;
+  createdAt?: string;
+}
+
+interface UserBookingStatus {
+  id: number;
+  approved: boolean;
+  rejectedAt: string | null;
+  bookingDate: string;
+  houseAddress: string;
+}
+
+// Тип для сырого ответа от API /bookings/user-bookings
+interface RawUserBooking {
+  id: number;
+  houseId: number;
+  houseAddress: string;
+  mainPhoto: string | null;
+  bookingDate: string;
+  approved: boolean;
+  rejectedAt: string | null;
+  createdAt: string;
+}
+
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -75,7 +119,6 @@ const Header: React.FC = () => {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [favoritesList, setFavoritesList] = useState<FavoriteItem[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const [toasts, setToasts] = useState<Array<{
     id: number;
@@ -100,23 +143,35 @@ const Header: React.FC = () => {
   const isAdmin = userData?.email?.toLowerCase() === 'admin@gmail.com';
   const shouldShowFavorites = isLoggedIn && !isAdmin;
 
+  // State for notifications
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const bellBtnRef = useRef<HTMLButtonElement>(null);
+  const isFetchingNotifications = useRef(false);
+  const isFetchingBookings = useRef(false);
+
+  // State for tracking user's own bookings (to detect status change)
+  const [, setUserBookings] = useState<UserBookingStatus[]>([]);
+
   const favoritesDropdownRef = useRef<HTMLDivElement>(null);
   const userBtnRef = useRef<HTMLDivElement>(null);
   const favoritesBtnRef = useRef<HTMLButtonElement>(null);
   const isFetchingCount = useRef(false);
   const isFetchingList = useRef(false);
-  const isFetchingUnread = useRef(false);
+
+  // ---------- Helper functions ----------
+  const removeToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' | 'info' | 'warning') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
     setTimeout(() => removeToast(id), 5000);
-  }, []);
+  }, [removeToast]);
 
-  const removeToast = useCallback((id: number) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  }, []);
-
+  // ---------- API calls ----------
   const fetchFavoritesCount = useCallback(async () => {
     if (isFetchingCount.current) return;
     try {
@@ -175,55 +230,243 @@ const Header: React.FC = () => {
     }
   }, []);
 
-  const fetchUnreadMessagesCount = useCallback(async () => {
-    if (!isLoggedIn) return;
-    if (isFetchingUnread.current) return;
+  const markChatAsRead = useCallback(async (chatId: number) => {
     try {
-      isFetchingUnread.current = true;
       const token = localStorage.getItem('token');
-      if (!token) return;
-      const response = await fetch('http://localhost:5213/api/chats/unread-count', {
+      await fetch(`http://localhost:5213/api/chats/${chatId}/mark-read`, {
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) setUnreadMessagesCount(data.count);
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  // Fetch user's own bookings to detect status changes
+  const fetchUserBookingsStatus = useCallback(async () => {
+    if (!isLoggedIn || isAdmin) return;
+    if (isFetchingBookings.current) return;
+    try {
+      isFetchingBookings.current = true;
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch('http://localhost:5213/api/bookings/user-bookings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        const newBookings: UserBookingStatus[] = (data.data as RawUserBooking[]).map(b => ({
+          id: b.id,
+          approved: b.approved,
+          rejectedAt: b.rejectedAt,
+          bookingDate: b.bookingDate,
+          houseAddress: b.houseAddress,
+        }));
+        
+        // Compare with previous state to generate notifications
+        setUserBookings(prev => {
+          const prevMap = new Map(prev.map(b => [b.id, b]));
+          const newNotifications: Notification[] = [];
+
+          for (const newB of newBookings) {
+            const oldB = prevMap.get(newB.id);
+            if (!oldB) continue; // new booking – no notification (it's already created by user)
+
+            // Detect change from pending to approved
+            if (oldB.approved === false && oldB.rejectedAt === null && newB.approved === true) {
+              newNotifications.push({
+                id: newB.id + 50000,
+                type: 'bookingStatus',
+                referenceId: newB.id,
+                text: `Ваша заявка на бронирование "${newB.houseAddress}" подтверждена!`,
+                createdAt: new Date().toISOString(),
+              });
+            }
+            // Detect change from pending to rejected
+            else if (oldB.approved === false && oldB.rejectedAt === null && newB.rejectedAt !== null) {
+              newNotifications.push({
+                id: newB.id + 50000,
+                type: 'bookingStatus',
+                referenceId: newB.id,
+                text: `Ваша заявка на бронирование "${newB.houseAddress}" отклонена.`,
+                createdAt: new Date().toISOString(),
+              });
+            }
+          }
+
+          if (newNotifications.length > 0) {
+            setNotifications(prevNotifs => {
+              const existingIds = new Set(prevNotifs.map(n => n.id));
+              const uniqueNew = newNotifications.filter(n => !existingIds.has(n.id));
+              return [...uniqueNew, ...prevNotifs];
+            });
+          }
+
+          return newBookings;
+        });
       }
     } catch (error) {
-      console.error('Ошибка загрузки непрочитанных сообщений:', error);
+      console.error('Ошибка загрузки статуса бронирований', error);
     } finally {
-      isFetchingUnread.current = false;
+      isFetchingBookings.current = false;
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isAdmin]);
+
+  // Main notification fetcher (messages and incoming requests for owner)
+  const fetchNotifications = useCallback(async () => {
+    if (!isLoggedIn || isAdmin) return;
+    if (isFetchingNotifications.current) return;
+    try {
+      isFetchingNotifications.current = true;
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const [chatsRes, bookingsRes] = await Promise.all([
+        fetch('http://localhost:5213/api/chats/my-chats', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5213/api/bookings/incoming-requests', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      const chatsJson = await chatsRes.json();
+      const bookingsJson = await bookingsRes.json();
+
+      const notifs: Notification[] = [];
+      if (chatsJson.success && Array.isArray(chatsJson.data)) {
+        (chatsJson.data as RawChat[]).filter(c => c.unread_count && c.unread_count > 0)
+          .forEach(chat => {
+            notifs.push({
+              id: chat.id,
+              type: 'message',
+              referenceId: chat.id,
+              text: `Новое сообщение от ${chat.user_name || 'пользователя'} по объявлению "${chat.ad_title || ''}"`,
+              createdAt: chat.last_message_time || new Date().toISOString()
+            });
+          });
+      }
+      if (bookingsJson.success && Array.isArray(bookingsJson.data)) {
+        (bookingsJson.data as RawBooking[]).forEach(booking => {
+          notifs.push({
+            id: booking.id + 10000,
+            type: 'booking',
+            referenceId: booking.id,
+            text: `Новая заявка на бронирование от ${booking.userName || 'пользователя'}`,
+            createdAt: booking.createdAt || new Date().toISOString()
+          });
+        });
+      }
+
+      setNotifications(prev => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const newNotifs = notifs.filter(n => !existingIds.has(n.id));
+        return [...newNotifs, ...prev];
+      });
+    } catch (error) {
+      console.error('Ошибка загрузки уведомлений', error);
+    } finally {
+      isFetchingNotifications.current = false;
+    }
+  }, [isLoggedIn, isAdmin]);
 
   const resetUserData = useCallback(() => {
     setFavoritesCount(0);
     setFavoritesList([]);
-    setUnreadMessagesCount(0);
+    setNotifications([]);
+    setUserBookings([]);
   }, []);
 
-  // Главный эффект – загрузка/сброс при входе/выходе
+  // ---------- Effects ----------
+  // Sync login state with localStorage changes
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    const newIsLoggedIn = !!token;
+    
+    if (newIsLoggedIn !== isLoggedIn) {
+      setIsLoggedIn(newIsLoggedIn);
+      if (userStr) {
+        setUserData(JSON.parse(userStr));
+      } else {
+        setUserData(null);
+      }
+    }
+    setIsProfilePage(location.pathname === '/profile');
+  }, [location.pathname, isLoggedIn]);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      setIsLoggedIn(!!token);
+      if (userStr) setUserData(JSON.parse(userStr));
+      else setUserData(null);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    const handleUserLoggedIn = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        setUserData(JSON.parse(userStr));
+      }
+    };
+    window.addEventListener('userLoggedIn', handleUserLoggedIn);
+    return () => window.removeEventListener('userLoggedIn', handleUserLoggedIn);
+  }, []);
+
   useEffect(() => {
     if (isLoggedIn && !isAdmin) {
       fetchFavoritesCount();
-      fetchUnreadMessagesCount();
+      fetchNotifications();
+      fetchUserBookingsStatus();
     } else {
       resetUserData();
     }
-  }, [isLoggedIn, isAdmin, fetchFavoritesCount, fetchUnreadMessagesCount, resetUserData]);
+  }, [isLoggedIn, isAdmin, fetchFavoritesCount, fetchNotifications, fetchUserBookingsStatus, resetUserData]);
 
-  // Открытие дропдауна – подгружаем список, если пуст
+  // Periodic refresh
+  useEffect(() => {
+    if (!isLoggedIn || isAdmin) return;
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchUserBookingsStatus();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn, isAdmin, fetchNotifications, fetchUserBookingsStatus]);
+
+  // Listen for explicit events from ProfilePage
+  useEffect(() => {
+    const handleNotificationsUpdate = () => {
+      if (isLoggedIn && !isAdmin) {
+        fetchNotifications();
+      }
+    };
+    const handleBookingsStatusChange = () => {
+      if (isLoggedIn && !isAdmin) {
+        fetchUserBookingsStatus();
+        fetchNotifications();
+      }
+    };
+    window.addEventListener('notificationsUpdate', handleNotificationsUpdate);
+    window.addEventListener('bookingsStatusChanged', handleBookingsStatusChange);
+    return () => {
+      window.removeEventListener('notificationsUpdate', handleNotificationsUpdate);
+      window.removeEventListener('bookingsStatusChanged', handleBookingsStatusChange);
+    };
+  }, [isLoggedIn, isAdmin, fetchNotifications, fetchUserBookingsStatus]);
+
+  // Load favorites list when dropdown opens
   useEffect(() => {
     if (showFavorites && isLoggedIn && !isAdmin && favoritesList.length === 0) {
       fetchFavoritesList();
     }
   }, [showFavorites, isLoggedIn, isAdmin, favoritesList.length, fetchFavoritesList]);
 
-  useEffect(() => {
-    setIsProfilePage(location.pathname === '/profile');
-  }, [location]);
-
-  // Слушаем глобальное обновление избранного
   useEffect(() => {
     const handleFavoritesUpdate = () => {
       if (isLoggedIn && !isAdmin) fetchFavoritesCount();
@@ -232,7 +475,7 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
   }, [isLoggedIn, isAdmin, fetchFavoritesCount]);
 
-  // Закрытие дропдаунов
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showFavorites && 
@@ -241,6 +484,13 @@ const Header: React.FC = () => {
           favoritesBtnRef.current &&
           !favoritesBtnRef.current.contains(event.target as Node)) {
         setShowFavorites(false);
+      }
+      if (showNotifications &&
+          notificationRef.current &&
+          !notificationRef.current.contains(event.target as Node) &&
+          bellBtnRef.current &&
+          !bellBtnRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
       if (userBtnRef.current && !userBtnRef.current.contains(event.target as Node)) {
         const dropdown = userBtnRef.current.querySelector('.user-dropdown');
@@ -251,6 +501,7 @@ const Header: React.FC = () => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (showFavorites) setShowFavorites(false);
+        if (showNotifications) setShowNotifications(false);
         if (userBtnRef.current) {
           const dropdown = userBtnRef.current.querySelector('.user-dropdown');
           if (dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show');
@@ -264,7 +515,21 @@ const Header: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEsc);
     };
-  }, [showFavorites]);
+  }, [showFavorites, showNotifications]);
+
+  // ---------- UI action handlers ----------
+  const openAuthModal = useCallback((isLogin: boolean) => {
+    setIsLoginForm(isLogin);
+    setShowAuthModal(true);
+    setFormData({
+      email: "",
+      fio: "",
+      password: "",
+      confirmPassword: "",
+      phone_num: ""
+    });
+    setShowFavorites(false);
+  }, []);
 
   const toggleFavorites = useCallback(() => {
     if (!isLoggedIn) {
@@ -276,7 +541,7 @@ const Header: React.FC = () => {
       return;
     }
     setShowFavorites(prev => !prev);
-  }, [isLoggedIn, isAdmin, showToast]);
+  }, [isLoggedIn, isAdmin, showToast, openAuthModal]);
 
   const removeFromFavorites = useCallback(async (houseId: number) => {
     try {
@@ -296,7 +561,6 @@ const Header: React.FC = () => {
           setFavoritesCount(prev => prev - 1);
           if (favoritesCount - 1 === 0) setShowFavorites(false);
           showToast('Удалено из избранного', 'success');
-          // Уведомляем другие компоненты (каталог) об изменении
           window.dispatchEvent(new CustomEvent('favoritesUpdated'));
         }
       } else {
@@ -335,19 +599,6 @@ const Header: React.FC = () => {
     }
   }, [showToast]);
 
-  const openAuthModal = useCallback((isLogin: boolean) => {
-    setIsLoginForm(isLogin);
-    setShowAuthModal(true);
-    setFormData({
-      email: "",
-      fio: "",
-      password: "",
-      confirmPassword: "",
-      phone_num: ""
-    });
-    setShowFavorites(false);
-  }, []);
-
   const closeAuthModal = useCallback(() => setShowAuthModal(false), []);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -375,7 +626,8 @@ const Header: React.FC = () => {
         
         if (data.data.email.toLowerCase() !== 'admin@gmail.com') {
           await fetchFavoritesCount();
-          await fetchUnreadMessagesCount();
+          await fetchNotifications();
+          await fetchUserBookingsStatus();
         }
         
         flushSync(() => {});
@@ -387,6 +639,7 @@ const Header: React.FC = () => {
           navigate('/profile');
           showToast('Вход выполнен успешно!', 'success');
         }
+        window.dispatchEvent(new CustomEvent('userLoggedIn'));
       } else {
         if (data.message?.toLowerCase().includes('неверный email или пароль')) {
           showToast('Неверный email или пароль', 'error');
@@ -400,7 +653,7 @@ const Header: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData.email, formData.password, fetchFavoritesCount, fetchUnreadMessagesCount, navigate, showToast]);
+  }, [formData.email, formData.password, fetchFavoritesCount, fetchNotifications, fetchUserBookingsStatus, navigate, showToast]);
 
   const handleRegister = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -449,11 +702,13 @@ const Header: React.FC = () => {
           setFormData({ email: "", fio: "", password: "", confirmPassword: "", phone_num: "" });
           
           await fetchFavoritesCount();
-          await fetchUnreadMessagesCount();
+          await fetchNotifications();
+          await fetchUserBookingsStatus();
           flushSync(() => {});
           
           navigate('/profile');
           showToast('Регистрация прошла успешно! Добро пожаловать!', 'success');
+          window.dispatchEvent(new CustomEvent('userLoggedIn'));
         } else {
           showToast("Регистрация прошла успешно, но не удалось автоматически войти.", "info");
         }
@@ -470,7 +725,7 @@ const Header: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, fetchFavoritesCount, fetchUnreadMessagesCount, navigate, showToast]);
+  }, [formData, fetchFavoritesCount, fetchNotifications, fetchUserBookingsStatus, navigate, showToast]);
 
   const switchToRegister = useCallback(() => {
     setIsLoginForm(false);
@@ -489,13 +744,11 @@ const Header: React.FC = () => {
     setUserData(null);
     resetUserData();
     setShowFavorites(false);
+    setShowNotifications(false);
     navigate('/');
     showToast('Вы вышли из системы', 'info');
+    window.dispatchEvent(new CustomEvent('userLoggedIn'));
   }, [navigate, showToast, resetUserData]);
-
-  const goToChats = useCallback(() => {
-    navigate('/profile?tab=chats');
-  }, [navigate]);
 
   const toggleUserDropdown = useCallback(() => {
     if (userBtnRef.current) {
@@ -503,6 +756,19 @@ const Header: React.FC = () => {
       if (dropdown) dropdown.classList.toggle('show');
     }
   }, []);
+
+  const handleNotificationClick = useCallback(async (notification: Notification) => {
+    setShowNotifications(false);
+    if (notification.type === 'message') {
+      await markChatAsRead(notification.referenceId);
+      navigate(`/chat/${notification.referenceId}`);
+      fetchNotifications();
+    } else if (notification.type === 'booking') {
+      navigate('/profile?tab=requests');
+    } else if (notification.type === 'bookingStatus') {
+      navigate('/profile?tab=bookings');
+    }
+  }, [navigate, markChatAsRead, fetchNotifications]);
 
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
   const headerClass = `header ${isProfilePage ? 'header-profile' : ''}`;
@@ -528,6 +794,7 @@ const Header: React.FC = () => {
     return description.substring(0, maxLength) + '...';
   }, []);
 
+  // ---------- Render ----------
   return (
     <>
       <header className={headerClass}>
@@ -541,23 +808,68 @@ const Header: React.FC = () => {
           <ul className="nav-links">
             <li><Link to="/" className={isActive("/") ? "active" : ""}>Главная</Link></li>
             <li><Link to="/catalog" className={isActive("/catalog") ? "active" : ""}>Каталог</Link></li>
-            <li><Link to="/agents" className={isActive("/agents") ? "active" : ""}>Услуги</Link></li>
+            <li><Link to="/agents" className={isActive("/agents") ? "active" : ""}>Организаторы</Link></li>
             <li><Link to="/about" className={isActive("/about") ? "active" : ""}>О нас</Link></li>
           </ul>
           <div className="nav-auth">
-            {/* Иконка сообщений */}
+            {/* Notifications bell */}
             {isLoggedIn && !isAdmin && (
-              <div className="nav-messages">
-                <button className="nav-messages-btn" onClick={goToChats} aria-label="Сообщения">
-                  <FontAwesomeIcon icon={faComment} />
-                  {unreadMessagesCount > 0 && (
-                    <span className="messages-badge">{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</span>
+              <div className="nav-notifications">
+                <button
+                  ref={bellBtnRef}
+                  className="nav-notifications-btn"
+                  onClick={() => setShowNotifications(prev => !prev)}
+                  aria-label="Уведомления"
+                >
+                  <FontAwesomeIcon icon={faBell} />
+                  {notifications.length > 0 && (
+                    <span className="notifications-badge">
+                      {notifications.length > 99 ? '99+' : notifications.length}
+                    </span>
                   )}
                 </button>
+                <div
+                  ref={notificationRef}
+                  className={`notifications-dropdown ${showNotifications ? 'show' : ''}`}
+                >
+                  <div className="notifications-dropdown-header">
+                    <h4>Уведомления ({notifications.length})</h4>
+                  </div>
+                  <div className="notifications-items">
+                    {notifications.length === 0 ? (
+                      <div className="notifications-empty">
+                        <FontAwesomeIcon icon={faBell} />
+                        <p>Новых уведомлений нет</p>
+                      </div>
+                    ) : (
+                      notifications.map(notification => (
+                        <div
+                          key={notification.id}
+                          className="notification-item"
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <div className="notification-icon">
+                            {notification.type === 'message' ? (
+                              <FontAwesomeIcon icon={faComment} />
+                            ) : (
+                              <FontAwesomeIcon icon={faCalendarAlt} />
+                            )}
+                          </div>
+                          <div className="notification-content">
+                            <p>{notification.text}</p>
+                            <span className="notification-time">
+                              {new Date(notification.createdAt).toLocaleDateString('ru-RU')}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Избранное – всегда зелёное сердечко faHeartSolid */}
+            {/* Favorites */}
             {shouldShowFavorites && (
               <div className="nav-favorites">
                 <button 
@@ -644,7 +956,7 @@ const Header: React.FC = () => {
               </div>
             )}
 
-            {/* Профиль пользователя */}
+            {/* User menu */}
             {isLoggedIn ? (
               <div className="user-profile-menu" ref={userBtnRef}>
                 <button className="user-profile-link" onClick={toggleUserDropdown}>
@@ -677,6 +989,7 @@ const Header: React.FC = () => {
         </nav>
       </header>
 
+      {/* Toast notifications */}
       <div className="toast-container">
         {toasts.map(toast => (
           <div key={toast.id} className={`toast toast-${toast.type}`} onClick={() => removeToast(toast.id)}>
@@ -692,6 +1005,7 @@ const Header: React.FC = () => {
         ))}
       </div>
 
+      {/* Auth modal */}
       {showAuthModal && (
         <div className="auth-modal-overlay" onClick={closeAuthModal}>
           <div className="auth-modal-content" onClick={e => e.stopPropagation()}>

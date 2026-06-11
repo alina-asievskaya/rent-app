@@ -22,7 +22,10 @@ namespace RentApp.API.Data
         public DbSet<Chat> Chats { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<Booking> Bookings { get; set; }
-        
+        public DbSet<ServiceRequest> ServiceRequests { get; set; }
+         public DbSet<CateringOwner> CateringOwners { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<MenuItem> MenuItems { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -520,6 +523,30 @@ namespace RentApp.API.Data
 
                 entity.HasIndex(c => c.IdHouse);
             });
+
+            modelBuilder.Entity<ServiceRequest>(entity =>
+            {
+                entity.ToTable("ServiceRequests");
+                entity.HasKey(s => s.Id);
+                entity.Property(s => s.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(s => s.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(s => s.ServiceType).HasColumnName("service_type").HasMaxLength(50).IsRequired();
+                entity.Property(s => s.CompanyName).HasColumnName("company_name").HasMaxLength(200).IsRequired();
+                entity.Property(s => s.City).HasColumnName("city").HasMaxLength(100).IsRequired();
+                entity.Property(s => s.Description).HasColumnName("description").HasMaxLength(2000).IsRequired();
+                entity.Property(s => s.Phone).HasColumnName("phone").HasMaxLength(20).IsRequired();
+                entity.Property(s => s.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("pending");
+                entity.Property(s => s.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+
+                entity.HasOne(s => s.User)
+                    .WithMany()
+                    .HasForeignKey(s => s.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(s => s.UserId);
+                entity.HasIndex(s => s.Status);
+                entity.HasIndex(s => s.CreatedAt);
+            });
             
             modelBuilder.Entity<Chat>(entity =>
             {
@@ -638,6 +665,73 @@ namespace RentApp.API.Data
                 entity.HasIndex(m => m.CreatedAt);
                 entity.HasIndex(m => m.IsRead);
                 entity.HasIndex(m => new { m.ChatId, m.IsRead, m.CreatedAt });
+            });
+
+            // Конфигурация MenuItem
+            modelBuilder.Entity<MenuItem>(entity =>
+            {
+                entity.ToTable("MenuItems");
+                entity.HasKey(m => m.Id);
+                entity.Property(m => m.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(m => m.CateringOwnerId).HasColumnName("catering_owner_id").IsRequired();
+                entity.Property(m => m.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(m => m.Description).HasColumnName("description").HasMaxLength(500);
+                entity.Property(m => m.Price).HasColumnName("price").HasColumnType("decimal(18,2)");
+                entity.Property(m => m.WeightGrams).HasColumnName("weight_grams");
+                entity.Property(m => m.PhotoUrl).HasColumnName("photo_url").HasMaxLength(500);
+                entity.Property(m => m.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+
+                entity.HasOne(m => m.CateringOwner)
+                    .WithMany()
+                    .HasForeignKey(m => m.CateringOwnerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(m => m.CateringOwnerId);
+            });
+
+            modelBuilder.Entity<CateringOwner>(entity =>
+            {
+                entity.ToTable("CateringOwners");
+                entity.HasKey(co => co.Id);
+                entity.Property(co => co.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(co => co.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(co => co.CompanyName).HasColumnName("company_name").HasMaxLength(200).IsRequired();
+                entity.Property(co => co.City).HasColumnName("city").HasMaxLength(100).IsRequired();
+                entity.Property(co => co.Description).HasColumnName("description").HasMaxLength(2000).IsRequired();
+                entity.Property(co => co.Phone).HasColumnName("phone").HasMaxLength(20);
+                entity.Property(co => co.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(co => co.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
+                entity.HasOne(co => co.User)
+                    .WithMany()
+                    .HasForeignKey(co => co.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(co => co.UserId);
+            });
+
+            // НОВАЯ КОНФИГУРАЦИЯ ДЛЯ Notification
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.ToTable("Notifications");
+                entity.HasKey(n => n.Id);
+                entity.Property(n => n.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(n => n.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(n => n.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
+                entity.Property(n => n.ReferenceId).HasColumnName("reference_id");
+                entity.Property(n => n.Text).HasColumnName("text").HasMaxLength(500).IsRequired();
+                entity.Property(n => n.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(n => n.IsRead).HasColumnName("is_read").HasDefaultValue(false);
+
+                entity.HasOne(n => n.User)
+                    .WithMany()
+                    .HasForeignKey(n => n.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(n => n.UserId);
+                entity.HasIndex(n => n.Type);
+                entity.HasIndex(n => n.CreatedAt);
+                entity.HasIndex(n => n.IsRead);
             });
 
             modelBuilder.Entity<User>(entity =>

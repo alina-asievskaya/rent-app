@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("rentAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5b412838858dda39ff43af4804ccf2d2d60fba02")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+031e5dfef15da515768a7f4574a5c5cae1cf79d5")]
 [assembly: System.Reflection.AssemblyProductAttribute("rentAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("rentAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

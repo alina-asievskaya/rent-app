@@ -1,0 +1,181 @@
+/* ===== Модальное окно предложения кейтеринга (изолированные стили) ===== */
+
+.offer-service-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: offerServiceFadeIn 0.2s ease;
+}
+
+.offer-service-modal-content {
+  background: var(--white);
+  border-radius: var(--radius);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 40px rgba(0, 0, 0, 0.2);
+  animation: offerServiceSlideDown 0.3s ease;
+}
+
+.offer-service-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.offer-service-modal-header h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  color: var(--text-dark);
+  font-size: 24px;
+}
+
+.offer-service-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: var(--transition);
+  padding: 4px 8px;
+}
+
+.offer-service-modal-close:hover {
+  color: var(--danger);
+}
+
+.offer-service-modal-content form {
+  padding: 24px;
+}
+
+.offer-service-form-group {
+  margin-bottom: 20px;
+}
+
+.offer-service-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-dark);
+  font-family: var(--font-sans);
+}
+
+.offer-service-form-group input,
+.offer-service-form-group select,
+.offer-service-form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--white);
+  font-family: var(--font-sans);
+  transition: var(--transition);
+}
+
+.offer-service-form-group input:focus,
+.offer-service-form-group select:focus,
+.offer-service-form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(27, 77, 60, 0.1);
+}
+
+.offer-service-form-group small {
+  display: block;
+  margin-top: 6px;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.offer-service-modal-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  margin-top: 32px;
+}
+
+/* Кнопки (изолированные, не зависят от ProfilePage) */
+.offer-service-btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offer-service-btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.offer-service-btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.offer-service-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  padding: 12px 24px;
+  border-radius: 40px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-dark);
+}
+
+.offer-service-btn-secondary:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .offer-service-modal-actions {
+    flex-direction: column;
+  }
+  .offer-service-modal-actions button {
+    width: 100%;
+  }
+}
+
+/* Анимации – изолированные имена */
+@keyframes offerServiceFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes offerServiceSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

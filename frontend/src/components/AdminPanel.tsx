@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faConciergeBell, faCheck, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 import './AdminPanel.css';
 
 interface User {
@@ -40,6 +42,20 @@ interface Feedback {
   };
 }
 
+interface ServiceRequest {
+  id: number;
+  userId: number;
+  userFio: string;
+  userEmail: string;
+  phone: string;
+  serviceType: string;
+  companyName: string;
+  city: string;
+  description: string;
+  status: string;
+  createdAt: string;
+}
+
 interface AdminStats {
   totalUsers: number;
   totalAgents: number;
@@ -48,10 +64,11 @@ interface AdminStats {
 }
 
 const AdminPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'agents' | 'feedback'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'agents' | 'feedback' | 'services'>('stats');
   const [users, setUsers] = useState<User[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [adminStats, setAdminStats] = useState<AdminStats>({
@@ -180,13 +197,39 @@ const AdminPanel: React.FC = () => {
     }
   }, [token, API_BASE_URL]);
 
+  const fetchServiceRequests = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/service-requests`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleLogoutConfirmation();
+          return;
+        }
+        throw new Error(`Service requests fetch failed: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.success) {
+        setServiceRequests(data.data);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки заявок на услуги:', error);
+      showToast('Ошибка загрузки заявок', 'error');
+    }
+  }, [token, API_BASE_URL]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const endpoints: Record<string, string> = {
         users: `${API_BASE_URL}/api/admin/users`,
         agents: `${API_BASE_URL}/api/admin/agents`,
-        feedback: `${API_BASE_URL}/api/admin/feedback`
+        feedback: `${API_BASE_URL}/api/admin/feedback`,
+        services: `${API_BASE_URL}/api/admin/service-requests`
       };
 
       if (activeTab === 'stats') {
@@ -220,6 +263,7 @@ const AdminPanel: React.FC = () => {
       if (activeTab === 'users') setUsers(data.data);
       if (activeTab === 'agents') setAgents(data.data);
       if (activeTab === 'feedback') setFeedback(data.data);
+      if (activeTab === 'services') setServiceRequests(data.data);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
       showToast('Ошибка загрузки данных', 'error');
@@ -358,6 +402,58 @@ const AdminPanel: React.FC = () => {
         } catch (error) {
           console.error('Ошибка удаления обращения:', error);
           showToast('Ошибка при удалении обращения', 'error');
+        }
+      }
+    );
+  };
+
+  // НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ ЗАЯВКАМИ НА УСЛУГИ
+  const handleUpdateServiceStatus = async (id: number, newStatus: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/service-requests/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast(`Статус изменён на ${newStatus === 'approved' ? 'одобрено' : 'отклонено'}`, 'success');
+        fetchServiceRequests(); // обновляем список
+      } else {
+        showToast(data.message || 'Ошибка обновления статуса', 'error');
+      }
+    } catch (error) {
+      console.error('Ошибка обновления статуса:', error);
+      showToast('Ошибка соединения', 'error');
+    }
+  };
+
+  const handleDeleteServiceRequest = (id: number) => {
+    showConfirmation(
+      'Удаление заявки',
+      'Вы уверены, что хотите удалить эту заявку?',
+      'danger',
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/admin/service-requests/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const data = await response.json();
+          if (data.success) {
+            showToast('Заявка удалена', 'success');
+            setServiceRequests(prev => prev.filter(req => req.id !== id));
+          } else {
+            showToast(data.message || 'Ошибка удаления', 'error');
+          }
+        } catch (error) {
+          console.error('Ошибка удаления заявки:', error);
+          showToast('Ошибка соединения', 'error');
         }
       }
     );
@@ -607,6 +703,16 @@ const AdminPanel: React.FC = () => {
               <i className="adminpage-nav-icon adminpage-feedback-icon"></i>
               <span>Обращения</span>
               <span className="adminpage-nav-badge">{adminStats.totalFeedback}</span>
+            </button>
+
+            {/* Кнопка для кейтеринга (ранее "Услуги") */}
+            <button 
+              className={`adminpage-nav-item ${activeTab === 'services' ? 'adminpage-nav-active' : ''}`}
+              onClick={() => setActiveTab('services')}
+            >
+              <FontAwesomeIcon icon={faConciergeBell} className="adminpage-nav-icon" />
+              <span>Кейтеринг</span>
+              <span className="adminpage-nav-badge">{serviceRequests.length}</span>
             </button>
             
             <div className="adminpage-nav-divider"></div>
@@ -1028,7 +1134,6 @@ const AdminPanel: React.FC = () => {
                             >
                               <i className="fas fa-trash"></i> Удалить
                             </button>
-                            {/* Кнопка "Редактировать" удалена по требованию */}
                           </div>
                         </div>
                       ))}
@@ -1104,6 +1209,106 @@ const AdminPanel: React.FC = () => {
                     </div>
                     <h3>Нет обращений</h3>
                     <p>Пользователи еще не отправляли обращения в поддержку</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Вкладка ТОЛЬКО КЕЙТЕРИНГ - убрана колонка "Услуга" */}
+          {activeTab === 'services' && (
+            <div className="adminpage-tab">
+              <div className="adminpage-header">
+                <div className="adminpage-header-title">
+                  <h2>Заявки на кейтеринг</h2>
+                  <p>Предложения от пользователей (кейтеринг)</p>
+                </div>
+              </div>
+              <div className="adminpage-table-container">
+                {loading ? (
+                  <div className="adminpage-loading-inner">
+                    <div className="adminpage-loading-spinner adminpage-small"></div>
+                    <p>Загрузка заявок...</p>
+                  </div>
+                ) : serviceRequests.length === 0 ? (
+                  <div className="adminpage-empty">
+                    <div className="adminpage-empty-illustration">
+                      <FontAwesomeIcon icon={faConciergeBell} size="3x" />
+                    </div>
+                    <h3>Нет заявок</h3>
+                    <p>Пользователи пока не отправляли предложения по кейтерингу</p>
+                  </div>
+                ) : (
+                  <div className="adminpage-table-wrapper">
+                    <table className="adminpage-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Пользователь</th>
+                          <th>Телефон</th>
+                          <th>Компания</th>
+                          <th>Город</th>
+                          <th>Описание</th>
+                          <th>Дата</th>
+                          <th>Статус</th>
+                          <th>Действия</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {serviceRequests.map(req => (
+                          <tr key={req.id}>
+                            <td className="adminpage-table-id">#{req.id}</td>
+                            <td>
+                              {req.userFio}<br/>
+                              <small>{req.userEmail}</small>
+                            </td>
+                            <td>{req.phone}</td>
+                            <td>{req.companyName}</td>
+                            <td>{req.city}</td>
+                            <td className="adminpage-description-cell">{req.description.substring(0, 80)}...</td>
+                            <td>{new Date(req.createdAt).toLocaleDateString()}</td>
+                            <td>
+                              <span className={`adminpage-status-badge ${
+                                req.status === 'approved' ? 'adminpage-status-approved' :
+                                req.status === 'rejected' ? 'adminpage-status-rejected' :
+                                'adminpage-status-pending'
+                              }`}>
+                                {req.status === 'approved' ? 'Одобрено' : req.status === 'rejected' ? 'Отклонено' : 'На рассмотрении'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="adminpage-table-actions">
+                                {req.status === 'pending' && (
+                                  <>
+                                    <button 
+                                      className="adminpage-action-btn adminpage-action-success"
+                                      onClick={() => handleUpdateServiceStatus(req.id, 'approved')}
+                                      title="Одобрить"
+                                    >
+                                      <FontAwesomeIcon icon={faCheck} />
+                                    </button>
+                                    <button 
+                                      className="adminpage-action-btn adminpage-action-warning"
+                                      onClick={() => handleUpdateServiceStatus(req.id, 'rejected')}
+                                      title="Отклонить"
+                                    >
+                                      <FontAwesomeIcon icon={faTimes} />
+                                    </button>
+                                  </>
+                                )}
+                                <button 
+                                  className="adminpage-action-btn adminpage-action-danger"
+                                  onClick={() => handleDeleteServiceRequest(req.id)}
+                                  title="Удалить заявку"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

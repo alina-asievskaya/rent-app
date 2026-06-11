@@ -37,6 +37,8 @@ namespace RentApp.API.Models
         [Column("id_agent")]
         public bool Id_agent { get; set; } = false;
 
+        
+
 
         public Agent? AgentInfo { get; set; }
     }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentApp.API.Data;
 
@@ -11,9 +12,11 @@ using RentApp.API.Data;
 namespace rentAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611115320_AddCateringOwnerAndNotifications")]
+    partial class AddCateringOwnerAndNotifications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -604,58 +607,6 @@ namespace rentAPI.Migrations
                     b.ToTable("Houses_info", (string)null);
                 });
 
-            modelBuilder.Entity("RentApp.API.Models.MenuItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CateringOwnerId")
-                        .HasColumnType("int")
-                        .HasColumnName("catering_owner_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("description");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("PhotoUrl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("photo_url");
-
-                    b.Property<decimal?>("Price")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("price");
-
-                    b.Property<int?>("WeightGrams")
-                        .HasColumnType("int")
-                        .HasColumnName("weight_grams");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CateringOwnerId");
-
-                    b.ToTable("MenuItems", (string)null);
-                });
-
             modelBuilder.Entity("RentApp.API.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -1099,17 +1050,6 @@ namespace rentAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("House");
-                });
-
-            modelBuilder.Entity("RentApp.API.Models.MenuItem", b =>
-                {
-                    b.HasOne("RentApp.API.Models.CateringOwner", "CateringOwner")
-                        .WithMany()
-                        .HasForeignKey("CateringOwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CateringOwner");
                 });
 
             modelBuilder.Entity("RentApp.API.Models.Message", b =>

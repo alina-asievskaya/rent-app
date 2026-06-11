@@ -1332,3 +1332,25 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+.adminpage-description-cell {
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.adminpage-status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+.adminpage-status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+.adminpage-status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+.adminpage-services-icon::before {
+    content: "\f0f5"; /* иконка консьерж-колокольчик, если используете Font Awesome через псевдоэлементы */
+}

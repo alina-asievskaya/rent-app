@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -6,9 +6,12 @@ import {
   faHistory, faHeadset, faSignOutAlt, faEdit, faTimes,
   faSave, faPlus, faPaperPlane, faEraser, faCheckDouble,
   faCheck, faTrash, faBed, faRulerCombined, faMapMarkerAlt,
-  faPause, faPlay, faClock, faCheckCircle, faTag, faUpload
+  faPause, faPlay, faClock, faCheckCircle, faTag, faUpload,
+  faUtensils
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
+import OfferServiceModal from '../components/OfferServiceModal';
+import CateringMenu from '../components/CateringMenu';
 
 // ==================== Интерфейсы ====================
 interface UserData {
@@ -161,7 +164,7 @@ interface RawUserBooking {
   createdAt: string;
 }
 
-type ProfileTab = 'profile' | 'ads' | 'chats' | 'support' | 'requests' | 'bookings' | 'history';
+type ProfileTab = 'profile' | 'ads' | 'chats' | 'support' | 'requests' | 'bookings' | 'history' | 'menu';
 
 // ==================== Вспомогательные функции ====================
 const safeFormatDate = (dateStr: string): string => {
@@ -172,7 +175,7 @@ const safeFormatDate = (dateStr: string): string => {
 };
 
 const isValidTab = (tab: string): tab is ProfileTab => {
-  return ['profile', 'ads', 'chats', 'support', 'requests', 'bookings', 'history'].includes(tab);
+  return ['profile', 'ads', 'chats', 'support', 'requests', 'bookings', 'history', 'menu'].includes(tab);
 };
 
 // ==================== Компонент ====================
@@ -183,7 +186,6 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' }>({ text: '', type: 'success' });
   
-  // Восстановление вкладки из sessionStorage – при новом входе всегда 'profile'
   const [activeTab, setActiveTab] = useState<ProfileTab>(() => {
     const saved = sessionStorage.getItem('profileLastTab');
     return isValidTab(saved || '') ? saved as ProfileTab : 'profile';
@@ -211,6 +213,8 @@ const ProfilePage: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [portfolioPhotos, setPortfolioPhotos] = useState<string[]>([]);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [isCateringOwner, setIsCateringOwner] = useState(false);
 
   const navigate = useNavigate();
 
@@ -247,6 +251,32 @@ const ProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const refreshCateringStatus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch('http://localhost:5213/api/catering/my-status', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const newStatus = data.isOwner;
+        if (newStatus !== isCateringOwner) {
+          setIsCateringOwner(newStatus);
+          if (newStatus === true) {
+            setMessage({ text: 'Поздравляем! Ваша заявка на кейтеринг одобрена. Теперь вам доступно управление меню.', type: 'success' });
+            setTimeout(() => setMessage({ text: '', type: 'success' }), 5000);
+            if (activeTab !== 'profile' && activeTab !== 'requests' && activeTab !== 'menu' && activeTab !== 'support') {
+              setActiveTab('profile');
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка обновления статуса кейтеринга:', error);
+    }
+  }, [isCateringOwner, activeTab]);
 
   const fetchAgentProfile = async () => {
     try {
@@ -576,7 +606,6 @@ const ProfilePage: React.FC = () => {
         fetchUpcomingBookings();
         setMessage({ text: 'Заявка подтверждена', type: 'success' });
         setTimeout(() => setMessage({ text: '', type: 'success' }), 3000);
-        // Оповещаем Header об изменении статуса бронирований
         window.dispatchEvent(new CustomEvent('bookingsStatusChanged'));
         window.dispatchEvent(new CustomEvent('notificationsUpdate'));
         if (activeTab === 'bookings') fetchUserBookings();
@@ -742,7 +771,6 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleViewAndEditAd = (adId: number) => {
-    // Сохраняем текущую вкладку перед уходом
     sessionStorage.setItem('profileLastTab', activeTab);
     navigate(`/edit-house/${adId}`);
   };
@@ -792,22 +820,55 @@ const ProfilePage: React.FC = () => {
 
   const translateTopic = (topic: string) => topicTranslations[topic] || topic;
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('profileLastTab');
+    window.dispatchEvent(new CustomEvent('userLoggedIn'));
+    window.location.href = '/';
+  };
+
   // ==================== Эффекты ====================
-  // Загрузка данных пользователя при монтировании
   useEffect(() => {
     fetchUserData();
   }, []);
 
-  // Сохранение активной вкладки в sessionStorage при её изменении
+  useEffect(() => {
+    if (!userData) return;
+    const intervalId = setInterval(() => {
+      refreshCateringStatus();
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [userData, refreshCateringStatus]);
+
+  useEffect(() => {
+    const handleNotificationsUpdate = () => {
+      refreshCateringStatus();
+    };
+    window.addEventListener('notificationsUpdate', handleNotificationsUpdate);
+    return () => window.removeEventListener('notificationsUpdate', handleNotificationsUpdate);
+  }, [refreshCateringStatus]);
+
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      refreshCateringStatus();
+    }
+  }, [activeTab, refreshCateringStatus]);
+
+  useEffect(() => {
+    if (userData) {
+      refreshCateringStatus();
+      if (userData.id_agent) fetchAgentProfile();
+    }
+  }, [userData, refreshCateringStatus]);
+
   useEffect(() => {
     sessionStorage.setItem('profileLastTab', activeTab);
   }, [activeTab]);
 
-  // Синхронизация с внешним событием входа
   useEffect(() => {
     const handleUserLoggedIn = () => {
       fetchUserData();
-      // Сбрасываем вкладку на 'profile' при новом входе
       setActiveTab('profile');
       sessionStorage.removeItem('profileLastTab');
     };
@@ -815,34 +876,26 @@ const ProfilePage: React.FC = () => {
     return () => window.removeEventListener('userLoggedIn', handleUserLoggedIn);
   }, []);
 
-  // Загрузка профиля агента, если пользователь – организатор
   useEffect(() => {
-    if (userData && userData.id_agent) {
-      fetchAgentProfile();
-    }
-  }, [userData]);
-
-  // Загрузка данных в зависимости от активной вкладки
-  useEffect(() => {
-    if (activeTab === 'ads' && userData) fetchUserAds();
-  }, [activeTab, userData]);
+    if (activeTab === 'ads' && userData && !isCateringOwner) fetchUserAds();
+  }, [activeTab, userData, isCateringOwner]);
 
   useEffect(() => {
     if (activeTab === 'support' && userData) fetchUserFeedback();
   }, [activeTab, userData]);
 
   useEffect(() => {
-    if (activeTab === 'chats' && userData) fetchUserChats();
-  }, [activeTab, userData]);
+    if (activeTab === 'chats' && userData && !isCateringOwner) fetchUserChats();
+  }, [activeTab, userData, isCateringOwner]);
 
   useEffect(() => {
     if (activeTab === 'requests' && userData) {
       fetchIncomingRequests();
       fetchUpcomingBookings();
     }
-    if (activeTab === 'bookings' && userData) fetchUserBookings();
-    if (activeTab === 'history' && userData) fetchHistoryBookings();
-  }, [activeTab, userData]);
+    if (activeTab === 'bookings' && userData && !isCateringOwner) fetchUserBookings();
+    if (activeTab === 'history' && userData && !isCateringOwner) fetchHistoryBookings();
+  }, [activeTab, userData, isCateringOwner]);
 
   // ==================== Рендер ====================
   if (loading) {
@@ -890,7 +943,7 @@ const ProfilePage: React.FC = () => {
           <p className="profilepage-email">{userData.email}</p>
           <div className={`profilepage-role ${userData.id_agent ? 'profilepage-agent' : 'profilepage-user'}`}>
             <span className="profilepage-role-dot"></span>
-            {userData.id_agent ? 'Организатор праздников' : 'Пользователь'}
+            {isCateringOwner ? 'Владелец кейтеринга' : (userData.id_agent ? 'Организатор праздников' : 'Пользователь')}
           </div>
         </div>
         <nav className="profilepage-nav">
@@ -898,44 +951,53 @@ const ProfilePage: React.FC = () => {
             <FontAwesomeIcon icon={faUser} className="profilepage-nav-icon" />
             <span>Мой профиль</span>
           </button>
-          <button className={`profilepage-nav-item ${activeTab === 'ads' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('ads')}>
-            <FontAwesomeIcon icon={faHome} className="profilepage-nav-icon" />
-            <span>Мои объявления</span>
-          </button>
-          <button className={`profilepage-nav-item ${activeTab === 'chats' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('chats')}>
-            <FontAwesomeIcon icon={faComment} className="profilepage-nav-icon" />
-            <span>Мои чаты</span>
-            {totalUnread > 0 && <span className="profilepage-nav-badge profilepage-nav-badge-unread">{totalUnread}</span>}
-          </button>
-          {userData && (
-            <button className={`profilepage-nav-item ${activeTab === 'requests' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('requests')}>
-              <FontAwesomeIcon icon={faEnvelope} className="profilepage-nav-icon" />
-              <span>Заявки</span>
-            </button>
+
+          {isCateringOwner ? (
+            <>
+              <button className={`profilepage-nav-item ${activeTab === 'requests' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('requests')}>
+                <FontAwesomeIcon icon={faEnvelope} className="profilepage-nav-icon" />
+                <span>Заявки</span>
+              </button>
+              <button className={`profilepage-nav-item ${activeTab === 'menu' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('menu')}>
+                <FontAwesomeIcon icon={faUtensils} className="profilepage-nav-icon" />
+                <span>Меню</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button className={`profilepage-nav-item ${activeTab === 'ads' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('ads')}>
+                <FontAwesomeIcon icon={faHome} className="profilepage-nav-icon" />
+                <span>Мои объявления</span>
+              </button>
+              <button className={`profilepage-nav-item ${activeTab === 'chats' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('chats')}>
+                <FontAwesomeIcon icon={faComment} className="profilepage-nav-icon" />
+                <span>Мои чаты</span>
+                {totalUnread > 0 && <span className="profilepage-nav-badge profilepage-nav-badge-unread">{totalUnread}</span>}
+              </button>
+              {userData && (
+                <button className={`profilepage-nav-item ${activeTab === 'requests' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('requests')}>
+                  <FontAwesomeIcon icon={faEnvelope} className="profilepage-nav-icon" />
+                  <span>Заявки</span>
+                </button>
+              )}
+              <button className={`profilepage-nav-item ${activeTab === 'bookings' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('bookings')}>
+                <FontAwesomeIcon icon={faCalendarAlt} className="profilepage-nav-icon" />
+                <span>Бронирования</span>
+              </button>
+              <button className={`profilepage-nav-item ${activeTab === 'history' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('history')}>
+                <FontAwesomeIcon icon={faHistory} className="profilepage-nav-icon" />
+                <span>История</span>
+              </button>
+            </>
           )}
-          <button className={`profilepage-nav-item ${activeTab === 'bookings' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('bookings')}>
-            <FontAwesomeIcon icon={faCalendarAlt} className="profilepage-nav-icon" />
-            <span>Бронирования</span>
-          </button>
-          <button className={`profilepage-nav-item ${activeTab === 'history' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('history')}>
-            <FontAwesomeIcon icon={faHistory} className="profilepage-nav-icon" />
-            <span>История</span>
-          </button>
+
           <button className={`profilepage-nav-item ${activeTab === 'support' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('support')}>
             <FontAwesomeIcon icon={faHeadset} className="profilepage-nav-icon" />
             <span>Поддержка</span>
           </button>
+
           <div className="profilepage-nav-divider"></div>
-          <button 
-            className="profilepage-nav-item profilepage-nav-logout" 
-            onClick={() => { 
-              localStorage.removeItem('token'); 
-              localStorage.removeItem('user'); 
-              sessionStorage.removeItem('profileLastTab'); // очищаем сохранённую вкладку
-              window.dispatchEvent(new CustomEvent('userLoggedIn'));
-              window.location.href = '/'; 
-            }}
-          >
+          <button className="profilepage-nav-item profilepage-nav-logout" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} className="profilepage-nav-icon" />
             <span>Выйти</span>
           </button>
@@ -957,9 +1019,16 @@ const ProfilePage: React.FC = () => {
                 <h2>Мой профиль</h2>
                 <p>Управление личной информацией</p>
               </div>
-              <button className={`profilepage-btn-${isEditing ? 'secondary' : 'primary'}`} onClick={handleEditToggle}>
-                {isEditing ? <><FontAwesomeIcon icon={faTimes} /> Отменить</> : <><FontAwesomeIcon icon={faEdit} /> Редактировать</>}
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className={`profilepage-btn-${isEditing ? 'secondary' : 'primary'}`} onClick={handleEditToggle}>
+                  {isEditing ? <><FontAwesomeIcon icon={faTimes} /> Отменить</> : <><FontAwesomeIcon icon={faEdit} /> Редактировать</>}
+                </button>
+                {!isCateringOwner && (
+                  <button className="profilepage-btn-secondary" onClick={() => setIsOfferModalOpen(true)}>
+                    <FontAwesomeIcon icon={faPlus} /> Предложить услугу
+                  </button>
+                )}
+              </div>
             </div>
             <div className="profilepage-info">
               <div className="profilepage-info-section">
@@ -1030,7 +1099,7 @@ const ProfilePage: React.FC = () => {
                       <label className="profilepage-stack-label">Статус аккаунта</label>
                       <div className={`profilepage-stack-value profilepage-role-badge ${userData.id_agent ? 'profilepage-agent' : 'profilepage-user'}`}>
                         <span className="profilepage-badge-dot"></span>
-                        {userData.id_agent ? 'Организатор праздников' : 'Обычный пользователь'}
+                        {isCateringOwner ? 'Владелец кейтеринга' : (userData.id_agent ? 'Организатор праздников' : 'Обычный пользователь')}
                       </div>
                     </div>
                   </div>
@@ -1044,7 +1113,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               )}
 
-              {userData.id_agent && agentData && (
+              {userData.id_agent && agentData && !isCateringOwner && (
                 <div className="profilepage-info-section" style={{ marginTop: '40px' }}>
                   <h3 className="profilepage-section-title">Профиль организатора</h3>
                   <div className="profilepage-info-stack">
@@ -1242,7 +1311,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'ads' && (
+        {activeTab === 'ads' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
@@ -1330,7 +1399,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'chats' && (
+        {activeTab === 'chats' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
@@ -1381,77 +1450,85 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'requests' && userData && (
+        {activeTab === 'requests' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
-                <h2>Входящие заявки на бронирование</h2>
-                <p>Подтвердите или отклоните запросы от пользователей</p>
+                <h2>Заявки</h2>
+                <p>{isCateringOwner ? 'Управление заказами на кейтеринг' : 'Управление заявками на бронирование'}</p>
               </div>
             </div>
-            <div className="profilepage-section">
-              <h3 className="profilepage-section-title">Предстоящие бронирования</h3>
-              {upcomingLoading ? (
-                <div className="profilepage-loading-placeholder">
-                  <div className="profilepage-loading-spinner profilepage-small"></div>
-                  <p>Загрузка...</p>
-                </div>
-              ) : upcomingBookings.length === 0 ? (
-                <p className="profilepage-empty-text">Нет предстоящих бронирований</p>
-              ) : (
-                <div className="profilepage-bookings-list">
-                  {upcomingBookings.map((b) => (
-                    <div key={b.id} className="profilepage-booking-card">
-                      <div className="booking-card-image">
-                        <img src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
-                        <div className="booking-status-badge confirmed">Подтверждено</div>
-                      </div>
-                      <div className="booking-card-info">
-                        <h4>{b.houseAddress}</h4>
-                        <p>Гость: {b.userName}</p>
-                        <p>Дата: {safeFormatDate(b.bookingDate)}</p>
-                        <p>Дата заявки: {safeFormatDate(b.createdAt)}</p>
-                      </div>
+            {isCateringOwner ? (
+              <div className="profilepage-info">
+                <p>Раздел в разработке. Здесь будут отображаться заказы на кейтеринг от клиентов.</p>
+              </div>
+            ) : (
+              <>
+                <div className="profilepage-section">
+                  <h3 className="profilepage-section-title">Предстоящие бронирования</h3>
+                  {upcomingLoading ? (
+                    <div className="profilepage-loading-placeholder">
+                      <div className="profilepage-loading-spinner profilepage-small"></div>
+                      <p>Загрузка...</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="profilepage-section">
-              <h3 className="profilepage-section-title">Новые заявки</h3>
-              {requestsLoading ? (
-                <div className="profilepage-loading-placeholder">
-                  <div className="profilepage-loading-spinner profilepage-small"></div>
-                  <p>Загрузка...</p>
-                </div>
-              ) : incomingRequests.length === 0 ? (
-                <p className="profilepage-empty-text">Нет новых заявок</p>
-              ) : (
-                <div className="profilepage-requests-list">
-                  {incomingRequests.map((req) => (
-                    <div key={req.id} className="profilepage-request-card">
-                      <div className="request-card-image">
-                        <img src={req.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
-                      </div>
-                      <div className="request-card-info">
-                        <h4>{req.houseAddress}</h4>
-                        <p>От: {req.userName}</p>
-                        <p>Дата бронирования: {safeFormatDate(req.bookingDate)}</p>
-                        <p>Заявка создана: {safeFormatDate(req.createdAt)}</p>
-                      </div>
-                      <div className="request-card-actions">
-                        <button className="profilepage-btn-approve" onClick={() => handleApproveRequest(req.id)}><FontAwesomeIcon icon={faCheck} /> Принять</button>
-                        <button className="profilepage-btn-reject" onClick={() => handleRejectRequest(req.id)}><FontAwesomeIcon icon={faTimes} /> Отклонить</button>
-                      </div>
+                  ) : upcomingBookings.length === 0 ? (
+                    <p className="profilepage-empty-text">Нет предстоящих бронирований</p>
+                  ) : (
+                    <div className="profilepage-bookings-list">
+                      {upcomingBookings.map((b) => (
+                        <div key={b.id} className="profilepage-booking-card">
+                          <div className="booking-card-image">
+                            <img src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
+                            <div className="booking-status-badge confirmed">Подтверждено</div>
+                          </div>
+                          <div className="booking-card-info">
+                            <h4>{b.houseAddress}</h4>
+                            <p>Гость: {b.userName}</p>
+                            <p>Дата: {safeFormatDate(b.bookingDate)}</p>
+                            <p>Дата заявки: {safeFormatDate(b.createdAt)}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
+                <div className="profilepage-section">
+                  <h3 className="profilepage-section-title">Новые заявки</h3>
+                  {requestsLoading ? (
+                    <div className="profilepage-loading-placeholder">
+                      <div className="profilepage-loading-spinner profilepage-small"></div>
+                      <p>Загрузка...</p>
+                    </div>
+                  ) : incomingRequests.length === 0 ? (
+                    <p className="profilepage-empty-text">Нет новых заявок</p>
+                  ) : (
+                    <div className="profilepage-requests-list">
+                      {incomingRequests.map((req) => (
+                        <div key={req.id} className="profilepage-request-card">
+                          <div className="request-card-image">
+                            <img src={req.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
+                          </div>
+                          <div className="request-card-info">
+                            <h4>{req.houseAddress}</h4>
+                            <p>От: {req.userName}</p>
+                            <p>Дата бронирования: {safeFormatDate(req.bookingDate)}</p>
+                            <p>Заявка создана: {safeFormatDate(req.createdAt)}</p>
+                          </div>
+                          <div className="request-card-actions">
+                            <button className="profilepage-btn-approve" onClick={() => handleApproveRequest(req.id)}><FontAwesomeIcon icon={faCheck} /> Принять</button>
+                            <button className="profilepage-btn-reject" onClick={() => handleRejectRequest(req.id)}><FontAwesomeIcon icon={faTimes} /> Отклонить</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {activeTab === 'bookings' && (
+        {activeTab === 'bookings' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
@@ -1491,7 +1568,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'history' && (
+        {activeTab === 'history' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
@@ -1529,6 +1606,10 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === 'menu' && isCateringOwner && (
+          <CateringMenu />
         )}
 
         {activeTab === 'support' && (
@@ -1599,9 +1680,9 @@ const ProfilePage: React.FC = () => {
                 <div className="profilepage-faq-section">
                   <h4 className="profilepage-section-title">Частые вопросы</h4>
                   <div className="profilepage-faq-list">
-                    <details className="profilepage-faq-item"><summary>Как добавить объявление?</summary><p>Перейдите на вкладку "Мои объявления" и нажмите кнопку "Добавить объявление". Заполните все необходимые поля формы: заголовок, описание, фотографии и контактные данные.</p></details>
-                    <details className="profilepage-faq-item"><summary>Как редактировать профиль?</summary><p>Для редактирования профиля зайдите в раздел "Мой профиль" и нажмите кнопку "Редактировать". Вы сможете изменить ФИО, телефон и другую личную информацию.</p></details>
-                    <details className="profilepage-faq-item"><summary>Как отвечать на сообщения в чатах?</summary><p>Перейдите во вкладку "Мои чаты", выберите интересующий вас диалог и напишите ответ. Вы также можете получать уведомления о новых сообщениях.</p></details>
+                    <details className="profilepage-faq-item"><summary>Как добавить объявление?</summary><p>Перейдите на вкладку "Мои объявления" и нажмите кнопку "Добавить объявление". Заполните все необходимые поля формы.</p></details>
+                    <details className="profilepage-faq-item"><summary>Как редактировать профиль?</summary><p>Для редактирования профиля зайдите в раздел "Мой профиль" и нажмите кнопку "Редактировать".</p></details>
+                    <details className="profilepage-faq-item"><summary>Как отвечать на сообщения в чатах?</summary><p>Перейдите во вкладку "Мои чаты", выберите диалог и напишите ответ.</p></details>
                   </div>
                 </div>
               </div>
@@ -1609,6 +1690,16 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <OfferServiceModal
+        isOpen={isOfferModalOpen}
+        onClose={() => setIsOfferModalOpen(false)}
+        onSuccess={() => {
+          setMessage({ text: 'Заявка успешно отправлена администратору!', type: 'success' });
+          setTimeout(() => setMessage({ text: '', type: 'success' }), 3000);
+        }}
+        onError={(errMsg) => setMessage({ text: errMsg, type: 'error' })}
+      />
     </div>
   );
 };

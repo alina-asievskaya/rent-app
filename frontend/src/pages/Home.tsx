@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
@@ -9,9 +9,7 @@ import {
   faArrowRight,
   faBuilding,
   faSpinner,
-  faHeart as faHeartSolid,
-  faChevronLeft,
-  faChevronRight
+  faHeart as faHeartSolid
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 
@@ -28,18 +26,6 @@ interface ApiResponse<T> {
   data: T;
   message?: string;
 }
-
-const partners = [
-  { name: "Мак Бай", logo: "https://fest-sbv.gck.by/media/b23f3705f42fa6e51890b5973b55e20e/b23f3705f42fa6e51890b5973b55e20e.png" },
-  { name: "KFC", logo: "https://otzovik.by/wp-content/uploads/2023/08/otzyvy-o-kfc.by-kiefsi.webp" },
-  { name: "Burger King", logo: "https://static.tildacdn.com/tild3261-6339-4635-a337-316364643738/Banner16.png" },
-  { name: "Пицца Лисица", logo: "https://cdn.picodi.com/by/shop/thumb_300/pzz_522_001_2.png" },
-  { name: "Пицца Темпо", logo: "https://expobel.by/upload/iblock/7af/p2gbh8i27s32pqt9unf226e6kwkbe5tm.jpg" },
-  { name: "The ODI", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_Apy8E2GWs48-YOZPU88OKMTGDmQ29u65xQ&s" },
-  { name: "Fabriq", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMxVuEtPNZeHvyXkfr6oXd-1hNEXVOcYZisw&s" },
-  { name: "Grand Cafe", logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRPgxxSQ_aBncjBOiy1sDalXl11BMtwLkm2bA&s" },
-  { name: "Louis Prima", logo: "https://www.mastercard.by/content/dam/public/mastercardcom/by/ru/offers/mc_by_offers_800x448-ember.jpg" },
-];
 
 const parseJwt = (token: string) => {
   try {
@@ -72,7 +58,6 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
-  const partnersScrollRef = useRef<HTMLDivElement>(null);
 
   const loadUserFavorites = async () => {
     try {
@@ -126,7 +111,6 @@ const Home: React.FC = () => {
     init();
   }, []);
 
-  // Подписка на глобальное обновление избранного
   useEffect(() => {
     const handleFavoritesUpdate = () => {
       loadUserFavorites();
@@ -189,7 +173,6 @@ const Home: React.FC = () => {
           else newSet.add(id);
           return newSet;
         });
-        // Уведомляем другие компоненты (шапку, каталог, избранное, страницу дома)
         window.dispatchEvent(new CustomEvent('favoritesUpdated'));
       } else if (response.status === 403) {
         console.warn('У вас нет прав на это действие');
@@ -199,16 +182,6 @@ const Home: React.FC = () => {
       }
     } catch (error) {
       console.error('Ошибка при работе с избранным:', error);
-    }
-  };
-
-  const scrollPartners = (direction: 'left' | 'right') => {
-    if (partnersScrollRef.current) {
-      const scrollAmount = 300;
-      partnersScrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
     }
   };
 
@@ -316,24 +289,6 @@ const Home: React.FC = () => {
             ) : (
               <div className="no-properties"><p>Нет активных объявлений</p></div>
             )}
-          </div>
-        </section>
-
-        <section className="partners-carousel-section">
-          <div className="container">
-            <h2 className="section-title-modern">Надёжные партнёры</h2>
-            <div className="partners-carousel-wrapper">
-              <button className="carousel-arrow left" onClick={() => scrollPartners('left')}><FontAwesomeIcon icon={faChevronLeft} /></button>
-              <div className="partners-carousel" ref={partnersScrollRef}>
-                {partners.map((partner, idx) => (
-                  <div key={idx} className="partner-carousel-card">
-                    <img src={partner.logo} alt={partner.name} />
-                    <p>{partner.name}</p>
-                  </div>
-                ))}
-              </div>
-              <button className="carousel-arrow right" onClick={() => scrollPartners('right')}><FontAwesomeIcon icon={faChevronRight} /></button>
-            </div>
           </div>
         </section>
       </main>

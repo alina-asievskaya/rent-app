@@ -18,6 +18,7 @@ import {
   faComment,
   faBell,
   faCalendarAlt,
+  faUtensils,
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import "./Header.css";
@@ -66,10 +67,11 @@ interface CountResponse {
 
 interface Notification {
   id: number;
-  type: 'message' | 'booking' | 'bookingStatus';
+  type: 'message' | 'booking' | 'bookingStatus' | 'cateringRequest';
   referenceId: number;
   text: string;
   createdAt: string;
+  isRead?: boolean;
 }
 
 interface RawChat {
@@ -94,7 +96,6 @@ interface UserBookingStatus {
   houseAddress: string;
 }
 
-// Тип для сырого ответа от API /bookings/user-bookings
 interface RawUserBooking {
   id: number;
   houseId: number;
@@ -104,6 +105,15 @@ interface RawUserBooking {
   approved: boolean;
   rejectedAt: string | null;
   createdAt: string;
+}
+
+interface ServerNotification {
+  id: number;
+  type: string;
+  referenceId: number;
+  text: string;
+  createdAt: string;
+  isRead: boolean;
 }
 
 const Header: React.FC = () => {
@@ -152,7 +162,8 @@ const Header: React.FC = () => {
   const isFetchingBookings = useRef(false);
 
   // State for tracking user's own bookings (to detect status change)
-  const [, setUserBookings] = useState<UserBookingStatus[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [userBookings, setUserBookings] = useState<UserBookingStatus[]>([]);
 
   const favoritesDropdownRef = useRef<HTMLDivElement>(null);
   const userBtnRef = useRef<HTMLDivElement>(null);
@@ -242,6 +253,18 @@ const Header: React.FC = () => {
     }
   }, []);
 
+  const markNotificationAsRead = useCallback(async (notificationId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:5213/api/notification/mark-read/${notificationId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
   // Fetch user's own bookings to detect status changes
   const fetchUserBookingsStatus = useCallback(async () => {
     if (!isLoggedIn || isAdmin) return;
@@ -270,9 +293,8 @@ const Header: React.FC = () => {
 
           for (const newB of newBookings) {
             const oldB = prevMap.get(newB.id);
-            if (!oldB) continue; // new booking – no notification (it's already created by user)
+            if (!oldB) continue;
 
-            // Detect change from pending to approved
             if (oldB.approved === false && oldB.rejectedAt === null && newB.approved === true) {
               newNotifications.push({
                 id: newB.id + 50000,
@@ -282,7 +304,6 @@ const Header: React.FC = () => {
                 createdAt: new Date().toISOString(),
               });
             }
-            // Detect change from pending to rejected
             else if (oldB.approved === false && oldB.rejectedAt === null && newB.rejectedAt !== null) {
               newNotifications.push({
                 id: newB.id + 50000,
@@ -312,7 +333,7 @@ const Header: React.FC = () => {
     }
   }, [isLoggedIn, isAdmin]);
 
-  // Main notification fetcher (messages and incoming requests for owner)
+  // Main notification fetcher (messages, incoming requests, catering requests)
   const fetchNotifications = useCallback(async () => {
     if (!isLoggedIn || isAdmin) return;
     if (isFetchingNotifications.current) return;
@@ -321,18 +342,24 @@ const Header: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const [chatsRes, bookingsRes] = await Promise.all([
+      const [chatsRes, bookingsRes, cateringNotifsRes] = await Promise.all([
         fetch('http://localhost:5213/api/chats/my-chats', {
           headers: { Authorization: `Bearer ${token}` }
         }),
         fetch('http://localhost:5213/api/bookings/incoming-requests', {
           headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5213/api/notification', {
+          headers: { Authorization: `Bearer ${token}` }
         })
       ]);
       const chatsJson = await chatsRes.json();
       const bookingsJson = await bookingsRes.json();
+      const cateringJson = await cateringNotifsRes.json();
 
       const notifs: Notification[] = [];
+      
+      // Messages
       if (chatsJson.success && Array.isArray(chatsJson.data)) {
         (chatsJson.data as RawChat[]).filter(c => c.unread_count && c.unread_count > 0)
           .forEach(chat => {
@@ -345,6 +372,8 @@ const Header: React.FC = () => {
             });
           });
       }
+      
+      // Booking requests for owner
       if (bookingsJson.success && Array.isArray(bookingsJson.data)) {
         (bookingsJson.data as RawBooking[]).forEach(booking => {
           notifs.push({
@@ -354,6 +383,21 @@ const Header: React.FC = () => {
             text: `Новая заявка на бронирование от ${booking.userName || 'пользователя'}`,
             createdAt: booking.createdAt || new Date().toISOString()
           });
+        });
+      }
+      
+      // Catering notifications (from backend when admin approves/rejects)
+      if (cateringJson.success && Array.isArray(cateringJson.data)) {
+        (cateringJson.data as ServerNotification[]).forEach(notif => {
+          if (!notif.isRead) {
+            notifs.push({
+              id: notif.id,
+              type: 'cateringRequest',
+              referenceId: notif.referenceId,
+              text: notif.text,
+              createdAt: notif.createdAt
+            });
+          }
         });
       }
 
@@ -377,7 +421,6 @@ const Header: React.FC = () => {
   }, []);
 
   // ---------- Effects ----------
-  // Sync login state with localStorage changes
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
@@ -759,6 +802,12 @@ const Header: React.FC = () => {
 
   const handleNotificationClick = useCallback(async (notification: Notification) => {
     setShowNotifications(false);
+    
+    // Помечаем уведомление прочитанным, если оно из кейтеринга
+    if (notification.type === 'cateringRequest') {
+      await markNotificationAsRead(notification.id);
+    }
+    
     if (notification.type === 'message') {
       await markChatAsRead(notification.referenceId);
       navigate(`/chat/${notification.referenceId}`);
@@ -767,8 +816,10 @@ const Header: React.FC = () => {
       navigate('/profile?tab=requests');
     } else if (notification.type === 'bookingStatus') {
       navigate('/profile?tab=bookings');
+    } else if (notification.type === 'cateringRequest') {
+      navigate('/profile?tab=menu');
     }
-  }, [navigate, markChatAsRead, fetchNotifications]);
+  }, [navigate, markChatAsRead, markNotificationAsRead, fetchNotifications]);
 
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
   const headerClass = `header ${isProfilePage ? 'header-profile' : ''}`;
@@ -849,11 +900,10 @@ const Header: React.FC = () => {
                           onClick={() => handleNotificationClick(notification)}
                         >
                           <div className="notification-icon">
-                            {notification.type === 'message' ? (
-                              <FontAwesomeIcon icon={faComment} />
-                            ) : (
-                              <FontAwesomeIcon icon={faCalendarAlt} />
-                            )}
+                            {notification.type === 'message' && <FontAwesomeIcon icon={faComment} />}
+                            {notification.type === 'booking' && <FontAwesomeIcon icon={faCalendarAlt} />}
+                            {notification.type === 'bookingStatus' && <FontAwesomeIcon icon={faCalendarAlt} />}
+                            {notification.type === 'cateringRequest' && <FontAwesomeIcon icon={faUtensils} />}
                           </div>
                           <div className="notification-content">
                             <p>{notification.text}</p>

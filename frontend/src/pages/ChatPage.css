@@ -1,4 +1,31 @@
-/* ChatPage.css — обновлённая цветовая палитра (премиум) */
+@font-face {
+    font-family: "nbrb";
+    src: url("/nbrb.woff2") format("woff2"),
+         url("/nbrb.ttf") format("truetype"),
+         url("/nbrb.woff") format("woff");
+    unicode-range: U+E901, U+42, U+59, U+4E;
+}
+
+.nbrb-icon {
+    font-family: "nbrb", "Segoe UI Symbol", "Arial Unicode MS", sans-serif !important;
+    font-size: 1.2em;          /* увеличенный размер для лучшей читаемости */
+    speak: none;
+    font-style: normal;    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: normal;
+    font-feature-settings: "liga";
+    font-variant-ligatures: discretionary-ligatures;
+    vertical-align: middle;
+    margin-left: 2px;          /* небольшой отступ от числа */
+}
+
+.nbrb-icon-byn:before {
+    content: "\e901";
+}
 
 :root {
   --primary: #2d6a4f;          /* основной тёмно-зелёный */

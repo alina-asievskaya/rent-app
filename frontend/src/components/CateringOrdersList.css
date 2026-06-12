@@ -1,0 +1,535 @@
+/* Подключение иконочного шрифта для знака валюты */
+@font-face {
+    font-family: "nbrb";
+    src: url("/nbrb.woff2") format("woff2"),
+         url("/nbrb.ttf") format("truetype"),
+         url("/nbrb.woff") format("woff");
+    unicode-range: U+E901, U+42, U+59, U+4E;
+}
+
+.nbrb-icon {
+    font-family: "nbrb", "Segoe UI Symbol", "Arial Unicode MS", sans-serif !important;
+    font-size: inherit;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: normal;
+    font-feature-settings: "liga";
+    font-variant-ligatures: discretionary-ligatures;
+}
+
+.nbrb-icon-byn:before {
+    content: "\e901";
+}
+
+.catering-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Карточка заказа */
+.catering-orders-card {
+    background: var(--white);
+    border-radius: 20px;
+    border: 1px solid var(--border-light);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.catering-orders-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, var(--accent), #f5e7a3);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.catering-orders-card:hover::before {
+    opacity: 1;
+}
+
+.catering-orders-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: var(--accent);
+}
+
+/* Истёкшие заказы */
+.catering-orders-card.expired {
+    background: #f8f9fa;
+    opacity: 0.7;
+}
+
+.catering-orders-card.expired:hover {
+    opacity: 0.85;
+}
+
+/* Основное содержимое */
+.catering-orders-card__content {
+    padding: 24px;
+    flex: 1;
+}
+
+/* Шапка карточки */
+.catering-orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    gap: 12px;
+}
+
+.catering-orders-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    font-family: var(--font-serif);
+}
+
+/* Бейдж статуса */
+.catering-orders-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.catering-orders-status.pending {
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.catering-orders-status.approved {
+    background: linear-gradient(135deg, var(--primary), #40916c);
+    color: white;
+}
+
+.catering-orders-status.rejected {
+    background: linear-gradient(135deg, var(--danger), #c82333);
+    color: white;
+}
+
+.catering-orders-status.expired {
+    background: #6c757d;
+    color: white;
+}
+
+/* Детали заказа */
+.catering-orders-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.catering-orders-details p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.catering-orders-details svg {
+    color: var(--accent);
+    width: 16px;
+}
+
+/* Блок позиций заказа */
+.catering-orders-items {
+    margin-top: 8px;
+}
+
+.catering-orders-items strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.catering-orders-items__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.catering-orders-item {
+    display: grid;
+    grid-template-columns: 2fr 0.5fr 0.8fr 0.8fr;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    gap: 8px;
+}
+
+.catering-orders-item:hover {
+    background: rgba(212, 175, 55, 0.08);
+    transform: translateX(4px);
+}
+
+.catering-orders-item__name {
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.catering-orders-item__qty {
+    color: var(--accent);
+    font-weight: 600;
+    background: rgba(212, 175, 55, 0.1);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    text-align: center;
+    width: fit-content;
+}
+
+.catering-orders-item__price {
+    font-weight: 600;
+    color: var(--primary);
+    font-family: var(--font-serif);
+}
+
+.catering-orders-item__total {
+    font-weight: 700;
+    color: var(--text-dark);
+    text-align: right;
+}
+
+.catering-orders-total {
+    margin-top: 12px;
+    padding-top: 12px;
+    text-align: right;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-dark);
+    border-top: 1px dashed var(--border-light);
+    font-family: var(--font-serif);
+}
+
+.catering-orders-total span {
+    color: var(--accent);
+    margin-right: 8px;
+}
+
+/* Блок кнопок (горизонтальный внизу) */
+.catering-orders-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px 24px 24px;
+    background: var(--bg);
+    border-top: 1px solid var(--border-light);
+    flex-wrap: wrap;
+}
+
+/* Общий стиль кнопок */
+.catering-orders-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    flex: 1;
+    white-space: nowrap;
+}
+
+/* Кнопка "Принять" */
+.catering-orders-btn--approve {
+    background: linear-gradient(135deg, var(--primary), #40916c);
+    color: white;
+    box-shadow: 0 4px 12px rgba(27, 77, 60, 0.3);
+}
+
+.catering-orders-btn--approve:hover {
+    transform: translateY(-2px);
+    gap: 14px;
+    box-shadow: 0 6px 20px rgba(27, 77, 60, 0.4);
+}
+
+/* Кнопка "Отклонить" */
+.catering-orders-btn--reject {
+    background: transparent;
+    border: 2px solid var(--danger);
+    color: var(--danger);
+}
+
+.catering-orders-btn--reject:hover {
+    background: rgba(220, 53, 69, 0.1);
+    transform: translateY(-2px);
+    gap: 14px;
+}
+
+/* Кнопка "Написать клиенту" - теперь зелёная, как в каталоге */
+.catering-orders-btn--write {
+    background: linear-gradient(135deg, var(--primary), #40916c);
+    color: white;
+    box-shadow: 0 2px 8px rgba(27, 77, 60, 0.3);
+}
+
+.catering-orders-btn--write:hover {
+    transform: translateY(-2px);
+    gap: 14px;
+    box-shadow: 0 6px 16px rgba(27, 77, 60, 0.4);
+    background: linear-gradient(135deg, #1b4d3c, #2a6e54);
+}
+
+/* Состояние disabled */
+.catering-orders-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Пустое состояние */
+.catering-orders-empty {
+    text-align: center;
+    padding: 80px 40px;
+    background: var(--white);
+    border-radius: 20px;
+    border: 1px dashed var(--border-light);
+}
+
+.catering-orders-empty svg {
+    color: var(--accent);
+    opacity: 0.5;
+    margin-bottom: 20px;
+}
+
+/* Загрузка */
+.catering-orders-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    background: var(--white);
+    border-radius: 20px;
+    border: 1px solid var(--border-light);
+}
+
+.catering-orders-loading .profilepage-spinner-small {
+    width: 50px;
+    height: 50px;
+    border: 3px solid var(--border-light);
+    border-top-color: var(--accent);
+    border-right-color: var(--primary-light);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Модальное окно */
+.catering-orders-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s;
+}
+
+.catering-orders-modal {
+    background: var(--white);
+    border-radius: 24px;
+    width: 90%;
+    max-width: 450px;
+    overflow: hidden;
+    animation: slideUp 0.3s;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.catering-orders-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: white;
+}
+
+.catering-orders-modal__header h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-family: var(--font-serif);
+}
+
+.catering-orders-modal__close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: white;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.catering-orders-modal__close:hover {
+    opacity: 1;
+}
+
+.catering-orders-modal__body {
+    padding: 24px;
+}
+
+.catering-orders-modal__body p {
+    margin: 0 0 16px;
+    color: var(--text-dark);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.catering-orders-modal__warning {
+    background: rgba(212, 175, 55, 0.1);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: var(--accent);
+    border-left: 3px solid var(--accent);
+}
+
+.catering-orders-modal__actions {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    background: var(--bg);
+    border-top: 1px solid var(--border-light);
+}
+
+.catering-orders-modal__cancel,
+.catering-orders-modal__confirm {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.catering-orders-modal__cancel {
+    background: var(--white);
+    border: 2px solid var(--border-light);
+    color: var(--text-muted);
+}
+
+.catering-orders-modal__cancel:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.catering-orders-modal__confirm.approve {
+    background: linear-gradient(135deg, var(--primary), #40916c);
+    color: white;
+    box-shadow: 0 4px 12px rgba(27, 77, 60, 0.3);
+}
+
+.catering-orders-modal__confirm.reject {
+    background: linear-gradient(135deg, var(--danger), #c82333);
+    color: white;
+}
+
+.catering-orders-modal__confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .catering-orders-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .catering-orders-details {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .catering-orders-item {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 6px;
+    }
+    
+    .catering-orders-item__qty {
+        margin: 0 auto;
+    }
+    
+    .catering-orders-item__total {
+        text-align: center;
+    }
+    
+    .catering-orders-total {
+        text-align: center;
+    }
+    
+    .catering-orders-actions {
+        flex-direction: column;
+    }
+    
+    .catering-orders-btn {
+        width: 100%;
+    }
+}

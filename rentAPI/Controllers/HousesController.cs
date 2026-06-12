@@ -363,6 +363,122 @@ namespace RentApp.API.Controllers
             }
         }
 
+        // Добавить в HousesController следующие методы:
+
+[HttpGet("{id}/caterings")]
+public async Task<IActionResult> GetHouseCaterings(int id)
+{
+    var house = await _context.Houses.FindAsync(id);
+    if (house == null) return NotFound();
+
+    var caterings = await _context.HouseCaterings
+        .Include(hc => hc.CateringOwner)
+        .Where(hc => hc.HouseId == id)
+        .Select(hc => new HouseCateringDto
+        {
+            Id = hc.Id,
+            CateringOwnerId = hc.CateringOwnerId,
+            CompanyName = hc.CateringOwner.CompanyName,
+            City = hc.CateringOwner.City,
+            Description = hc.CateringOwner.Description
+        })
+        .ToListAsync();
+    return Ok(new { success = true, data = caterings });
+}
+
+// RentApp.API/Controllers/HousesController.cs – фрагмент
+
+[HttpPut("{id}/caterings")]
+public async Task<IActionResult> UpdateHouseCaterings(int id, [FromBody] UpdateHouseCateringsDto dto)
+{
+    var house = await _context.Houses.FindAsync(id);
+    if (house == null) return NotFound();
+
+    // Получаем текущие активные привязки (одобренные)
+    var currentActive = await _context.HouseCaterings
+        .Where(hc => hc.HouseId == id)
+        .Select(hc => hc.CateringOwnerId)
+        .ToListAsync();
+
+    // Получаем текущие незавершённые заявки для этого дома
+    var pendingRequests = await _context.HouseCateringRequests
+        .Where(r => r.HouseId == id && r.Status == "pending")
+        .ToListAsync();
+
+    // Новые выбранные ID
+    var newSelected = dto.CateringOwnerIds ?? new List<int>();
+
+    // Заявки, которые нужно создать (есть в newSelected, нет в currentActive и нет уже в pending)
+    var toCreate = newSelected.Except(currentActive)
+        .Where(id => !pendingRequests.Any(r => r.CateringOwnerId == id))
+        .ToList();
+
+    // Удаляем активные привязки, которые были убраны из выбора
+    var toRemove = currentActive.Except(newSelected).ToList();
+    if (toRemove.Any())
+    {
+        var toRemoveEntities = await _context.HouseCaterings
+            .Where(hc => hc.HouseId == id && toRemove.Contains(hc.CateringOwnerId))
+            .ToListAsync();
+        _context.HouseCaterings.RemoveRange(toRemoveEntities);
+    }
+
+    // Отклоняем заявки, которые были убраны из выбора (если ещё в статусе pending)
+    var toCancelRequests = pendingRequests
+        .Where(r => !newSelected.Contains(r.CateringOwnerId))
+        .ToList();
+    if (toCancelRequests.Any())
+    {
+        foreach (var req in toCancelRequests)
+        {
+            req.Status = "rejected";
+            req.RespondedAt = DateTime.UtcNow;
+        }
+    }
+
+    // Создаём новые заявки
+    foreach (var ownerId in toCreate)
+    {
+        var request = new HouseCateringRequest
+        {
+            HouseId = id,
+            CateringOwnerId = ownerId,
+            Status = "pending",
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.HouseCateringRequests.Add(request);
+
+        // Уведомление владельцу кейтеринга
+        var cateringOwner = await _context.CateringOwners.FindAsync(ownerId);
+        if (cateringOwner != null)
+        {
+            var notification = new Notification
+            {
+                UserId = cateringOwner.UserId,
+                Type = "cateringAddRequest",
+                ReferenceId = request.Id,
+                Text = $"Вас добавили в объявление \"{house.Description}\" (дом #{id})",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
+            _context.Notifications.Add(notification);
+        }
+    }
+
+    await _context.SaveChangesAsync();
+    return Ok(new { success = true });
+}
+
+[HttpGet("available-caterings")]
+public async Task<IActionResult> GetAvailableCaterings()
+{
+    var owners = await _context.CateringOwners
+        .Where(co => co.IsActive)
+        .Select(co => new { co.Id, co.CompanyName, co.City, co.Description, co.Phone })
+        .ToListAsync();
+    return Ok(new { success = true, data = owners });
+}
+
         // PATCH: api/houses/{id}/toggle-active
         [HttpPatch("{id}/toggle-active")]
         [Authorize]

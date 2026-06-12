@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentApp.API.Data;
 
@@ -11,9 +12,11 @@ using RentApp.API.Data;
 namespace rentAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611193921_AddHouseCateringRequests")]
+    partial class AddHouseCateringRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -155,14 +158,6 @@ namespace rentAPI.Migrations
                     b.Property<DateOnly>("BookingDate")
                         .HasColumnType("date")
                         .HasColumnName("booking_date");
-
-                    b.Property<string>("CateringItemsJson")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("catering_items_json");
-
-                    b.Property<int?>("CateringOwnerId")
-                        .HasColumnType("int")
-                        .HasColumnName("catering_owner_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()

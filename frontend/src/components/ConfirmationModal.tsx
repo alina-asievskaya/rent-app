@@ -12,7 +12,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info';
 }
-
+ 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen,
   title,

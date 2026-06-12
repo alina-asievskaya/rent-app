@@ -1,3 +1,4 @@
+// frontend/src/pages/CreateAd.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -71,6 +72,11 @@ const CreateAd: React.FC = () => {
     photoUrls: [] as string[],
   });
 
+  // Новые состояния для кейтеринга
+  const [cateringCompanies, setCateringCompanies] = useState<{ id: number; companyName: string; city: string; description: string; phone: string }[]>([]);
+  const [selectedCaterings, setSelectedCaterings] = useState<number[]>([]);
+  const [cateringCompaniesLoading, setCateringCompaniesLoading] = useState(false);
+
   const showNotification = (message: string, type: 'success' | 'error' | 'warning') => setNotification({ message, type });
   const closeNotification = () => setNotification(null);
 
@@ -95,6 +101,24 @@ const CreateAd: React.FC = () => {
       setFormData(parsedDraft.formData);
       setFormStep(parsedDraft.formStep);
     }
+
+    // Загрузка доступных кейтеринговых компаний
+    const fetchCateringCompanies = async () => {
+      try {
+        setCateringCompaniesLoading(true);
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5213/api/houses/available-caterings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) setCateringCompanies(data.data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setCateringCompaniesLoading(false);
+      }
+    };
+    fetchCateringCompanies();
   }, [navigate]);
 
   const houseTypes = [
@@ -111,7 +135,6 @@ const CreateAd: React.FC = () => {
     'Могилёвская область', 'Брестская область', 'Витебская область'
   ];
 
-  // Справочник городов по областям (для валидации)
   const citiesByRegion: Record<string, string[]> = {
     'Минская область': ['Минск', 'Борисов', 'Солигорск', 'Молодечно', 'Жодино', 'Слуцк', 'Вилейка', 'Дзержинск', 'Марьина Горка', 'Столбцы', 'Несвиж', 'Клецк', 'Любань', 'Старые Дороги', 'Узда', 'Червень', 'Березино', 'Крупки', 'Смолевичи', 'Логойск', 'Воложин', 'Мядель'],
     'Гомельская область': ['Гомель', 'Мозырь', 'Жлобин', 'Светлогорск', 'Речица', 'Калинковичи', 'Рогачёв', 'Добруш', 'Петриков', 'Ельск', 'Наровля', 'Хойники', 'Брагин', 'Лельчицы', 'Октябрьский', 'Ветка', 'Чечерск', 'Буда-Кошелёво', 'Корма'],
@@ -121,7 +144,6 @@ const CreateAd: React.FC = () => {
     'Витебская область': ['Витебск', 'Орша', 'Новополоцк', 'Полоцк', 'Глубокое', 'Лепель', 'Поставы', 'Миоры', 'Верхнедвинск', 'Браслав', 'Докшицы', 'Дубровно', 'Сенно', 'Толочин', 'Шарковщина', 'Ушачи', 'Россоны', 'Бешенковичи', 'Лиозно']
   };
 
-  // Построим обратный словарь: город -> область
   const cityToRegion: Record<string, string> = {};
   for (const [region, cities] of Object.entries(citiesByRegion)) {
     for (const city of cities) {
@@ -205,12 +227,10 @@ const CreateAd: React.FC = () => {
 
   const validateCityByRegion = (city: string, region: string): boolean => {
     const trimmedCity = city.trim();
-    if (!trimmedCity) return true; // пустое проверится отдельно
-    // Если город есть в справочнике cityToRegion, проверяем соответствие области
+    if (!trimmedCity) return true;
     if (cityToRegion[trimmedCity] && cityToRegion[trimmedCity] !== region) {
       return false;
     }
-    // Если города нет в справочнике (деревня, хутор и т.п.) – пропускаем
     return true;
   };
 
@@ -242,7 +262,6 @@ const CreateAd: React.FC = () => {
     if (step === 2) {
       if (!formData.region.trim()) { showNotification('Выберите область', 'error'); return false; }
       if (!formData.city.trim()) { showNotification('Введите населённый пункт', 'error'); return false; }
-      // Валидация города по области
       if (!validateCityByRegion(formData.city, formData.region)) {
         showNotification(`Город "${formData.city}" не относится к области "${formData.region}". Пожалуйста, выберите правильную область или уточните населённый пункт.`, 'error');
         return false;
@@ -346,14 +365,22 @@ const CreateAd: React.FC = () => {
         body: JSON.stringify(houseData)
       });
       const result = await response.json();
-      if (response.ok && result.success) {
-        localStorage.removeItem('propertyDraft');
-        showNotification('Объявление успешно создано', 'success');
-        setTimeout(() => navigate('/my-houses'), 2000);
+      if (response.ok && result.success && result.houseId) {
+          // Привязка кейтеринговых компаний
+          if (selectedCaterings.length > 0) {
+              await fetch(`http://localhost:5213/api/houses/${result.houseId}/caterings`, {
+                  method: 'PUT',
+                  headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ cateringOwnerIds: selectedCaterings })
+              });
+          }
+          localStorage.removeItem('propertyDraft');
+          showNotification('Объявление успешно создано', 'success');
+          setTimeout(() => navigate('/profile?tab=ads'), 2000);
       } else {
-        showNotification(result.message || 'Ошибка при создании', 'error');
+          showNotification(result.message || 'Ошибка при создании', 'error');
       }
-    } catch  {
+    } catch {
       showNotification('Ошибка соединения', 'error');
     } finally {
       setIsSubmitting(false);
@@ -403,15 +430,14 @@ const CreateAd: React.FC = () => {
             <form className="createad-property-form" onSubmit={handleSubmit}>
               {formStep === 1 && (
                 <div className="createad-form-step">
+                  {/* Шаг 1: тип дома, аренда, основные параметры (без изменений) */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-home"></i> Тип дома</h3>
-                    <p className="createad-section-description">Выберите тип вашего дома</p>
                     <div className="createad-house-type-grid">
                       {houseTypes.map(type => (
                         <label key={type.value} className={`createad-house-type-card ${formData.houseType === type.value ? 'createad-selected' : ''}`}>
                           <input type="radio" name="houseType" value={type.value} checked={formData.houseType === type.value} onChange={handleInputChange} className="createad-visually-hidden" />
                           <div className="createad-card-content">
-                            <div className="createad-card-icon"></div>
                             <h4>{type.label}</h4>
                             <p>{type.description}</p>
                             <div className="createad-checkmark"><i className="fas fa-check"></i></div>
@@ -420,40 +446,28 @@ const CreateAd: React.FC = () => {
                       ))}
                     </div>
                   </div>
-
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-calendar-alt"></i> Тип аренды</h3>
-                    <p className="createad-section-description">Укажите, как вы сдаёте дом</p>
                     <div className="createad-rent-type-group">
-                    <label className={`createad-rent-option ${formData.rentType === 'month' ? 'active' : ''}`}>
-                      <input type="radio" name="rentType" value="month" checked={formData.rentType === 'month'} onChange={handleInputChange} />
-                      <i className="fas fa-calendar-alt createad-rent-icon"></i>
-                      <div className="createad-rent-text">
-                        <strong>Помесячно</strong>
-                        <small>Долгосрочная аренда</small>
-                      </div>
-                    </label>
-                    <label className={`createad-rent-option ${formData.rentType === 'day' ? 'active' : ''}`}>
-                      <input type="radio" name="rentType" value="day" checked={formData.rentType === 'day'} onChange={handleInputChange} />
-                      <i className="fas fa-sun createad-rent-icon"></i>
-                      <div className="createad-rent-text">
-                        <strong>Посутчно</strong>
-                        <small>Аренда на короткий срок</small>
-                      </div>
-                    </label>
+                      <label className={`createad-rent-option ${formData.rentType === 'month' ? 'active' : ''}`}>
+                        <input type="radio" name="rentType" value="month" checked={formData.rentType === 'month'} onChange={handleInputChange} />
+                        <i className="fas fa-calendar-alt createad-rent-icon"></i>
+                        <div className="createad-rent-text"><strong>Помесячно</strong><small>Долгосрочная аренда</small></div>
+                      </label>
+                      <label className={`createad-rent-option ${formData.rentType === 'day' ? 'active' : ''}`}>
+                        <input type="radio" name="rentType" value="day" checked={formData.rentType === 'day'} onChange={handleInputChange} />
+                        <i className="fas fa-sun createad-rent-icon"></i>
+                        <div className="createad-rent-text"><strong>Посутчно</strong><small>Аренда на короткий срок</small></div>
+                      </label>
+                    </div>
                   </div>
-                  </div>
-
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-info-circle"></i> Основная информация</h3>
                     <div className="createad-form-grid">
                       <div className="createad-form-group">
-                        <label className="createad-form-label">
-                          <span>Цена аренды {formData.rentType === 'month' ? 'в месяц' : 'за сутки'}</span>
-                          <span className="createad-required">*</span>
-                        </label>
+                        <label className="createad-form-label"><span>Цена аренды {formData.rentType === 'month' ? 'в месяц' : 'за сутки'}</span><span className="createad-required">*</span></label>
                         <div className="createad-input-with-suffix">
-                          <input type="number" name="price" value={formData.price} onChange={handleInputChange} required min="0" step="100" placeholder="50000" className="createad-form-input" />
+                          <input type="number" name="price" value={formData.price} onChange={handleInputChange} required min="0" step="100" className="createad-form-input" />
                           <span className="createad-suffix">
                             <i className="nbrb-icon">&#xe901;</i>
                             {formData.rentType === 'month' ? '/мес' : '/сут'}
@@ -463,7 +477,7 @@ const CreateAd: React.FC = () => {
                       <div className="createad-form-group">
                         <label className="createad-form-label"><span>Общая площадь</span><span className="createad-required">*</span></label>
                         <div className="createad-input-with-suffix">
-                          <input type="number" name="area" value={formData.area} onChange={handleInputChange} required min="0" step="0.1" placeholder="120.5" className="createad-form-input" />
+                          <input type="number" name="area" value={formData.area} onChange={handleInputChange} required min="0" step="0.1" className="createad-form-input" />
                           <span className="createad-suffix">м²</span>
                         </div>
                       </div>
@@ -471,12 +485,8 @@ const CreateAd: React.FC = () => {
                         <label className="createad-form-label"><span>Количество комнат</span><span className="createad-required">*</span></label>
                         <div className="createad-select-wrapper">
                           <select name="rooms" value={formData.rooms} onChange={handleInputChange} required className="createad-form-select">
-                            <option value="1">1 комната</option>
-                            <option value="2">2 комнаты</option>
-                            <option value="3">3 комнаты</option>
-                            <option value="4">4 комнаты</option>
-                            <option value="5">5 комнат</option>
-                            <option value="6">6+ комнат</option>
+                            <option value="1">1 комната</option><option value="2">2 комнаты</option><option value="3">3 комнаты</option>
+                            <option value="4">4 комнаты</option><option value="5">5 комнат</option><option value="6">6+ комнат</option>
                           </select>
                           <i className="createad-select-arrow fas fa-chevron-down"></i>
                         </div>
@@ -485,17 +495,14 @@ const CreateAd: React.FC = () => {
                         <label className="createad-form-label"><span>Количество санузлов</span><span className="createad-required">*</span></label>
                         <div className="createad-select-wrapper">
                           <select name="bathrooms" value={formData.bathrooms} onChange={handleInputChange} required className="createad-form-select">
-                            <option value="1">1 санузел</option>
-                            <option value="2">2 санузла</option>
-                            <option value="3">3 санузла</option>
-                            <option value="4">4+ санузла</option>
+                            <option value="1">1 санузел</option><option value="2">2 санузла</option><option value="3">3 санузла</option><option value="4">4+ санузла</option>
                           </select>
                           <i className="createad-select-arrow fas fa-chevron-down"></i>
                         </div>
                       </div>
                       <div className="createad-form-group">
                         <label className="createad-form-label"><span>Этаж</span><span className="createad-required">*</span></label>
-                        <input type="number" name="floor" value={formData.floor} onChange={handleInputChange} required min="0" max="10" placeholder="1" className="createad-form-input" />
+                        <input type="number" name="floor" value={formData.floor} onChange={handleInputChange} required min="0" max="10" className="createad-form-input" />
                       </div>
                     </div>
                   </div>
@@ -517,8 +524,8 @@ const CreateAd: React.FC = () => {
                         </div>
                       </div>
                       <div className="createad-form-group">
-                        <label className="createad-form-label"><span>Населённый пункт (город, деревня, посёлок)</span><span className="createad-required">*</span></label>
-                        <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="Минск, Столбцы, Сула, Боровляны..." className="createad-form-input" />
+                        <label className="createad-form-label"><span>Населённый пункт</span><span className="createad-required">*</span></label>
+                        <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="Минск, Столбцы, Сула..." className="createad-form-input" />
                       </div>
                       <div className="createad-form-group">
                         <label className="createad-form-label"><span>Улица</span><span className="createad-required">*</span></label>
@@ -533,7 +540,6 @@ const CreateAd: React.FC = () => {
 
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-pencil-alt"></i> Описание дома</h3>
-                    <p className="createad-section-description">Расскажите подробнее о вашем доме</p>
                     <div className="createad-form-group createad-full-width">
                       <textarea name="description" value={formData.description} onChange={handleInputChange} required rows={6} minLength={50} maxLength={2000} placeholder="Опишите ваш дом..." className="createad-form-textarea" />
                       <div className="createad-char-counter">
@@ -545,7 +551,6 @@ const CreateAd: React.FC = () => {
 
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-star"></i> Удобства и особенности</h3>
-                    <p className="createad-section-description">Выберите доступные удобства</p>
                     <div className="createad-features-grid">
                       <div className="createad-features-column">
                         <h4>Комфорт</h4>
@@ -584,9 +589,43 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* НОВЫЙ БЛОК: Выбор кейтеринговых компаний */}
+                  <div className="createad-form-section">
+                    <h3 className="createad-section-title"><i className="createad-icon fas fa-utensils"></i> Кейтеринг</h3>
+                    <p className="createad-section-description">Выберите компании, которые будут доступны для заказа еды при бронировании дома</p>
+                    <div className="createad-catering-selector">
+                      {cateringCompaniesLoading ? (
+                        <p>Загрузка компаний...</p>
+                      ) : cateringCompanies.length === 0 ? (
+                        <p>Нет доступных кейтеринговых компаний</p>
+                      ) : (
+                        <div className="createad-checkbox-group">
+                          {cateringCompanies.map(company => (
+                            <label key={company.id} className="createad-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={selectedCaterings.includes(company.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedCaterings(prev => [...prev, company.id]);
+                                  } else {
+                                    setSelectedCaterings(prev => prev.filter(id => id !== company.id));
+                                  }
+                                }}
+                              />
+                              <span className="createad-custom-checkbox"></span>
+                              <span className="createad-checkbox-label">
+                                <strong>{company.companyName}</strong> ({company.city})
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-camera"></i> Фотографии дома</h3>
-                    <p className="createad-section-description">Загрузите фотографии вашего дома</p>
                     <div className={`createad-upload-area ${dragActive ? 'createad-drag-active' : ''} ${photosCount > 0 ? 'createad-has-photos' : ''}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
                       <div className="createad-upload-content">
                         <i className="createad-upload-icon fas fa-cloud-upload-alt"></i>

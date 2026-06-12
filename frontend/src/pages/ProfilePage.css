@@ -1526,3 +1526,121 @@ body {
   outline-offset: 2px;
 }
 
+/* Стили для ссылки на дом в заявках кейтеринга */
+.house-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+.house-link:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+/* ==================== Стили для владельца кейтеринга ==================== */
+/* Единый стиль карточек для заказов и заявок на добавление */
+.catering-orders-list,
+.catering-add-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.catering-order-card,
+.catering-add-request-card {
+  background: var(--white);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  transition: var(--transition);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+}
+
+.catering-order-card:hover,
+.catering-add-request-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent);
+}
+
+/* Изображение в карточке */
+.catering-order-image,
+.catering-add-request-image {
+  width: 120px;
+  height: 90px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.catering-order-image img,
+.catering-add-request-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Информационная часть */
+.catering-order-info,
+.catering-add-request-info {
+  flex: 1;
+}
+.catering-order-info h4,
+.catering-add-request-info h4 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-dark);
+  font-family: var(--font-serif);
+}
+.catering-order-info p,
+.catering-add-request-info p {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+}
+
+/* Бейдж статуса (как у бронирований) */
+.order-status-badge,
+.request-status-badge {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  width: fit-content;
+  margin-bottom: 8px;
+}
+.order-status-badge.confirmed,
+.request-status-badge.approved {
+  background: var(--primary);
+}
+.order-status-badge.pending,
+.request-status-badge.pending {
+  background: var(--warning);
+  color: var(--text-dark);
+}
+.order-status-badge.completed {
+  background: var(--primary-dark);
+}
+.order-status-badge.rejected,
+.request-status-badge.rejected {
+  background: var(--danger);
+}
+
+/* Кнопки действий в карточке (как в заявках на бронирование) */

@@ -1,3 +1,4 @@
+// frontend/src/pages/ProfilePage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -7,11 +8,13 @@ import {
   faSave, faPlus, faPaperPlane, faEraser, faCheckDouble,
   faCheck, faTrash, faBed, faRulerCombined, faMapMarkerAlt,
   faPause, faPlay, faClock, faCheckCircle, faTag, faUpload,
-  faUtensils
+  faUtensils, faBuilding
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
 import OfferServiceModal from '../components/OfferServiceModal';
 import CateringMenu from '../components/CateringMenu';
+import CateringOrdersList from '../components/CateringOrdersList';
+import CateringAddRequestsList from '../components/CateringAddRequestsList';
 
 // ==================== Интерфейсы ====================
 interface UserData {
@@ -164,7 +167,7 @@ interface RawUserBooking {
   createdAt: string;
 }
 
-type ProfileTab = 'profile' | 'ads' | 'chats' | 'support' | 'requests' | 'bookings' | 'history' | 'menu';
+type ProfileTab = 'profile' | 'ads' | 'chats' | 'support' | 'requests' | 'bookings' | 'history' | 'menu' | 'cateringAddRequests';
 
 // ==================== Вспомогательные функции ====================
 const safeFormatDate = (dateStr: string): string => {
@@ -175,7 +178,7 @@ const safeFormatDate = (dateStr: string): string => {
 };
 
 const isValidTab = (tab: string): tab is ProfileTab => {
-  return ['profile', 'ads', 'chats', 'support', 'requests', 'bookings', 'history', 'menu'].includes(tab);
+  return ['profile', 'ads', 'chats', 'support', 'requests', 'bookings', 'history', 'menu', 'cateringAddRequests'].includes(tab);
 };
 
 // ==================== Компонент ====================
@@ -267,7 +270,7 @@ const ProfilePage: React.FC = () => {
           if (newStatus === true) {
             setMessage({ text: 'Поздравляем! Ваша заявка на кейтеринг одобрена. Теперь вам доступно управление меню.', type: 'success' });
             setTimeout(() => setMessage({ text: '', type: 'success' }), 5000);
-            if (activeTab !== 'profile' && activeTab !== 'requests' && activeTab !== 'menu' && activeTab !== 'support') {
+            if (activeTab !== 'profile' && activeTab !== 'requests' && activeTab !== 'menu' && activeTab !== 'support' && activeTab !== 'cateringAddRequests') {
               setActiveTab('profile');
             }
           }
@@ -884,9 +887,12 @@ const ProfilePage: React.FC = () => {
     if (activeTab === 'support' && userData) fetchUserFeedback();
   }, [activeTab, userData]);
 
+  // ИЗМЕНЕНИЕ: разрешаем загрузку чатов для любого пользователя (включая владельца кейтеринга)
   useEffect(() => {
-    if (activeTab === 'chats' && userData && !isCateringOwner) fetchUserChats();
-  }, [activeTab, userData, isCateringOwner]);
+    if (activeTab === 'chats' && userData) {
+      fetchUserChats();
+    }
+  }, [activeTab, userData]);
 
   useEffect(() => {
     if (activeTab === 'requests' && userData) {
@@ -956,11 +962,21 @@ const ProfilePage: React.FC = () => {
             <>
               <button className={`profilepage-nav-item ${activeTab === 'requests' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('requests')}>
                 <FontAwesomeIcon icon={faEnvelope} className="profilepage-nav-icon" />
-                <span>Заявки</span>
+                <span>Заказы</span>
+              </button>
+              <button className={`profilepage-nav-item ${activeTab === 'cateringAddRequests' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('cateringAddRequests')}>
+                <FontAwesomeIcon icon={faBuilding} className="profilepage-nav-icon" />
+                <span>Заявки на добавление</span>
               </button>
               <button className={`profilepage-nav-item ${activeTab === 'menu' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('menu')}>
                 <FontAwesomeIcon icon={faUtensils} className="profilepage-nav-icon" />
                 <span>Меню</span>
+              </button>
+              {/* ДОБАВЛЕНА КНОПКА "Мои чаты" */}
+              <button className={`profilepage-nav-item ${activeTab === 'chats' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('chats')}>
+                <FontAwesomeIcon icon={faComment} className="profilepage-nav-icon" />
+                <span>Мои чаты</span>
+                {totalUnread > 0 && <span className="profilepage-nav-badge profilepage-nav-badge-unread">{totalUnread}</span>}
               </button>
             </>
           ) : (
@@ -1399,12 +1415,13 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'chats' && !isCateringOwner && (
+        {/* ИЗМЕНЕНИЕ: убрано && !isCateringOwner – чаты доступны всем */}
+        {activeTab === 'chats' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
                 <h2>Мои чаты</h2>
-                <p>Общение с пользователями по вашим объявлениям</p>
+                <p>Общение с пользователями по вашим объявлениям и заказам</p>
               </div>
               {totalUnread > 0 && (
                 <button className="profilepage-btn-secondary" onClick={() => { userChats.forEach((chat) => { if (chat.unread_count > 0) handleMarkAsRead(chat.id); }); }}>
@@ -1443,7 +1460,7 @@ const ProfilePage: React.FC = () => {
                     <FontAwesomeIcon icon={faComment} size="3x" />
                   </div>
                   <h3>У вас пока нет чатов</h3>
-                  <p>Когда пользователи начнут писать вам по объявлениям, здесь появятся чаты</p>
+                  <p>Когда пользователи начнут писать вам по объявлениям или заказам, здесь появятся чаты</p>
                 </div>
               )}
             </div>
@@ -1455,13 +1472,11 @@ const ProfilePage: React.FC = () => {
             <div className="profilepage-header">
               <div className="profilepage-header-title">
                 <h2>Заявки</h2>
-                <p>{isCateringOwner ? 'Управление заказами на кейтеринг' : 'Управление заявками на бронирование'}</p>
+                <p>{isCateringOwner ? 'Заказы на кейтеринг' : 'Управление заявками на бронирование'}</p>
               </div>
             </div>
             {isCateringOwner ? (
-              <div className="profilepage-info">
-                <p>Раздел в разработке. Здесь будут отображаться заказы на кейтеринг от клиентов.</p>
-              </div>
+              <CateringOrdersList />
             ) : (
               <>
                 <div className="profilepage-section">
@@ -1526,6 +1541,10 @@ const ProfilePage: React.FC = () => {
               </>
             )}
           </div>
+        )}
+
+        {activeTab === 'cateringAddRequests' && isCateringOwner && (
+          <CateringAddRequestsList />
         )}
 
         {activeTab === 'bookings' && !isCateringOwner && (

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentApp.API.Data;
 
@@ -11,9 +12,11 @@ using RentApp.API.Data;
 namespace rentAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611190004_AddCateringFull")]
+    partial class AddCateringFull
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -155,14 +158,6 @@ namespace rentAPI.Migrations
                     b.Property<DateOnly>("BookingDate")
                         .HasColumnType("date")
                         .HasColumnName("booking_date");
-
-                    b.Property<string>("CateringItemsJson")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("catering_items_json");
-
-                    b.Property<int?>("CateringOwnerId")
-                        .HasColumnType("int")
-                        .HasColumnName("catering_owner_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -639,50 +634,6 @@ namespace rentAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("HouseCaterings", (string)null);
-                });
-
-            modelBuilder.Entity("RentApp.API.Models.HouseCateringRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CateringOwnerId")
-                        .HasColumnType("int")
-                        .HasColumnName("catering_owner_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<int>("HouseId")
-                        .HasColumnType("int")
-                        .HasColumnName("house_id");
-
-                    b.Property<DateTime?>("RespondedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("responded_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CateringOwnerId");
-
-                    b.HasIndex("HouseId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("HouseCateringRequests", (string)null);
                 });
 
             modelBuilder.Entity("RentApp.API.Models.HouseInfo", b =>
@@ -1266,25 +1217,6 @@ namespace rentAPI.Migrations
                 });
 
             modelBuilder.Entity("RentApp.API.Models.HouseCatering", b =>
-                {
-                    b.HasOne("RentApp.API.Models.CateringOwner", "CateringOwner")
-                        .WithMany()
-                        .HasForeignKey("CateringOwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RentApp.API.Models.House", "House")
-                        .WithMany()
-                        .HasForeignKey("HouseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CateringOwner");
-
-                    b.Navigation("House");
-                });
-
-            modelBuilder.Entity("RentApp.API.Models.HouseCateringRequest", b =>
                 {
                     b.HasOne("RentApp.API.Models.CateringOwner", "CateringOwner")
                         .WithMany()

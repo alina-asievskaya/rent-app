@@ -70,6 +70,15 @@ interface HouseData {
   };
 }
 
+// Тип для кейтеринговой компании
+interface CateringCompany {
+  id: number;
+  companyName: string;
+  city: string;
+  description: string;
+  phone: string;
+}
+
 const EditHousePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -78,6 +87,11 @@ const EditHousePage: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [houseData, setHouseData] = useState<HouseData | null>(null);
+
+  // ----- Состояния для кейтеринга -----
+  const [cateringCompanies, setCateringCompanies] = useState<CateringCompany[]>([]);
+  const [selectedCaterings, setSelectedCaterings] = useState<number[]>([]);
+  const [cateringCompaniesLoading, setCateringCompaniesLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     price: '',
@@ -268,6 +282,40 @@ const EditHousePage: React.FC = () => {
     };
   }, []);
 
+  // ----- Загрузка доступных кейтеринговых компаний -----
+  const fetchAvailableCaterings = async (token: string) => {
+    try {
+      setCateringCompaniesLoading(true);
+      const res = await fetch('http://localhost:5213/api/houses/available-caterings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCateringCompanies(data.data);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки кейтерингов:', error);
+    } finally {
+      setCateringCompaniesLoading(false);
+    }
+  };
+
+  // ----- Загрузка текущих привязанных компаний для дома -----
+  const fetchCurrentCaterings = async (token: string, houseId: number) => {
+    try {
+      const res = await fetch(`http://localhost:5213/api/houses/${houseId}/caterings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const currentIds = data.data.map((c: { cateringOwnerId: number }) => c.cateringOwnerId);
+        setSelectedCaterings(currentIds);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки текущих кейтерингов:', error);
+    }
+  };
+
   const fetchHouseData = useCallback(async (token: string) => {
     try {
       setLoading(true);
@@ -309,6 +357,8 @@ const EditHousePage: React.FC = () => {
           existingPhotos: houseData.photos || [],
           newPhotos: [],
         });
+        // Загружаем привязанные кейтеринговые компании
+        await fetchCurrentCaterings(token, houseData.id);
       } else {
         showNotification(result.message || 'Ошибка загрузки данных', 'error');
         setTimeout(() => navigate('/profile'), 2000);
@@ -324,7 +374,10 @@ const EditHousePage: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) navigate('/login');
-    else if (id) fetchHouseData(token);
+    else {
+      fetchHouseData(token);
+      fetchAvailableCaterings(token);
+    }
   }, [id, navigate, fetchHouseData]);
 
   const houseTypes = [
@@ -465,17 +518,41 @@ const EditHousePage: React.FC = () => {
     }
   };
 
+  // ----- Обновление привязки кейтеринга (отправка заявок) -----
+  const updateCaterings = async (token: string, houseId: number, cateringIds: number[]) => {
+    try {
+      const res = await fetch(`http://localhost:5213/api/houses/${houseId}/caterings`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ cateringOwnerIds: cateringIds })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        console.warn('Ошибка обновления кейтерингов:', data.message);
+        showNotification('Не удалось обновить список кейтеринга', 'warning');
+      } else {
+        showNotification('Список кейтеринговых компаний обновлён', 'success');
+      }
+    } catch (error) {
+      console.error('Ошибка при обновлении кейтерингов:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
     setIsSubmitting(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showNotification('Требуется авторизация', 'error');
+      navigate('/login');
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('Требуется авторизация', 'error');
-        navigate('/login');
-        return;
-      }
       const uploadedImageUrls: string[] = [];
       for (const photo of formData.newPhotos) {
         const url = await uploadToCloudinary(photo);
@@ -487,7 +564,8 @@ const EditHousePage: React.FC = () => {
         setIsSubmitting(false);
         return;
       }
-      const houseData = {
+
+      const housePayload = {
         Price: parseFloat(formData.price) || 0,
         Area: parseFloat(formData.area) || 0,
         Description: formData.description || '',
@@ -517,14 +595,18 @@ const EditHousePage: React.FC = () => {
         PhotoUrls: allPhotoUrls,
         DeleteExistingPhotos: true
       };
+
       const response = await fetch(`http://localhost:5213/api/houses/${id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(houseData)
+        body: JSON.stringify(housePayload)
       });
       const result = await response.json();
       if (response.ok && result.success) {
+        // После успешного обновления основных данных – обновляем привязку кейтеринга
+        await updateCaterings(token, parseInt(id!), selectedCaterings);
         showNotification('Объявление успешно обновлено', 'success');
+        // Перезагружаем данные, чтобы обновить форму
         setTimeout(() => { if (token) fetchHouseData(token); }, 1000);
       } else {
         showNotification(result.message || 'Ошибка при обновлении', 'error');
@@ -743,6 +825,41 @@ const EditHousePage: React.FC = () => {
                     <div className="createad-form-group"><label className="createad-form-label">Образовательные учреждения</label><textarea name="education" value={formData.education} onChange={handleInputChange} rows={3} placeholder="Например: школа №15 в 500м" className="createad-form-textarea" /></div>
                     <div className="createad-form-group"><label className="createad-form-label">Магазины и ТЦ</label><textarea name="shops" value={formData.shops} onChange={handleInputChange} rows={3} placeholder="Например: супермаркет 'Евроопт' в 200м" className="createad-form-textarea" /></div>
                   </div>
+                </div>
+              </div>
+
+              {/* НОВЫЙ БЛОК: Кейтеринг */}
+              <div className="createad-form-section">
+                <h3 className="createad-section-title"><i className="createad-icon fas fa-utensils"></i> Кейтеринг</h3>
+                <p className="createad-section-description">Выберите компании, которые будут доступны для заказа еды при бронировании дома</p>
+                <div className="createad-catering-selector">
+                  {cateringCompaniesLoading ? (
+                    <p>Загрузка компаний...</p>
+                  ) : cateringCompanies.length === 0 ? (
+                    <p>Нет доступных кейтеринговых компаний</p>
+                  ) : (
+                    <div className="createad-checkbox-group">
+                      {cateringCompanies.map(company => (
+                        <label key={company.id} className="createad-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedCaterings.includes(company.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCaterings(prev => [...prev, company.id]);
+                              } else {
+                                setSelectedCaterings(prev => prev.filter(id => id !== company.id));
+                              }
+                            }}
+                          />
+                          <span className="createad-custom-checkbox"></span>
+                          <span className="createad-checkbox-label">
+                            <strong>{company.companyName}</strong> ({company.city})
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

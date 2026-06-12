@@ -1,8 +1,7 @@
-// frontend/src/components/CateringMenu.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus, faSave, faTimes, faUtensils } from '@fortawesome/free-solid-svg-icons';
-import '../pages/ProfilePage.css';
+import './CateringMenu.css';
 
 interface MenuItem {
   id: number;
@@ -35,6 +34,16 @@ const CateringMenu: React.FC = () => {
 
   const token = localStorage.getItem('token');
   const API_BASE = 'http://localhost:5213';
+
+  // Функция форматирования цены с иконкой
+  const formatPriceWithIcon = (price: number | null | undefined): React.ReactNode => {
+    if (price == null || isNaN(price)) return null;
+    return (
+      <>
+        {price} <i className="nbrb-icon">&#xe901;</i>
+      </>
+    );
+  };
 
   const fetchCompanyInfo = useCallback(async () => {
     try {
@@ -222,48 +231,48 @@ const CateringMenu: React.FC = () => {
   };
 
   return (
-    <div className="profilepage-tab">
-      <div className="profilepage-header">
-        <div className="profilepage-header-title">
+    <div className="catering-menu-tab">
+      <div className="catering-menu-header">
+        <div className="catering-menu-header-title">
           <h2>Управление меню кейтеринга</h2>
           <p>Ваши блюда и информация о компании</p>
         </div>
       </div>
 
       {error && (
-        <div className="profilepage-message error">
-          <div className="profilepage-message-content">{error}</div>
-          <button className="profilepage-message-close" onClick={() => setError(null)}>&times;</button>
+        <div className="catering-menu-message error">
+          <div className="catering-menu-message-content">{error}</div>
+          <button className="catering-menu-message-close" onClick={() => setError(null)}>&times;</button>
         </div>
       )}
 
       {/* Информация о компании */}
-      <div className="profilepage-info" style={{ marginBottom: '30px' }}>
-        <h3 className="profilepage-section-title">Информация о компании</h3>
-        <div className="profilepage-info-stack">
-          <div className="profilepage-info-stack-item">
-            <div className="profilepage-stack-header">
-              <label className="profilepage-stack-label">Название ИП / Компании</label>
+      <div className="catering-menu-info" style={{ marginBottom: '30px' }}>
+        <h3 className="catering-menu-section-title">Информация о компании</h3>
+        <div className="catering-menu-info-stack">
+          <div className="catering-menu-info-stack-item">
+            <div className="catering-menu-stack-header">
+              <label className="catering-menu-stack-label">Название ИП / Компании</label>
               {editingCompany ? (
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     value={tempCompanyName}
                     onChange={(e) => setTempCompanyName(e.target.value)}
-                    className="profilepage-stack-input"
+                    className="catering-menu-stack-input"
                     style={{ flex: 1 }}
                   />
-                  <button className="profilepage-btn-primary" onClick={handleUpdateCompany}>
+                  <button className="catering-menu-btn-primary" onClick={handleUpdateCompany}>
                     <FontAwesomeIcon icon={faSave} /> Сохранить
                   </button>
-                  <button className="profilepage-btn-secondary" onClick={() => setEditingCompany(false)}>
+                  <button className="catering-menu-btn-secondary" onClick={() => setEditingCompany(false)}>
                     <FontAwesomeIcon icon={faTimes} /> Отмена
                   </button>
                 </div>
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
-                  <div className="profilepage-stack-value">{companyName || 'Не указано'}</div>
-                  <button className="profilepage-btn-secondary" onClick={() => setEditingCompany(true)}>
+                  <div className="catering-menu-stack-value">{companyName || 'Не указано'}</div>
+                  <button className="catering-menu-btn-secondary" onClick={() => setEditingCompany(true)}>
                     <FontAwesomeIcon icon={faEdit} /> Редактировать
                   </button>
                 </div>
@@ -274,50 +283,50 @@ const CateringMenu: React.FC = () => {
       </div>
 
       {/* Список блюд */}
-      <div className="profilepage-info">
+      <div className="catering-menu-info">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-          <h3 className="profilepage-section-title" style={{ margin: 0 }}>Меню блюд</h3>
-          <button className="profilepage-btn-primary" onClick={() => { setEditingItem(null); setFormData({ name: '', description: '', price: '', weightGrams: '', photoUrl: '' }); setShowForm(true); }}>
+          <h3 className="catering-menu-section-title" style={{ margin: 0 }}>Меню блюд</h3>
+          <button className="catering-menu-btn-primary" onClick={() => { setEditingItem(null); setFormData({ name: '', description: '', price: '', weightGrams: '', photoUrl: '' }); setShowForm(true); }}>
             <FontAwesomeIcon icon={faPlus} /> Добавить блюдо
           </button>
         </div>
 
         {loading ? (
-          <div className="profilepage-loading-inner"><div className="profilepage-spinner-small"></div><p>Загрузка меню...</p></div>
+          <div className="catering-menu-loading-inner"><div className="catering-menu-spinner-small"></div><p>Загрузка меню...</p></div>
         ) : menuItems.length === 0 ? (
-          <div className="profilepage-empty">
+          <div className="catering-menu-empty">
             <FontAwesomeIcon icon={faUtensils} size="3x" style={{ color: 'var(--text-muted)', marginBottom: '20px' }} />
             <p>У вас пока нет блюд в меню. Нажмите "Добавить блюдо", чтобы начать.</p>
           </div>
         ) : (
-          <div className="profilepage-ads-list">
+          <div className="catering-menu-ads-list">
             {menuItems.map(item => (
-              <div key={item.id} className="profilepage-ad-item">
+              <div key={item.id} className="catering-menu-ad-item">
                 {item.photoUrl && (
-                  <div className="profilepage-ad-item-image" style={{ width: '120px', height: '120px', flexShrink: 0 }}>
+                  <div className="catering-menu-ad-item-image" style={{ width: '120px', height: '120px', flexShrink: 0 }}>
                     <img src={item.photoUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 )}
-                <div className="profilepage-ad-item-content">
-                  <div className="profilepage-ad-item-header">
+                <div className="catering-menu-ad-item-content">
+                  <div className="catering-menu-ad-item-header">
                     <h3>{item.name}</h3>
                     {item.price != null && item.price > 0 && (
-                      <div className="profilepage-ad-type">{item.price} BYN</div>
+                      <div className="catering-menu-ad-type">{formatPriceWithIcon(item.price)}</div>
                     )}
                   </div>
                   {item.weightGrams && (
-                    <div className="profilepage-ad-item-info">
+                    <div className="catering-menu-ad-item-info">
                       <span>Вес: {item.weightGrams} г</span>
                     </div>
                   )}
                   {item.description && (
-                    <p className="profilepage-ad-item-description">{item.description}</p>
+                    <p className="catering-menu-ad-item-description">{item.description}</p>
                   )}
-                  <div className="profilepage-ad-item-actions">
-                    <button className="profilepage-btn-primary" onClick={() => startEditItem(item)}>
+                  <div className="catering-menu-ad-item-actions">
+                    <button className="catering-menu-btn-primary" onClick={() => startEditItem(item)}>
                       <FontAwesomeIcon icon={faEdit} /> Редактировать
                     </button>
-                    <button className="profilepage-btn-danger" onClick={() => handleDeleteItem(item.id)}>
+                    <button className="catering-menu-btn-danger" onClick={() => handleDeleteItem(item.id)}>
                       <FontAwesomeIcon icon={faTrash} /> Удалить
                     </button>
                   </div>
@@ -330,16 +339,16 @@ const CateringMenu: React.FC = () => {
 
       {/* Модальная форма добавления/редактирования блюда */}
       {showForm && (
-        <div className="modal-overlay" onClick={cancelForm}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="catering-menu-modal-overlay" onClick={cancelForm}>
+          <div className="catering-menu-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="catering-menu-modal-header">
               <h3>{editingItem ? 'Редактировать блюдо' : 'Добавить блюдо'}</h3>
-              <button className="modal-close" onClick={cancelForm}>
+              <button className="catering-menu-modal-close" onClick={cancelForm}>
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
             <form onSubmit={handleSubmitItem}>
-              <div className="form-group">
+              <div className="catering-menu-form-group">
                 <label>Название блюда *</label>
                 <input
                   type="text"
@@ -348,7 +357,7 @@ const CateringMenu: React.FC = () => {
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className="catering-menu-form-group">
                 <label>Описание</label>
                 <textarea
                   rows={3}
@@ -356,8 +365,8 @@ const CateringMenu: React.FC = () => {
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div className="form-group">
-                <label>Цена (BYN)</label>
+              <div className="catering-menu-form-group">
+                <label>Цена (<i className="nbrb-icon">&#xe901;</i>)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -367,7 +376,7 @@ const CateringMenu: React.FC = () => {
                   placeholder="0.00"
                 />
               </div>
-              <div className="form-group">
+              <div className="catering-menu-form-group">
                 <label>Вес (граммы)</label>
                 <input
                   type="number"
@@ -377,13 +386,13 @@ const CateringMenu: React.FC = () => {
                   placeholder="200"
                 />
               </div>
-              <div className="form-group">
+              <div className="catering-menu-form-group">
                 <label>Фото блюда</label>
-                <div className="profilepage-photo-upload" style={{ marginTop: '8px' }}>
+                <div className="catering-menu-photo-upload" style={{ marginTop: '8px' }}>
                   {formData.photoUrl ? (
-                    <div className="profilepage-photo-preview">
+                    <div className="catering-menu-photo-preview">
                       <img src={formData.photoUrl} alt="Предпросмотр" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />
-                      <button type="button" className="profilepage-photo-remove" onClick={() => setFormData({ ...formData, photoUrl: '' })}>
+                      <button type="button" className="catering-menu-photo-remove" onClick={() => setFormData({ ...formData, photoUrl: '' })}>
                         <FontAwesomeIcon icon={faTrash} /> Удалить
                       </button>
                     </div>
@@ -395,14 +404,14 @@ const CateringMenu: React.FC = () => {
                         onChange={handlePhotoUpload}
                         disabled={uploadingPhoto}
                       />
-                      {uploadingPhoto && <div className="profilepage-spinner-small"></div>}
+                      {uploadingPhoto && <div className="catering-menu-spinner-small"></div>}
                     </div>
                   )}
                 </div>
               </div>
-              <div className="modal-actions">
-                <button type="button" className="profilepage-btn-secondary" onClick={cancelForm}>Отмена</button>
-                <button type="submit" className="profilepage-btn-primary" disabled={submitting || uploadingPhoto}>
+              <div className="catering-menu-modal-actions">
+                <button type="button" className="catering-menu-btn-secondary" onClick={cancelForm}>Отмена</button>
+                <button type="submit" className="catering-menu-btn-primary" disabled={submitting || uploadingPhoto}>
                   {submitting ? 'Сохранение...' : <><FontAwesomeIcon icon={faSave} /> Сохранить</>}
                 </button>
               </div>

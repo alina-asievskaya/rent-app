@@ -72,6 +72,16 @@ const ChatPage: React.FC = () => {
 
   const getToken = () => localStorage.getItem('token');
 
+  // Функция форматирования цены с иконкой
+  const formatPriceWithIcon = (price: number): React.ReactNode => {
+    if (price == null || isNaN(price)) return null;
+    return (
+      <>
+        {price.toLocaleString('ru-RU')} <i className="nbrb-icon">&#xe901;</i>
+      </>
+    );
+  };
+
   const fetchChat = useCallback(async () => {
     try {
       setLoading(true);
@@ -310,7 +320,12 @@ const ChatPage: React.FC = () => {
             <div className="chat-header-right">
               <div className="chat-house-info" onClick={handleViewHouse}>
                 <FontAwesomeIcon icon={faHome} />
-                <div><strong>{chat.house.title}</strong><p>{chat.house.price?.toLocaleString('ru-RU')} Br/мес</p></div>
+                <div>
+                  <strong>{chat.house.title}</strong>
+                  <p>
+                    {formatPriceWithIcon(chat.house.price)} /мес
+                  </p>
+                </div>
               </div>
               <div className="dropdown">
                 <button className="btn-icon" onClick={() => setShowMenu(!showMenu)}><FontAwesomeIcon icon={faEllipsisV} /></button>

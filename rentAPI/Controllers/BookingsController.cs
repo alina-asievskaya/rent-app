@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RentApp.API.Data;
+using RentApp.API.DTOs;
 using RentApp.API.DTOs.Bookings;
 using RentApp.API.Models;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace RentApp.API.Controllers
 {
@@ -49,10 +51,27 @@ namespace RentApp.API.Controllers
                     BookingDate = bookingDate,
                     Approved = false,
                     RejectedAt = null,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    CateringOwnerId = dto.CateringOwnerId,
+                    CateringItemsJson = dto.CateringItems != null && dto.CateringItems.Any()
+                        ? JsonSerializer.Serialize(dto.CateringItems)
+                        : null
                 };
 
                 _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync();
+
+                // Уведомление владельцу дома
+                var ownerNotification = new Notification
+                {
+                    UserId = house.IdOwner,
+                    Type = "booking",
+                    ReferenceId = booking.Id,
+                    Text = $"Новая заявка на бронирование дома {house.Description} на {bookingDate}",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                };
+                _context.Notifications.Add(ownerNotification);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Создано бронирование (ожидает): {BookingId} для дома {HouseId} пользователем {UserId}",
@@ -153,9 +172,66 @@ namespace RentApp.API.Controllers
             if (booking == null) return NotFound();
             if (booking.House.IdOwner != userId) return Forbid();
 
+            if (booking.Approved || booking.RejectedAt != null)
+                return BadRequest(new { success = false, message = "Бронирование уже обработано" });
+
             booking.Approved = true;
             booking.RejectedAt = null;
             await _context.SaveChangesAsync();
+
+            // Создание заказа кейтеринга, если есть данные
+            if (booking.CateringOwnerId.HasValue && !string.IsNullOrEmpty(booking.CateringItemsJson))
+            {
+                var items = JsonSerializer.Deserialize<List<CateringOrderItemDto>>(booking.CateringItemsJson);
+                if (items != null && items.Any())
+                {
+                    var order = new CateringOrder
+                    {
+                        BookingId = booking.Id,
+                        CateringOwnerId = booking.CateringOwnerId.Value,
+                        HouseId = booking.HouseId,
+                        UserId = booking.UserId,
+                        ItemsJson = booking.CateringItemsJson,
+                        Status = "pending",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.CateringOrders.Add(order);
+                    await _context.SaveChangesAsync();
+
+                    // Уведомление владельцу кейтеринга
+                    var cateringOwner = await _context.CateringOwners
+                        .Include(co => co.User)
+                        .FirstOrDefaultAsync(co => co.Id == booking.CateringOwnerId);
+                    if (cateringOwner?.UserId != null)
+                    {
+                        var cateringNotification = new Notification
+                        {
+                            UserId = cateringOwner.UserId,
+                            Type = "cateringOrder",
+                            ReferenceId = order.Id,
+                            Text = $"Новый заказ на кейтеринг для дома {booking.House.Description}",
+                            CreatedAt = DateTime.UtcNow,
+                            IsRead = false
+                        };
+                        _context.Notifications.Add(cateringNotification);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
+            // Уведомление пользователю
+            var userNotification = new Notification
+            {
+                UserId = booking.UserId,
+                Type = "bookingStatus",
+                ReferenceId = booking.Id,
+                Text = $"Ваше бронирование дома {booking.House.Description} на {booking.BookingDate} одобрено!",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
+            _context.Notifications.Add(userNotification);
+            await _context.SaveChangesAsync();
+
             return Ok(new { success = true });
         }
 
@@ -174,6 +250,20 @@ namespace RentApp.API.Controllers
             booking.Approved = false;
             booking.RejectedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            // Уведомление пользователю об отказе
+            var userNotification = new Notification
+            {
+                UserId = booking.UserId,
+                Type = "bookingStatus",
+                ReferenceId = booking.Id,
+                Text = $"К сожалению, ваше бронирование дома {booking.House.Description} на {booking.BookingDate} отклонено.",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
+            _context.Notifications.Add(userNotification);
+            await _context.SaveChangesAsync();
+
             return Ok(new { success = true });
         }
 

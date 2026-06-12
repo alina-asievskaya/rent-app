@@ -29,6 +29,7 @@ namespace RentApp.API.Controllers
             return owner?.Id;
         }
 
+        // GET: api/cateringmenu
         [HttpGet]
         public async Task<IActionResult> GetMyMenu()
         {
@@ -36,6 +37,29 @@ namespace RentApp.API.Controllers
             if (ownerId == null)
                 return Unauthorized(new { success = false, message = "Вы не являетесь владельцем кейтеринга" });
 
+            var items = await _context.MenuItems
+                .Where(m => m.CateringOwnerId == ownerId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => new MenuItemDto
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    Description = m.Description,
+                    Price = m.Price,
+                    WeightGrams = m.WeightGrams,
+                    PhotoUrl = m.PhotoUrl,
+                    CreatedAt = m.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(new { success = true, data = items });
+        }
+
+        // НОВЫЙ МЕТОД: GET api/cateringmenu/by-owner/{ownerId}
+        [HttpGet("by-owner/{ownerId}")]
+        [AllowAnonymous] // можно оставить AllowAnonymous, либо [Authorize] – всё равно будет работать
+        public async Task<IActionResult> GetMenuByOwnerId(int ownerId)
+        {
             var items = await _context.MenuItems
                 .Where(m => m.CateringOwnerId == ownerId)
                 .OrderByDescending(m => m.CreatedAt)

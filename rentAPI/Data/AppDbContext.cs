@@ -26,7 +26,9 @@ namespace RentApp.API.Data
          public DbSet<CateringOwner> CateringOwners { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
-
+        public DbSet<HouseCatering> HouseCaterings { get; set; }
+        public DbSet<CateringOrder> CateringOrders { get; set; }
+        public DbSet<HouseCateringRequest> HouseCateringRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -733,6 +735,154 @@ namespace RentApp.API.Data
                 entity.HasIndex(n => n.CreatedAt);
                 entity.HasIndex(n => n.IsRead);
             });
+            // Конфигурация CateringOwner
+            modelBuilder.Entity<CateringOwner>(entity =>
+            {
+                entity.ToTable("CateringOwners");
+                entity.HasKey(co => co.Id);
+                entity.Property(co => co.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(co => co.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(co => co.CompanyName).HasColumnName("company_name").HasMaxLength(200).IsRequired();
+                entity.Property(co => co.City).HasColumnName("city").HasMaxLength(100).IsRequired();
+                entity.Property(co => co.Description).HasColumnName("description").HasMaxLength(2000).IsRequired();
+                entity.Property(co => co.Phone).HasColumnName("phone").HasMaxLength(20);
+                entity.Property(co => co.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(co => co.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
+                entity.HasOne(co => co.User)
+                    .WithMany()
+                    .HasForeignKey(co => co.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(co => co.UserId);
+            });
+
+            // Конфигурация Notification
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.ToTable("Notifications");
+                entity.HasKey(n => n.Id);
+                entity.Property(n => n.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(n => n.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(n => n.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
+                entity.Property(n => n.ReferenceId).HasColumnName("reference_id");
+                entity.Property(n => n.Text).HasColumnName("text").HasMaxLength(500).IsRequired();
+                entity.Property(n => n.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(n => n.IsRead).HasColumnName("is_read").HasDefaultValue(false);
+
+                entity.HasOne(n => n.User)
+                    .WithMany()
+                    .HasForeignKey(n => n.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(n => n.UserId);
+            });
+
+            // Конфигурация MenuItem
+            modelBuilder.Entity<MenuItem>(entity =>
+            {
+                entity.ToTable("MenuItems");
+                entity.HasKey(m => m.Id);
+                entity.Property(m => m.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(m => m.CateringOwnerId).HasColumnName("catering_owner_id").IsRequired();
+                entity.Property(m => m.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(m => m.Description).HasColumnName("description").HasMaxLength(500);
+                entity.Property(m => m.Price).HasColumnName("price").HasColumnType("decimal(18,2)");
+                entity.Property(m => m.WeightGrams).HasColumnName("weight_grams");
+                entity.Property(m => m.PhotoUrl).HasColumnName("photo_url").HasMaxLength(500);
+                entity.Property(m => m.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+
+                entity.HasOne(m => m.CateringOwner)
+                    .WithMany()
+                    .HasForeignKey(m => m.CateringOwnerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(m => m.CateringOwnerId);
+            });
+
+            // Конфигурация HouseCatering
+            modelBuilder.Entity<HouseCatering>(entity =>
+            {
+                entity.ToTable("HouseCaterings");
+                entity.HasKey(hc => hc.Id);
+                entity.Property(hc => hc.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(hc => hc.HouseId).HasColumnName("house_id").IsRequired();
+                entity.Property(hc => hc.CateringOwnerId).HasColumnName("catering_owner_id").IsRequired();
+
+                entity.HasOne(hc => hc.House)
+                    .WithMany()
+                    .HasForeignKey(hc => hc.HouseId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(hc => hc.CateringOwner)
+                    .WithMany()
+                    .HasForeignKey(hc => hc.CateringOwnerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(hc => new { hc.HouseId, hc.CateringOwnerId }).IsUnique();
+            });
+
+                // Конфигурация CateringOrder
+                modelBuilder.Entity<CateringOrder>(entity =>
+                {
+                    entity.ToTable("CateringOrders");
+                    entity.HasKey(o => o.Id);
+                    entity.Property(o => o.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                    entity.Property(o => o.BookingId).HasColumnName("booking_id").IsRequired();
+                    entity.Property(o => o.CateringOwnerId).HasColumnName("catering_owner_id").IsRequired();
+                    entity.Property(o => o.HouseId).HasColumnName("house_id").IsRequired();
+                    entity.Property(o => o.UserId).HasColumnName("user_id").IsRequired();
+                    entity.Property(o => o.ItemsJson).HasColumnName("items_json");
+                    entity.Property(o => o.Status).HasColumnName("status").HasMaxLength(20);
+                    entity.Property(o => o.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+                    entity.Property(o => o.RespondedAt).HasColumnName("responded_at");
+
+                    entity.HasOne(o => o.Booking)
+                        .WithMany()
+                        .HasForeignKey(o => o.BookingId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    entity.HasOne(o => o.CateringOwner)
+                        .WithMany()
+                        .HasForeignKey(o => o.CateringOwnerId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    entity.HasIndex(o => o.BookingId);
+                    entity.HasIndex(o => o.CateringOwnerId);
+                    entity.HasIndex(o => o.Status);
+
+                    modelBuilder.Entity<CateringOrder>()
+                    .HasOne(o => o.User)
+                    .WithMany()
+                    .HasForeignKey(o => o.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                });
+
+                modelBuilder.Entity<HouseCateringRequest>(entity =>
+                {
+                    entity.ToTable("HouseCateringRequests");
+                    entity.HasKey(r => r.Id);
+                    entity.Property(r => r.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                    entity.Property(r => r.HouseId).HasColumnName("house_id").IsRequired();
+                    entity.Property(r => r.CateringOwnerId).HasColumnName("catering_owner_id").IsRequired();
+                    entity.Property(r => r.Status).HasColumnName("status").HasMaxLength(20);
+                    entity.Property(r => r.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+                    entity.Property(r => r.RespondedAt).HasColumnName("responded_at");
+
+                    entity.HasOne(r => r.House)
+                        .WithMany()
+                        .HasForeignKey(r => r.HouseId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    entity.HasOne(r => r.CateringOwner)
+                        .WithMany()
+                        .HasForeignKey(r => r.CateringOwnerId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    entity.HasIndex(r => r.HouseId);
+                    entity.HasIndex(r => r.CateringOwnerId);
+                    entity.HasIndex(r => r.Status);
+                });
 
             modelBuilder.Entity<User>(entity =>
             {

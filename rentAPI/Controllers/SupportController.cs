@@ -53,7 +53,7 @@ namespace RentApp.API.Controllers
                     UserId = userId,
                     Topic = feedbackDto.Topic,
                     Text = feedbackDto.Text,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateOnly.FromDateTime(DateTime.Now)
                 };
 
                 // Сохраняем в базу данных

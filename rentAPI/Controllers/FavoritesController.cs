@@ -61,6 +61,7 @@ namespace RentApp.API.Controllers
                     Photos = f.House.Photos.Select(p => p.Photo).ToList(),
                     City = f.House.HouseInfo != null ? f.House.HouseInfo.City : string.Empty,
                     Street = f.House.HouseInfo != null ? f.House.HouseInfo.Street : string.Empty,
+                    HouseNumber = f.House.HouseInfo.HouseNumber,
                     Rooms = f.House.HouseInfo != null ? f.House.HouseInfo.Rooms : 1,
                     Bathrooms = f.House.HouseInfo != null ? f.House.HouseInfo.Bathrooms : 1,
                     Floor = f.House.HouseInfo != null ? f.House.HouseInfo.Floor : 1,
@@ -68,7 +69,7 @@ namespace RentApp.API.Controllers
                     Year = DateTime.UtcNow.Year,
                     AddedToFavorites = f.CreatedAt.ToString("yyyy-MM-dd"),
                     IsActive = f.House.Active,
-                    RentType = f.House.RentType   // <-- ДОБАВИТЬ ЭТУ СТРОКУ
+                    RentType = f.House.RentType   
                 })
                 .ToListAsync();
 

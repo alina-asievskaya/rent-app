@@ -36,7 +36,8 @@ import {
   faChevronLeft as faChevronLeftDouble,
   faExpand,
   faSun,
-  faCalendarAlt as faCalendarAltSolid
+  faCalendarAlt as faCalendarAltSolid,
+  faTrashAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
@@ -50,7 +51,7 @@ interface ApiHouseInfo {
   announcementData: string;
   active: boolean;
   photos: string[];
-  rentType?: 'day' | 'month'; // Добавлено поле для типа аренды
+  rentType?: 'day' | 'month';
   houseInfo?: {
     region?: string;
     city?: string;
@@ -94,7 +95,7 @@ interface HouseInfo {
   announcementData: string;
   active: boolean;
   photos: string[];
-  rentType?: 'day' | 'month'; // Добавлено поле для типа аренды
+  rentType?: 'day' | 'month';
   region?: string;
   city?: string;
   street?: string;
@@ -239,7 +240,6 @@ const HouseInfo: React.FC = () => {
   const [thumbnailScrollPosition, setThumbnailScrollPosition] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  // Функции для типа аренды
   const getRentTypeText = (rentType?: 'day' | 'month'): string => {
     if (rentType === 'day') return 'Посуточно';
     if (rentType === 'month') return 'Помесячно';
@@ -692,13 +692,41 @@ const HouseInfo: React.FC = () => {
     }
   };
 
+  const handleDeleteHouse = async () => {
+    if (!window.confirm('Вы уверены, что хотите удалить это объявление? Действие необратимо.')) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Необходима авторизация');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5213/api/houses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        alert('Объявление успешно удалено');
+        navigate('/catalog');
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Ошибка при удалении объявления');
+      }
+    } catch (error) {
+      console.error('Ошибка удаления:', error);
+      alert('Не удалось удалить объявление');
+    }
+  };
+
   const transformApiDataToHouseInfo = (apiData: ApiHouseInfo): HouseInfo => {
-    // Определяем тип аренды из данных API
     let rentType: 'day' | 'month' | undefined = apiData.rentType;
     if (!rentType) {
-      // Если rentType не пришел, пытаемся определить по цене или другим признакам
-      // Здесь можно добавить логику определения, если нужно
-      rentType = 'month'; // значение по умолчанию
+      rentType = 'month';
     }
     
     return {
@@ -710,7 +738,7 @@ const HouseInfo: React.FC = () => {
       announcementData: apiData.announcementData,
       active: apiData.active,
       photos: apiData.photos,
-      rentType: rentType, // Добавляем тип аренды
+      rentType: rentType,
       region: apiData.houseInfo?.region,
       city: apiData.houseInfo?.city,
       street: apiData.houseInfo?.street,
@@ -1331,7 +1359,6 @@ const HouseInfo: React.FC = () => {
                   </p>
                   <div className="price-section-house">
                     <h2>{formatPriceWithIcon(house.price, house.rentType)}</h2>
-                    {/* Добавляем бейдж типа аренды */}
                   </div>
                 </div>
 
@@ -1373,7 +1400,6 @@ const HouseInfo: React.FC = () => {
                       <span className="feature-label-house">Дата публикации</span>
                     </div>
                   </div>
-                  {/* Добавляем тип аренды в характеристики */}
                   {house.rentType && (
                     <div className="feature-item-house">
                       <FontAwesomeIcon icon={getRentTypeIcon(house.rentType)} />
@@ -1452,74 +1478,77 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Раздел отзывов - показывается всем, но форма отправки скрыта для админа */}
                 <div className="reviews-section-house">
                   <h3>Отзывы о доме</h3>
                   
-                  <div className="review-form-house">
-                    <h4>Оставить отзыв</h4>
-                    <div className="rating-input-house">
-                      <span>Рейтинг:</span>
-                      <div className="stars-input-house">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <FontAwesomeIcon
-                            key={star}
-                            icon={faStar}
-                            className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
-                            onClick={canLeaveReviewResult ? 
-                              () => setNewReview({ ...newReview, rating: star }) : 
-                              handleStarClickUnauthorized}
-                          />
-                        ))}
+                  {/* Форма добавления отзыва - только для обычных пользователей (не админ) */}
+                  {!isAdmin && (
+                    <div className="review-form-house">
+                      <h4>Оставить отзыв</h4>
+                      <div className="rating-input-house">
+                        <span>Рейтинг:</span>
+                        <div className="stars-input-house">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <FontAwesomeIcon
+                              key={star}
+                              icon={faStar}
+                              className={`star-input ${newReview.rating >= star ? 'active' : ''}`}
+                              onClick={canLeaveReviewResult ? 
+                                () => setNewReview({ ...newReview, rating: star }) : 
+                                handleStarClickUnauthorized}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="review-text-house">
-                      <textarea
-                        value={newReview.text}
-                        onChange={canLeaveReviewResult ? 
-                          (e) => setNewReview({ ...newReview, text: e.target.value }) : 
-                          undefined}
-                        onClick={!canLeaveReviewResult ? handleTextareaClickUnauthorized : undefined}
-                        placeholder={canLeaveReviewResult ? 
-                          "Расскажите о вашем опыте (минимум 10 символов)..." :
-                          "Для оставления отзыва необходимо авторизоваться"}
-                        rows={4}
-                        maxLength={1000}
-                        readOnly={!canLeaveReviewResult}
-                      />
-                      <div className="char-count">
-                        {newReview.text.length}/1000 символов
-                        {newReview.text.length < 10 && (
-                          <span className="char-warning"> (минимум 10 символов)</span>
-                        )}
+                      <div className="review-text-house">
+                        <textarea
+                          value={newReview.text}
+                          onChange={canLeaveReviewResult ? 
+                            (e) => setNewReview({ ...newReview, text: e.target.value }) : 
+                            undefined}
+                          onClick={!canLeaveReviewResult ? handleTextareaClickUnauthorized : undefined}
+                          placeholder={canLeaveReviewResult ? 
+                            "Расскажите о вашем опыте (минимум 10 символов)..." :
+                            "Для оставления отзыва необходимо авторизоваться"}
+                          rows={4}
+                          maxLength={1000}
+                          readOnly={!canLeaveReviewResult}
+                        />
+                        <div className="char-count">
+                          {newReview.text.length}/1000 символов
+                          {newReview.text.length < 10 && (
+                            <span className="char-warning"> (минимум 10 символов)</span>
+                          )}
+                        </div>
                       </div>
+                      {canLeaveReviewResult ? (
+                        <button 
+                          className="btn-primary-house"
+                          onClick={handleSubmitReview}
+                          disabled={submittingReview || newReview.text.trim().length < 10}
+                        >
+                          {submittingReview ? (
+                            <>
+                              <FontAwesomeIcon icon={faSpinner} spin />
+                              Отправка...
+                            </>
+                          ) : (
+                            'Отправить отзыв'
+                          )}
+                        </button>
+                      ) : (
+                        <button 
+                          className="btn-primary-house"
+                          onClick={() => navigate('/login')}
+                        >
+                          {isAdmin ? 'Администраторы не могут оставлять отзывы' : 
+                           isOwner ? 'Владельцы не могут оставлять отзывы на свое объявление' : 
+                           'Войти для отправки отзыва'}
+                        </button>
+                      )}
                     </div>
-                    {canLeaveReviewResult ? (
-                      <button 
-                        className="btn-primary-house"
-                        onClick={handleSubmitReview}
-                        disabled={submittingReview || newReview.text.trim().length < 10}
-                      >
-                        {submittingReview ? (
-                          <>
-                            <FontAwesomeIcon icon={faSpinner} spin />
-                            Отправка...
-                          </>
-                        ) : (
-                          'Отправить отзыв'
-                        )}
-                      </button>
-                    ) : (
-                      <button 
-                        className="btn-primary-house"
-                        onClick={() => navigate('/login')}
-                      >
-                        {isAdmin ? 'Администраторы не могут оставлять отзывы' : 
-                         isOwner ? 'Владельцы не могут оставлять отзывы на свое объявление' : 
-                         'Войти для отправки отзыва'}
-                      </button>
-                    )}
-                    
-                  </div>
+                  )}
 
                   {loadingReviews ? (
                     <div className="loading-reviews">
@@ -1591,74 +1620,90 @@ const HouseInfo: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <div className="contact-actions-house">
-                    {ownerInfo?.phone_num && (
-                      <button className="btn-primary-house full-width-house" onClick={handleCall}>
-                        <FontAwesomeIcon icon={faPhone} />
-                        Позвонить владельцу
-                      </button>
-                    )}
-                    <button 
-                      className="btn-primary-house full-width-house" 
-                      onClick={() => setIsBookingModalOpen(true)}
-                    >
-                      Забронировать
-                    </button>
-                    
-                    {!isOwner && ownerInfo?.email !== 'admin@gmail.com' && (
-                      <button 
-                        className="btn-primary-house full-width-house chat-button"
-                        onClick={handleStartChat}
-                        style={{ marginTop: '10px' }}
-                        disabled={checkingOwner}
-                      >
-                        <FontAwesomeIcon icon={faComment} />
-                        {checkingOwner ? ' Загрузка...' : ' Написать владельцу'}
-                      </button>
-                    )}
-                    
-                    {ownerInfo?.email === 'admin@gmail.com' && (
-                      <div className="admin-chat-notice">
-                        <p><strong>Это объявление администратора.</strong></p>
-                        <p>Для связи используйте форму обратной связи в профиле.</p>
-                      </div>
-                    )}
-                  </div>
                   
-                  <div className="contact-meta-house">
-                    <div className="meta-item-house">
-                      <FontAwesomeIcon icon={faCalendarAlt} />
-                      <span>{announcementDate}</span>
-                    </div>
-                  </div>
+                  {/* Контактные действия (кнопки) - только для обычных пользователей */}
+                  {!isAdmin && (
+                    <>
+                      <div className="contact-actions-house">
+                        {ownerInfo?.phone_num && (
+                          <button className="btn-primary-house full-width-house" onClick={handleCall}>
+                            <FontAwesomeIcon icon={faPhone} />
+                            Позвонить владельцу
+                          </button>
+                        )}
+                        <button 
+                          className="btn-primary-house full-width-house" 
+                          onClick={() => setIsBookingModalOpen(true)}
+                        >
+                          Забронировать
+                        </button>
+                        
+                        {!isOwner && ownerInfo?.email !== 'admin@gmail.com' && (
+                          <button 
+                            className="btn-primary-house full-width-house chat-button"
+                            onClick={handleStartChat}
+                            style={{ marginTop: '10px' }}
+                            disabled={checkingOwner}
+                          >
+                            <FontAwesomeIcon icon={faComment} />
+                            {checkingOwner ? ' Загрузка...' : ' Написать владельцу'}
+                          </button>
+                        )}
+                        
+                        {ownerInfo?.email === 'admin@gmail.com' && (
+                          <div className="admin-chat-notice">
+                            <p><strong>Это объявление администратора.</strong></p>
+                            <p>Для связи используйте форму обратной связи в профиле.</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="contact-meta-house">
+                        <div className="meta-item-house">
+                          <FontAwesomeIcon icon={faCalendarAlt} />
+                          <span>{announcementDate}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="action-buttons-house">
-                  {checkingFavorite ? (
-                    <button 
-                      className="btn-outline-house full-width-house"
-                      disabled
-                    >
-                      <FontAwesomeIcon icon={faSpinner} spin />
-                      Проверка...
-                    </button>
+                  {!isAdmin ? (
+                    checkingFavorite ? (
+                      <button 
+                        className="btn-outline-house full-width-house"
+                        disabled
+                      >
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                        Проверка...
+                      </button>
+                    ) : (
+                      <button 
+                        className={`btn-outline-house full-width-house ${isFavorite ? 'active-favorite' : ''}`}
+                        onClick={toggleFavorite}
+                        disabled={togglingFavorite}
+                      >
+                        {togglingFavorite ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} spin />
+                            Загрузка...
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={isFavorite ? faHeart : faHeartRegular} />
+                            {isFavorite ? 'В избранном' : 'В избранное'}
+                          </>
+                        )}
+                      </button>
+                    )
                   ) : (
                     <button 
-                      className={`btn-outline-house full-width-house ${isFavorite ? 'active-favorite' : ''}`}
-                      onClick={toggleFavorite}
-                      disabled={togglingFavorite || isAdmin}
+                      className="btn-outline-house full-width-house delete-button"
+                      onClick={handleDeleteHouse}
                     >
-                      {togglingFavorite ? (
-                        <>
-                          <FontAwesomeIcon icon={faSpinner} spin />
-                          Загрузка...
-                        </>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon={isFavorite ? faHeart : faHeartRegular} />
-                          {isFavorite ? 'В избранном' : 'В избранное'}
-                        </>
-                      )}
+                      <FontAwesomeIcon icon={faTrashAlt} />
+                      Удалить объявление
                     </button>
                   )}
                 </div>
@@ -1669,12 +1714,12 @@ const HouseInfo: React.FC = () => {
       </div>
       
       <BookingModal
-    isOpen={isBookingModalOpen}
-    onClose={() => setIsBookingModalOpen(false)}
-    houseId={house.id}
-    rentType={house.rentType || 'month'}   // ← добавлено
-    onBookingSuccess={() => {}}
-/>
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        houseId={house.id}
+        rentType={house.rentType || 'month'}
+        onBookingSuccess={() => {}}
+      />
     </>
   );
 };

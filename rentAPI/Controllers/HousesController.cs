@@ -203,6 +203,7 @@ namespace RentApp.API.Controllers
         }
 
         // GET: api/houses/catalog
+       // GET: api/houses/catalog
         [HttpGet("catalog")]
         [AllowAnonymous]
         public async Task<IActionResult> GetCatalogHouses()
@@ -228,12 +229,13 @@ namespace RentApp.API.Controllers
                         : h.Description,
                     FullDescription = h.Description,
                     HouseType = h.HouseType,
-                    RentType = h.RentType, // <-- ДОБАВЛЕНО RentType
+                    RentType = h.RentType,
                     AnnouncementData = h.AnnouncementData.ToString("yyyy-MM-dd"),
                     Photos = h.Photos.Select(p => p.Photo).ToList(),
                     Region = h.HouseInfo?.Region ?? string.Empty,
                     City = h.HouseInfo?.City ?? string.Empty,
                     Street = h.HouseInfo?.Street ?? string.Empty,
+                    HouseNumber = h.HouseInfo?.HouseNumber ?? string.Empty, // <-- ДОБАВЛЕНО
                     Rooms = h.HouseInfo?.Rooms ?? 1,
                     Bathrooms = h.HouseInfo?.Bathrooms ?? 1,
                     Floor = h.HouseInfo?.Floor ?? 1,
@@ -252,15 +254,16 @@ namespace RentApp.API.Controllers
                 .Select(h => new
                 {
                     h.Id,
-                    Price = h.Price.ToString("N0") + (h.RentType == "day" ? " Br/сутки" : " Br/мес"), // <-- динамическая цена
+                    Price = h.Price.ToString("N0") + (h.RentType == "day" ? " Br/сутки" : " Br/мес"),
                     h.Area,
                     h.Description,
                     h.FullDescription,
                     h.HouseType,
-                    h.RentType, // <-- ДОБАВЛЕНО RentType
+                    h.RentType,
                     h.AnnouncementData,
                     h.Photos,
-                    Address = $"{h.City}, {h.Street}",
+                    // Адрес теперь включает номер дома
+                    Address = $"{h.City}, {h.Street}{(string.IsNullOrEmpty(h.HouseNumber) ? "" : $", {h.HouseNumber}")}",
                     ShortAddress = $"{h.City}, {h.Street.Substring(0, Math.Min(30, h.Street.Length))}...",
                     Info = $"{h.Rooms}-комн. {h.HouseType?.ToLower()}, {h.Area} м²",
                     h.Rooms,
@@ -276,7 +279,11 @@ namespace RentApp.API.Controllers
                     h.Badge,
                     h.ImageUrl,
                     h.Beds,
-                    h.Baths
+                    h.Baths,
+                    // Можно также передать отдельные компоненты адреса для гибкости на фронте
+                    h.City,
+                    h.Street,
+                    HouseNumber = h.HouseNumber
                 })
                 .ToList();
 
@@ -301,7 +308,6 @@ namespace RentApp.API.Controllers
                 });
             }
         }
-
         // GET: api/houses/my-houses
         [HttpGet("my-houses")]
         [Authorize]

@@ -88,7 +88,7 @@ interface FeedbackData {
   id: number;
   topic: string;
   text: string;
-  created_at: string;
+ createdAt: string;
   user: {
     fio: string;
     email: string;
@@ -201,9 +201,18 @@ interface RawUserBooking {
 
 type ProfileTab = 'profile' | 'ads' | 'chats' | 'support' | 'requests' | 'bookings' | 'history' | 'menu' | 'cateringAddRequests';
 
-// ==================== Вспомогательные функции ====================
 const safeFormatDate = (dateStr: string): string => {
   if (!dateStr) return '—';
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+    const localDate = new Date(year, month - 1, day);
+    if (!isNaN(localDate.getTime())) {
+      return localDate.toLocaleDateString('ru-RU');
+    }
+  }
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('ru-RU');
@@ -756,6 +765,7 @@ const ProfilePage: React.FC = () => {
       setMessage({ text: 'Ошибка соединения', type: 'error' });
     }
   };
+  
 
   const handleSupportSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1704,11 +1714,10 @@ const ProfilePage: React.FC = () => {
                   <div className="profilepage-form-group">
                     <label htmlFor="topic" className="profilepage-form-label">Тема обращения <span className="profilepage-required">*</span></label>
                     <select id="topic" name="topic" className="profilepage-support-select" required>
-                      <option value="">Выберите тему</option>
-                      <option value="technical">Технические проблемы</option>
-                      <option value="account">Вопросы по аккаунту</option>
-                      <option value="ad">Проблемы с объявлениями</option>
-                      <option value="other">Другое</option>
+                      <option value="Технические проблемы">Технические проблемы</option>
+                      <option value="Вопросы по аккаунту">Вопросы по аккаунту</option>
+                      <option value="Проблемы с объявлениями">Проблемы с объявлениями</option>
+                      <option value="Другое">Другое</option>
                     </select>
                   </div>
                   <div className="profilepage-form-group">
@@ -1732,7 +1741,7 @@ const ProfilePage: React.FC = () => {
                           <div className="profilepage-feedback-header">
                             <div className="profilepage-feedback-topic">{translateTopic(feedback.topic)}</div>
                             <div className="profilepage-feedback-date">
-                              {safeFormatDate(feedback.created_at)}
+                              {safeFormatDate(feedback.createdAt)}
                               <button className="profilepage-btn-delete-feedback" onClick={(e) => { e.stopPropagation(); handleDeleteFeedback(feedback.id); }} disabled={deletingFeedback === feedback.id} title="Удалить обращение">
                                 {deletingFeedback === feedback.id ? <div className="profilepage-spinner-small"></div> : <FontAwesomeIcon icon={faTrash} />}
                               </button>

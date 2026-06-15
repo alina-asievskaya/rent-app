@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from '../components/Header';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faConciergeBell, faCheck, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faConciergeBell, faCheck, faTimes, faTrash,
+  faMapMarkerAlt, faPhone, faEnvelope, faCalendarAlt, faUser
+} from '@fortawesome/free-solid-svg-icons';
 import './AdminPanel.css';
 
 interface User {
@@ -63,6 +65,23 @@ interface AdminStats {
   totalFeedback: number;
 }
 
+const formatDateOnly = (dateStr: string): string => {
+  if (!dateStr) return '—';
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+    const localDate = new Date(year, month - 1, day);
+    if (!isNaN(localDate.getTime())) {
+      return localDate.toLocaleDateString('ru-RU');
+    }
+  }
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('ru-RU');
+};
+
 const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'agents' | 'feedback' | 'services'>('stats');
   const [users, setUsers] = useState<User[]>([]);
@@ -77,8 +96,7 @@ const AdminPanel: React.FC = () => {
     activeUsers: 0,
     totalFeedback: 0
   });
-  
-  // Состояния для всплывающих сообщений
+
   const [toasts, setToasts] = useState<Array<{
     id: number;
     text: string;
@@ -117,14 +135,10 @@ const AdminPanel: React.FC = () => {
   const user = userStr ? JSON.parse(userStr) : null;
   const API_BASE_URL = 'http://localhost:5213';
 
-  // Функция для показа всплывающего сообщения
   const showToast = (text: string, type: 'success' | 'error' | 'info' | 'warning') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
-    
-    setTimeout(() => {
-      removeToast(id);
-    }, 5000);
+    setTimeout(() => removeToast(id), 5000);
   };
 
   const removeToast = (id: number) => {
@@ -132,13 +146,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const showConfirmation = (title: string, message: string, type: 'danger' | 'warning' | 'info', onConfirm: () => void) => {
-    setConfirmationModal({
-      isOpen: true,
-      title,
-      message,
-      type,
-      onConfirm
-    });
+    setConfirmationModal({ isOpen: true, title, message, type, onConfirm });
   };
 
   const closeConfirmation = () => {
@@ -156,11 +164,7 @@ const AdminPanel: React.FC = () => {
         method: 'POST',
         body: formData
       });
-
-      if (!response.ok) {
-        throw new Error(`Cloudinary upload failed: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Cloudinary upload failed: ${response.status}`);
       const data = await response.json();
       return data.secure_url || null;
     } catch (error) {
@@ -173,24 +177,14 @@ const AdminPanel: React.FC = () => {
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-
       if (!response.ok) {
-        if (response.status === 401) {
-          handleLogoutConfirmation();
-          return;
-        }
+        if (response.status === 401) handleLogoutConfirmation();
         throw new Error(`Stats fetch failed: ${response.status}`);
       }
-
       const data = await response.json();
-      if (data.success) {
-        setAdminStats(data.data);
-      }
+      if (data.success) setAdminStats(data.data);
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
       showToast('Ошибка загрузки статистики', 'error');
@@ -200,24 +194,16 @@ const AdminPanel: React.FC = () => {
   const fetchServiceRequests = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/service-requests`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!response.ok) {
-        if (response.status === 401) {
-          handleLogoutConfirmation();
-          return;
-        }
+        if (response.status === 401) handleLogoutConfirmation();
         throw new Error(`Service requests fetch failed: ${response.status}`);
       }
       const data = await response.json();
-      if (data.success) {
-        setServiceRequests(data.data);
-      }
+      if (data.success) setServiceRequests(data.data);
     } catch (error) {
-      console.error('Ошибка загрузки заявок на услуги:', error);
+      console.error('Ошибка загрузки заявок:', error);
       showToast('Ошибка загрузки заявок', 'error');
     }
   }, [token, API_BASE_URL]);
@@ -225,40 +211,29 @@ const AdminPanel: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      if (activeTab === 'stats') {
+        await fetchStats();
+        setLoading(false);
+        return;
+      }
       const endpoints: Record<string, string> = {
         users: `${API_BASE_URL}/api/admin/users`,
         agents: `${API_BASE_URL}/api/admin/agents`,
         feedback: `${API_BASE_URL}/api/admin/feedback`,
         services: `${API_BASE_URL}/api/admin/service-requests`
       };
-
-      if (activeTab === 'stats') {
-        await fetchStats();
-        setLoading(false);
-        return;
-      }
-
       const endpoint = endpoints[activeTab];
       if (!endpoint) {
         setLoading(false);
         return;
       }
-
       const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-
       if (!response.ok) {
-        if (response.status === 401) {
-          handleLogoutConfirmation();
-          return;
-        }
+        if (response.status === 401) handleLogoutConfirmation();
         throw new Error(`Data fetch failed: ${response.status}`);
       }
-
       const data = await response.json();
       if (activeTab === 'users') setUsers(data.data);
       if (activeTab === 'agents') setAgents(data.data);
@@ -281,22 +256,15 @@ const AdminPanel: React.FC = () => {
   }, [token, user?.email, navigate, fetchData]);
 
   useEffect(() => {
-    if (token && user?.email === 'admin@gmail.com') {
-      fetchData();
-    }
+    if (token && user?.email === 'admin@gmail.com') fetchData();
   }, [activeTab, fetchData, token, user?.email]);
 
   const handleLogoutConfirmation = () => {
-    showConfirmation(
-      'Выход из системы',
-      'Вы уверены, что хотите выйти из административной панели?',
-      'warning',
-      () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/');
-      }
-    );
+    showConfirmation('Выход из системы', 'Вы уверены, что хотите выйти из административной панели?', 'warning', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/');
+    });
   };
 
   const handleDeleteUser = (userId: number, userEmail: string, userFio: string) => {
@@ -308,20 +276,12 @@ const AdminPanel: React.FC = () => {
         try {
           const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
             method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
           });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Delete user failed: ${response.status}: ${errorText}`);
-          }
-
+          if (!response.ok) throw new Error(`Delete user failed: ${response.status}`);
           const data = await response.json();
           if (data.success) {
-            setUsers(users.filter(user => user.id !== userId));
+            setUsers(users.filter(u => u.id !== userId));
             showToast('Пользователь успешно удален', 'success');
             fetchStats();
           } else {
@@ -344,20 +304,12 @@ const AdminPanel: React.FC = () => {
         try {
           const response = await fetch(`${API_BASE_URL}/api/admin/agents/${agentId}`, {
             method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
           });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Delete agent failed: ${response.status}: ${errorText}`);
-          }
-
+          if (!response.ok) throw new Error(`Delete agent failed: ${response.status}`);
           const data = await response.json();
           if (data.success) {
-            setAgents(agents.filter(agent => agent.id !== agentId));
+            setAgents(agents.filter(a => a.id !== agentId));
             showToast('Организатор успешно удален', 'success');
             fetchStats();
           } else {
@@ -380,17 +332,9 @@ const AdminPanel: React.FC = () => {
         try {
           const response = await fetch(`${API_BASE_URL}/api/admin/feedback/${feedbackId}`, {
             method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
           });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Delete feedback failed: ${response.status}: ${errorText}`);
-          }
-
+          if (!response.ok) throw new Error(`Delete feedback failed: ${response.status}`);
           const data = await response.json();
           if (data.success) {
             setFeedback(feedback.filter(f => f.id !== feedbackId));
@@ -407,21 +351,17 @@ const AdminPanel: React.FC = () => {
     );
   };
 
-  // НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ ЗАЯВКАМИ НА УСЛУГИ
   const handleUpdateServiceStatus = async (id: number, newStatus: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/service-requests/${id}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus })
       });
       const data = await response.json();
       if (data.success) {
         showToast(`Статус изменён на ${newStatus === 'approved' ? 'одобрено' : 'отклонено'}`, 'success');
-        fetchServiceRequests(); // обновляем список
+        fetchServiceRequests();
       } else {
         showToast(data.message || 'Ошибка обновления статуса', 'error');
       }
@@ -432,31 +372,24 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteServiceRequest = (id: number) => {
-    showConfirmation(
-      'Удаление заявки',
-      'Вы уверены, что хотите удалить эту заявку?',
-      'danger',
-      async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/admin/service-requests/${id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          const data = await response.json();
-          if (data.success) {
-            showToast('Заявка удалена', 'success');
-            setServiceRequests(prev => prev.filter(req => req.id !== id));
-          } else {
-            showToast(data.message || 'Ошибка удаления', 'error');
-          }
-        } catch (error) {
-          console.error('Ошибка удаления заявки:', error);
-          showToast('Ошибка соединения', 'error');
+    showConfirmation('Удаление заявки', 'Вы уверены, что хотите удалить эту заявку?', 'danger', async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/admin/service-requests/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          showToast('Заявка удалена', 'success');
+          setServiceRequests(prev => prev.filter(req => req.id !== id));
+        } else {
+          showToast(data.message || 'Ошибка удаления', 'error');
         }
+      } catch (error) {
+        console.error('Ошибка удаления заявки:', error);
+        showToast('Ошибка соединения', 'error');
       }
-    );
+    });
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -479,17 +412,14 @@ const AdminPanel: React.FC = () => {
 
   const handleCreateAgent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!agentForm.email || !agentForm.fio || !agentForm.password || !agentForm.phone_num || !agentForm.specialization) {
       showToast('Заполните все обязательные поля', 'warning');
       return;
     }
-
     if (agentForm.password.length < 6) {
       showToast('Пароль должен содержать минимум 6 символов', 'warning');
       return;
     }
-
     let finalPhotoUrl = agentForm.photo;
     if (agentForm.photoFile) {
       setUploadingPhoto(true);
@@ -507,14 +437,10 @@ const AdminPanel: React.FC = () => {
         return;
       }
     }
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/agents`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: agentForm.email,
           fio: agentForm.fio,
@@ -526,31 +452,16 @@ const AdminPanel: React.FC = () => {
           rating: agentForm.rating
         })
       });
-
       const data = await response.json();
-      
       if (data.success) {
         showToast('Организатор успешно создан', 'success');
         setAgentForm({
-          email: '',
-          fio: '',
-          password: '',
-          phone_num: '',
-          specialization: '',
-          experience: 0,
-          photo: '',
-          rating: 0,
-          photoFile: null
+          email: '', fio: '', password: '', phone_num: '', specialization: '',
+          experience: 0, photo: '', rating: 0, photoFile: null
         });
         fetchData();
       } else {
-        if (data.message?.includes('already exists') || data.message?.includes('уже существует')) {
-          showToast('Пользователь с таким email уже существует', 'error');
-        } else if (data.message?.includes('password') || data.message?.includes('пароль')) {
-          showToast('Ошибка в пароле: ' + data.message, 'error');
-        } else {
-          showToast(`Ошибка: ${data.message || 'Неизвестная ошибка'}`, 'error');
-        }
+        showToast(`Ошибка: ${data.message || 'Неизвестная ошибка'}`, 'error');
       }
     } catch (error) {
       console.error('Ошибка создания организатора:', error);
@@ -558,10 +469,6 @@ const AdminPanel: React.FC = () => {
     } finally {
       setUploadingPhoto(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ru-RU');
   };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -599,10 +506,216 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  // --- Рендер статистики ---
+  const renderStatsTab = () => (
+    <div className="adminpage-tab">
+      <div className="adminpage-header">
+        <div className="adminpage-header-title">
+          <h2>Административная панель</h2>
+          <p>Статистика и управление системой</p>
+        </div>
+        <div className="adminpage-header-time">
+          {new Date().toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
+      </div>
+      <div className="adminpage-stats-grid">
+        <div className="adminpage-stat-card adminpage-stat-primary">
+          <div className="adminpage-stat-icon"><i className="fas fa-users"></i></div>
+          <div className="adminpage-stat-content">
+            <div className="adminpage-stat-number">{adminStats.totalUsers}</div>
+            <div className="adminpage-stat-label">Всего пользователей</div>
+            <div className="adminpage-stat-sub">{adminStats.activeUsers} активных</div>
+          </div>
+        </div>
+        <div className="adminpage-stat-card adminpage-stat-success">
+          <div className="adminpage-stat-icon"><i className="fas fa-user-tie"></i></div>
+          <div className="adminpage-stat-content">
+            <div className="adminpage-stat-number">{adminStats.totalAgents}</div>
+            <div className="adminpage-stat-label">Организаторов</div>
+            <div className="adminpage-stat-sub">в системе</div>
+          </div>
+        </div>
+        <div className="adminpage-stat-card adminpage-stat-warning">
+          <div className="adminpage-stat-icon"><i className="fas fa-comments"></i></div>
+          <div className="adminpage-stat-content">
+            <div className="adminpage-stat-number">{adminStats.totalFeedback}</div>
+            <div className="adminpage-stat-label">Обращений</div>
+            <div className="adminpage-stat-sub">в поддержку</div>
+          </div>
+        </div>
+      </div>
+      <div className="adminpage-quick-actions">
+        <h3 className="adminpage-section-title">Быстрые действия</h3>
+        <div className="adminpage-actions-grid">
+          <button className="adminpage-action-card" onClick={() => setActiveTab('users')}>
+            <div className="adminpage-action-icon"><i className="fas fa-user-plus"></i></div>
+            <div className="adminpage-action-text">Просмотреть пользователей</div>
+          </button>
+          <button className="adminpage-action-card" onClick={() => setActiveTab('agents')}>
+            <div className="adminpage-action-icon"><i className="fas fa-user-tie"></i></div>
+            <div className="adminpage-action-text">Создать организатора</div>
+          </button>
+          <button className="adminpage-action-card" onClick={() => setActiveTab('feedback')}>
+            <div className="adminpage-action-icon"><i className="fas fa-eye"></i></div>
+            <div className="adminpage-action-text">Просмотреть обращения</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // --- Рендер пользователей ---
+  const renderUsersTab = () => (
+    <div className="adminpage-tab">
+      <div className="adminpage-header">
+        <div className="adminpage-header-title">
+          <h2>Управление пользователями</h2>
+          <p>Просмотр и управление учетными записями пользователей</p>
+        </div>
+      </div>
+      <div className="adminpage-table-container">
+        {loading ? (
+          <div className="adminpage-loading-inner">
+            <div className="adminpage-loading-spinner adminpage-small"></div>
+            <p>Загрузка пользователей...</p>
+          </div>
+        ) : users.length > 0 ? (
+          <div className="adminpage-table-wrapper">
+            <table className="adminpage-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>ФИО</th>
+                  <th>Телефон</th>
+                  <th>Статус</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(user => (
+                  <tr key={user.id}>
+                    <td>{user.email}</td>
+                    <td>{user.fio}</td>
+                    <td>{user.phone_num}</td>
+                    <td>
+                      <span className={`adminpage-status-badge ${user.id_agent ? 'adminpage-status-agent' : 'adminpage-status-user'}`}>
+                        {user.id_agent ? 'Организатор' : 'Пользователь'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="adminpage-table-actions">
+                        <button
+                          className="adminpage-action-btn adminpage-action-danger"
+                          onClick={() => handleDeleteUser(user.id, user.email, user.fio)}
+                          title="Удалить пользователя"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="adminpage-empty">
+            <div className="adminpage-empty-illustration"><i className="fas fa-users fa-3x"></i></div>
+            <h3>Нет пользователей</h3>
+            <p>В системе пока нет зарегистрированных пользователей</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // --- Рендер заявок на кейтеринг (карточки) ---
+  const renderServicesTab = () => (
+    <div className="adminpage-tab">
+      <div className="adminpage-header">
+        <div className="adminpage-header-title">
+          <h2>Заявки на кейтеринг</h2>
+          <p>Предложения от пользователей (кейтеринг)</p>
+        </div>
+      </div>
+      <div className="adminpage-services-container">
+        {loading ? (
+          <div className="adminpage-loading-inner">
+            <div className="adminpage-loading-spinner adminpage-small"></div>
+            <p>Загрузка заявок...</p>
+          </div>
+        ) : serviceRequests.length === 0 ? (
+          <div className="adminpage-empty">
+            <div className="adminpage-empty-illustration"><FontAwesomeIcon icon={faConciergeBell} size="3x" /></div>
+            <h3>Нет заявок</h3>
+            <p>Пользователи пока не отправляли предложения по кейтерингу</p>
+          </div>
+        ) : (
+          <div className="adminpage-services-grid">
+            {serviceRequests.map(req => (
+              <div key={req.id} className="adminpage-service-card">
+                <div className="adminpage-service-card__image">
+                  <FontAwesomeIcon icon={faConciergeBell} size="3x" />
+                </div>
+                <div className="adminpage-service-card__content">
+                  <div className="adminpage-service-card__header">
+                    <h3>{req.companyName || 'Компания не указана'}</h3>
+                    <span className={`adminpage-status-badge ${
+                      req.status === 'approved' ? 'adminpage-status-approved' :
+                      req.status === 'rejected' ? 'adminpage-status-rejected' :
+                      'adminpage-status-pending'
+                    }`}>
+                      {req.status === 'approved' ? 'Одобрено' : req.status === 'rejected' ? 'Отклонено' : 'На рассмотрении'}
+                    </span>
+                  </div>
+                  <div className="adminpage-service-card__details">
+                    <p><FontAwesomeIcon icon={faUser} /> {req.userFio}</p>
+                    <p><FontAwesomeIcon icon={faEnvelope} /> {req.userEmail}</p>
+                    <p><FontAwesomeIcon icon={faPhone} /> {req.phone}</p>
+                    <p><FontAwesomeIcon icon={faMapMarkerAlt} /> {req.city}</p>
+                    <p className="adminpage-service-card__desc">{req.description}</p>
+                    {/* ========== ИСПРАВЛЕНА ДАТА ========== */}
+                    <p><FontAwesomeIcon icon={faCalendarAlt} /> {formatDateOnly(req.createdAt)}</p>
+                  </div>
+                  <div className="adminpage-service-card__actions">
+                    {req.status === 'pending' && (
+                      <>
+                        <button
+                          className="adminpage-action-btn adminpage-action-success"
+                          onClick={() => handleUpdateServiceStatus(req.id, 'approved')}
+                          title="Одобрить"
+                        >
+                          <FontAwesomeIcon icon={faCheck} /> Одобрить
+                        </button>
+                        <button
+                          className="adminpage-action-btn adminpage-action-warning"
+                          onClick={() => handleUpdateServiceStatus(req.id, 'rejected')}
+                          title="Отклонить"
+                        >
+                          <FontAwesomeIcon icon={faTimes} /> Отклонить
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="adminpage-action-btn adminpage-action-danger"
+                      onClick={() => handleDeleteServiceRequest(req.id)}
+                      title="Удалить заявку"
+                    >
+                      <FontAwesomeIcon icon={faTrash} /> Удалить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   if (loading && activeTab === 'stats') {
     return (
       <div className="adminpage-loading-full">
-        <Header />
         <div className="adminpage-loading-content">
           <div className="adminpage-spinner"></div>
           <p>Загрузка административной панели...</p>
@@ -613,31 +726,18 @@ const AdminPanel: React.FC = () => {
 
   return (
     <div className="adminpage-wrapper">
-      <Header />
-      
+      {/* Всплывающие уведомления */}
       <div className="toast-container">
         {toasts.map(toast => (
-          <div 
-            key={toast.id} 
-            className={`toast toast-${toast.type}`}
-            onClick={() => removeToast(toast.id)}
-          >
+          <div key={toast.id} className={`toast toast-${toast.type}`} onClick={() => removeToast(toast.id)}>
             <div className="toast-icon">
               {toast.type === 'success' && <i className="fas fa-check-circle"></i>}
               {toast.type === 'error' && <i className="fas fa-exclamation-circle"></i>}
               {toast.type === 'warning' && <i className="fas fa-exclamation-triangle"></i>}
               {toast.type === 'info' && <i className="fas fa-info-circle"></i>}
             </div>
-            <div className="toast-content">
-              <div className="toast-message">{toast.text}</div>
-            </div>
-            <button 
-              className="toast-close" 
-              onClick={(e) => {
-                e.stopPropagation();
-                removeToast(toast.id);
-              }}
-            >
+            <div className="toast-content"><div className="toast-message">{toast.text}</div></div>
+            <button className="toast-close" onClick={(e) => { e.stopPropagation(); removeToast(toast.id); }}>
               <i className="fas fa-times"></i>
             </button>
           </div>
@@ -649,268 +749,57 @@ const AdminPanel: React.FC = () => {
         title={confirmationModal.title}
         message={confirmationModal.message}
         type={confirmationModal.type}
-        onConfirm={() => {
-          confirmationModal.onConfirm();
-          closeConfirmation();
-        }}
+        onConfirm={() => { confirmationModal.onConfirm(); closeConfirmation(); }}
         onCancel={closeConfirmation}
         confirmText={confirmationModal.type === 'danger' ? 'Удалить' : 'Подтвердить'}
         cancelText="Отмена"
       />
 
       <div className="adminpage-container">
+        {/* Сайдбар */}
         <div className="adminpage-sidebar">
           <div className="adminpage-avatar">
-            <div className="adminpage-avatar-circle">
-              <i className="fas fa-shield-alt"></i>
-            </div>
+            <div className="adminpage-avatar-circle"><i className="fas fa-shield-alt"></i></div>
             <h3>Администратор</h3>
             <p className="adminpage-email">{user?.email}</p>
             <div className="adminpage-role adminpage-admin">
-              <span className="adminpage-role-dot"></span>
-              Системный администратор
+              <span className="adminpage-role-dot"></span> Системный администратор
             </div>
           </div>
-
           <nav className="adminpage-nav">
-            <button 
-              className={`adminpage-nav-item ${activeTab === 'stats' ? 'adminpage-nav-active' : ''}`}
-              onClick={() => setActiveTab('stats')}
-            >
-              <i className="adminpage-nav-icon adminpage-stats-icon"></i>
-              <span>Статистика</span>
+            <button className={`adminpage-nav-item ${activeTab === 'stats' ? 'adminpage-nav-active' : ''}`} onClick={() => setActiveTab('stats')}>
+              <i className="adminpage-nav-icon adminpage-stats-icon"></i><span>Статистика</span>
             </button>
-            <button 
-              className={`adminpage-nav-item ${activeTab === 'users' ? 'adminpage-nav-active' : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              <i className="adminpage-nav-icon adminpage-users-icon"></i>
-              <span>Пользователи</span>
+            <button className={`adminpage-nav-item ${activeTab === 'users' ? 'adminpage-nav-active' : ''}`} onClick={() => setActiveTab('users')}>
+              <i className="adminpage-nav-icon adminpage-users-icon"></i><span>Пользователи</span>
               <span className="adminpage-nav-badge">{adminStats.totalUsers}</span>
             </button>
-            <button 
-              className={`adminpage-nav-item ${activeTab === 'agents' ? 'adminpage-nav-active' : ''}`}
-              onClick={() => setActiveTab('agents')}
-            >
-              <i className="adminpage-nav-icon adminpage-agents-icon"></i>
-              <span>Организаторы</span>
+            <button className={`adminpage-nav-item ${activeTab === 'agents' ? 'adminpage-nav-active' : ''}`} onClick={() => setActiveTab('agents')}>
+              <i className="adminpage-nav-icon adminpage-agents-icon"></i><span>Организаторы</span>
               <span className="adminpage-nav-badge">{adminStats.totalAgents}</span>
             </button>
-            <button 
-              className={`adminpage-nav-item ${activeTab === 'feedback' ? 'adminpage-nav-active' : ''}`}
-              onClick={() => setActiveTab('feedback')}
-            >
-              <i className="adminpage-nav-icon adminpage-feedback-icon"></i>
-              <span>Обращения</span>
+            <button className={`adminpage-nav-item ${activeTab === 'feedback' ? 'adminpage-nav-active' : ''}`} onClick={() => setActiveTab('feedback')}>
+              <i className="adminpage-nav-icon adminpage-feedback-icon"></i><span>Обращения</span>
               <span className="adminpage-nav-badge">{adminStats.totalFeedback}</span>
             </button>
-
-            {/* Кнопка для кейтеринга (ранее "Услуги") */}
-            <button 
-              className={`adminpage-nav-item ${activeTab === 'services' ? 'adminpage-nav-active' : ''}`}
-              onClick={() => setActiveTab('services')}
-            >
-              <FontAwesomeIcon icon={faConciergeBell} className="adminpage-nav-icon" />
-              <span>Кейтеринг</span>
+            <button className={`adminpage-nav-item ${activeTab === 'services' ? 'adminpage-nav-active' : ''}`} onClick={() => setActiveTab('services')}>
+              <FontAwesomeIcon icon={faConciergeBell} className="adminpage-nav-icon" /><span>Кейтеринг</span>
               <span className="adminpage-nav-badge">{serviceRequests.length}</span>
             </button>
-            
             <div className="adminpage-nav-divider"></div>
-            
-            <button 
-              className="adminpage-nav-item adminpage-nav-back"
-              onClick={() => navigate('/')}
-            >
-              <i className="adminpage-nav-icon adminpage-back-icon"></i>
-              <span>На главную</span>
+            <button className="adminpage-nav-item adminpage-nav-back" onClick={() => navigate('/')}>
+              <i className="adminpage-nav-icon adminpage-back-icon"></i><span>На главную</span>
             </button>
-            
-            <button 
-              className="adminpage-nav-item adminpage-nav-logout"
-              onClick={handleLogoutConfirmation}
-            >
-              <i className="adminpage-nav-icon adminpage-logout-icon"></i>
-              <span>Выйти</span>
+            <button className="adminpage-nav-item adminpage-nav-logout" onClick={handleLogoutConfirmation}>
+              <i className="adminpage-nav-icon adminpage-logout-icon"></i><span>Выйти</span>
             </button>
           </nav>
         </div>
 
+        {/* Основной контент */}
         <div className="adminpage-content">
-          {activeTab === 'stats' && (
-            <div className="adminpage-tab">
-              <div className="adminpage-header">
-                <div className="adminpage-header-title">
-                  <h2>Административная панель</h2>
-                  <p>Статистика и управление системой</p>
-                </div>
-                <div className="adminpage-header-time">
-                  {new Date().toLocaleDateString('ru-RU', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </div>
-              </div>
-
-              <div className="adminpage-stats-grid">
-                <div className="adminpage-stat-card adminpage-stat-primary">
-                  <div className="adminpage-stat-icon">
-                    <i className="fas fa-users"></i>
-                  </div>
-                  <div className="adminpage-stat-content">
-                    <div className="adminpage-stat-number">{adminStats.totalUsers}</div>
-                    <div className="adminpage-stat-label">Всего пользователей</div>
-                    <div className="adminpage-stat-sub">{adminStats.activeUsers} активных</div>
-                  </div>
-                </div>
-
-                <div className="adminpage-stat-card adminpage-stat-success">
-                  <div className="adminpage-stat-icon">
-                    <i className="fas fa-user-tie"></i>
-                  </div>
-                  <div className="adminpage-stat-content">
-                    <div className="adminpage-stat-number">{adminStats.totalAgents}</div>
-                    <div className="adminpage-stat-label">Организаторов</div>
-                    <div className="adminpage-stat-sub">в системе</div>
-                  </div>
-                </div>
-
-                <div className="adminpage-stat-card adminpage-stat-warning">
-                  <div className="adminpage-stat-icon">
-                    <i className="fas fa-comments"></i>
-                  </div>
-                  <div className="adminpage-stat-content">
-                    <div className="adminpage-stat-number">{adminStats.totalFeedback}</div>
-                    <div className="adminpage-stat-label">Обращений</div>
-                    <div className="adminpage-stat-sub">в поддержку</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="adminpage-quick-actions">
-                <h3 className="adminpage-section-title">Быстрые действия</h3>
-                <div className="adminpage-actions-grid">
-                  <button 
-                    className="adminpage-action-card"
-                    onClick={() => setActiveTab('users')}
-                  >
-                    <div className="adminpage-action-icon">
-                      <i className="fas fa-user-plus"></i>
-                    </div>
-                    <div className="adminpage-action-text">Добавить пользователя</div>
-                  </button>
-
-                  <button 
-                    className="adminpage-action-card"
-                    onClick={() => setActiveTab('agents')}
-                  >
-                    <div className="adminpage-action-icon">
-                      <i className="fas fa-user-tie"></i>
-                    </div>
-                    <div className="adminpage-action-text">Создать организатора</div>
-                  </button>
-
-                  <button 
-                    className="adminpage-action-card"
-                    onClick={() => setActiveTab('feedback')}
-                  >
-                    <div className="adminpage-action-icon">
-                      <i className="fas fa-eye"></i>
-                    </div>
-                    <div className="adminpage-action-text">Просмотреть обращения</div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'users' && (
-            <div className="adminpage-tab">
-              <div className="adminpage-header">
-                <div className="adminpage-header-title">
-                  <h2>Управление пользователями</h2>
-                  <p>Просмотр и управление учетными записями пользователей</p>
-                </div>
-              </div>
-
-              <div className="adminpage-table-container">
-                {loading ? (
-                  <div className="adminpage-loading-inner">
-                    <div className="adminpage-loading-spinner adminpage-small"></div>
-                    <p>Загрузка пользователей...</p>
-                  </div>
-                ) : users.length > 0 ? (
-                  <div className="adminpage-table-wrapper">
-                    <table className="adminpage-table">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Email</th>
-                          <th>ФИО</th>
-                          <th>Телефон</th>
-                          <th>Статус</th>
-                          <th>Действия</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.map(user => (
-                          <tr key={user.id}>
-                            <td className="adminpage-table-id">#{user.id}</td>
-                            <td>{user.email}</td>
-                            <td>{user.fio}</td>
-                            <td>{user.phone_num}</td>
-                            <td>
-                              <span className={`adminpage-status-badge ${user.id_agent ? 'adminpage-status-agent' : 'adminpage-status-user'}`}>
-                                {user.id_agent ? 'Организатор' : 'Пользователь'}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="adminpage-table-actions">
-                                <button 
-                                  className="adminpage-action-btn adminpage-action-danger"
-                                  onClick={() => handleDeleteUser(user.id, user.email, user.fio)}
-                                  title="Удалить пользователя"
-                                >
-                                  <i className="fas fa-trash"></i>
-                                </button>
-                                {!user.id_agent && (
-                                  <button 
-                                    className="adminpage-action-btn adminpage-action-success"
-                                    onClick={() => {
-                                      setAgentForm({
-                                        ...agentForm,
-                                        email: user.email,
-                                        fio: user.fio,
-                                        phone_num: user.phone_num
-                                      });
-                                      setActiveTab('agents');
-                                    }}
-                                    title="Сделать организатором"
-                                  >
-                                    <i className="fas fa-user-tie"></i>
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="adminpage-empty">
-                    <div className="adminpage-empty-illustration">
-                      <i className="fas fa-users fa-3x"></i>
-                    </div>
-                    <h3>Нет пользователей</h3>
-                    <p>В системе пока нет зарегистрированных пользователей</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+          {activeTab === 'stats' && renderStatsTab()}
+          {activeTab === 'users' && renderUsersTab()}
           {activeTab === 'agents' && (
             <div className="adminpage-tab">
               <div className="adminpage-header">
@@ -919,7 +808,6 @@ const AdminPanel: React.FC = () => {
                   <p>Создание и управление организаторами праздников</p>
                 </div>
               </div>
-
               <div className="adminpage-agents-section">
                 <div className="adminpage-agents-form">
                   <h3 className="adminpage-section-title">Создать нового организатора</h3>
@@ -927,111 +815,47 @@ const AdminPanel: React.FC = () => {
                     <div className="adminpage-form-row">
                       <div className="adminpage-form-group">
                         <label>Email *</label>
-                        <input
-                          type="email"
-                          value={agentForm.email}
-                          onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
-                          required
-                          placeholder="Email организатора"
-                        />
+                        <input type="email" value={agentForm.email} onChange={(e) => setAgentForm({...agentForm, email: e.target.value})} required />
                       </div>
                       <div className="adminpage-form-group">
                         <label>Пароль *</label>
-                        <input
-                          type="password"
-                          value={agentForm.password}
-                          onChange={(e) => setAgentForm({...agentForm, password: e.target.value})}
-                          required
-                          minLength={6}
-                          placeholder="Минимум 6 символов"
-                        />
+                        <input type="password" value={agentForm.password} onChange={(e) => setAgentForm({...agentForm, password: e.target.value})} required minLength={6} />
                       </div>
                     </div>
-
                     <div className="adminpage-form-row">
                       <div className="adminpage-form-group">
                         <label>ФИО *</label>
-                        <input
-                          type="text"
-                          value={agentForm.fio}
-                          onChange={(e) => setAgentForm({...agentForm, fio: e.target.value})}
-                          required
-                          placeholder="Фамилия и имя организатора"
-                        />
+                        <input type="text" value={agentForm.fio} onChange={(e) => setAgentForm({...agentForm, fio: e.target.value})} required />
                       </div>
                       <div className="adminpage-form-group">
                         <label>Телефон *</label>
-                        <input
-                          type="tel"
-                          value={agentForm.phone_num}
-                          onChange={(e) => setAgentForm({...agentForm, phone_num: e.target.value})}
-                          required
-                          placeholder="+375 (XX) XXX-XX-XX"
-                        />
+                        <input type="tel" value={agentForm.phone_num} onChange={(e) => setAgentForm({...agentForm, phone_num: e.target.value})} required />
                       </div>
                     </div>
-
                     <div className="adminpage-form-row">
                       <div className="adminpage-form-group">
                         <label>Специализация *</label>
-                        <input
-                          type="text"
-                          value={agentForm.specialization}
-                          onChange={(e) => setAgentForm({...agentForm, specialization: e.target.value})}
-                          required
-                          placeholder="Специализация"
-                        />
+                        <input type="text" value={agentForm.specialization} onChange={(e) => setAgentForm({...agentForm, specialization: e.target.value})} required />
                       </div>
                       <div className="adminpage-form-group">
                         <label>Опыт работы (лет) *</label>
-                        <input
-                          type="number"
-                          value={agentForm.experience}
-                          onChange={(e) => setAgentForm({...agentForm, experience: parseInt(e.target.value) || 0})}
-                          required
-                          min="0"
-                          max="50"
-                        />
+                        <input type="number" value={agentForm.experience} onChange={(e) => setAgentForm({...agentForm, experience: parseInt(e.target.value) || 0})} required min="0" max="50" />
                       </div>
                     </div>
-
                     <div className="adminpage-form-row">
                       <div className="adminpage-form-group">
                         <label>Рейтинг</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          value={agentForm.rating}
-                          onChange={(e) => setAgentForm({...agentForm, rating: parseFloat(e.target.value) || 0})}
-                        />
+                        <input type="number" step="0.1" min="0" max="5" value={agentForm.rating} onChange={(e) => setAgentForm({...agentForm, rating: parseFloat(e.target.value) || 0})} />
                       </div>
                       <div className="adminpage-form-group">
                         <label>Фото организатора</label>
-                        <div 
-                          className="adminpage-photo-upload"
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleFileDrop}
-                        >
+                        <div className="adminpage-photo-upload" onDragOver={(e) => e.preventDefault()} onDrop={handleFileDrop}>
                           {agentForm.photo ? (
                             <div className="adminpage-photo-preview">
                               <img src={agentForm.photo} alt="Предпросмотр" />
                               <div className="adminpage-photo-overlay">
-                                <button 
-                                  type="button"
-                                  className="adminpage-photo-change"
-                                  onClick={() => document.getElementById('photo-upload-input')?.click()}
-                                >
-                                  <i className="fas fa-sync-alt"></i> Заменить
-                                </button>
-                                <button 
-                                  type="button"
-                                  className="adminpage-photo-remove"
-                                  onClick={() => setAgentForm({...agentForm, photo: '', photoFile: null})}
-                                >
-                                  <i className="fas fa-trash"></i> Удалить
-                                </button>
+                                <button type="button" className="adminpage-photo-change" onClick={() => document.getElementById('photo-upload-input')?.click()}>Заменить</button>
+                                <button type="button" className="adminpage-photo-remove" onClick={() => setAgentForm({...agentForm, photo: '', photoFile: null})}>Удалить</button>
                               </div>
                             </div>
                           ) : (
@@ -1039,119 +863,59 @@ const AdminPanel: React.FC = () => {
                               <i className="fas fa-cloud-upload-alt"></i>
                               <p>Перетащите фото сюда или нажмите для выбора</p>
                               <p className="adminpage-photo-hint">JPG, PNG до 5MB</p>
-                              <input
-                                type="file"
-                                id="photo-upload-input"
-                                accept="image/*"
-                                onChange={handleFileSelect}
-                                style={{ display: 'none' }}
-                              />
-                              <button 
-                                type="button"
-                                className="adminpage-photo-select-btn"
-                                onClick={() => document.getElementById('photo-upload-input')?.click()}
-                              >
-                                Выбрать файл
-                              </button>
+                              <input type="file" id="photo-upload-input" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
+                              <button type="button" className="adminpage-photo-select-btn" onClick={() => document.getElementById('photo-upload-input')?.click()}>Выбрать файл</button>
                             </div>
                           )}
                           {uploadingPhoto && (
                             <div className="adminpage-photo-loading">
-                              <div className="adminpage-spinner-small"></div>
-                              <p>Загрузка фото...</p>
+                              <div className="adminpage-spinner-small"></div><p>Загрузка фото...</p>
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
-
-                    <button 
-                      type="submit" 
-                      className="btn-primary adminpage-submit-btn"
-                      disabled={uploadingPhoto}
-                    >
-                      {uploadingPhoto ? (
-                        <>
-                          <div className="adminpage-spinner-small"></div>
-                          Загрузка...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-plus"></i> Создать организатора
-                        </>
-                      )}
+                    <button type="submit" className="btn-primary adminpage-submit-btn" disabled={uploadingPhoto}>
+                      {uploadingPhoto ? <> <div className="adminpage-spinner-small"></div> Загрузка... </> : <> <i className="fas fa-plus"></i> Создать организатора </>}
                     </button>
                   </form>
                 </div>
-
                 <div className="adminpage-agents-list">
                   <h3 className="adminpage-section-title">Список организаторов ({agents.length})</h3>
-                  
                   {loading ? (
-                    <div className="adminpage-loading-inner">
-                      <div className="adminpage-loading-spinner adminpage-small"></div>
-                      <p>Загрузка организаторов...</p>
-                    </div>
+                    <div className="adminpage-loading-inner"><div className="adminpage-loading-spinner adminpage-small"></div><p>Загрузка организаторов...</p></div>
                   ) : agents.length > 0 ? (
                     <div className="adminpage-agents-grid">
                       {agents.map(agent => (
                         <div key={agent.id} className="adminpage-agent-card">
                           <div className="adminpage-agent-header">
                             <div className="adminpage-agent-avatar">
-                              {agent.photo ? (
-                                <img src={agent.photo} alt={agent.user.fio} />
-                              ) : (
-                                <div className="adminpage-avatar-placeholder">
-                                  {agent.user.fio.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                </div>
-                              )}
+                              {agent.photo ? <img src={agent.photo} alt={agent.user.fio} /> : <div className="adminpage-avatar-placeholder">{agent.user.fio.split(' ').map(n => n[0]).join('').toUpperCase()}</div>}
                             </div>
                             <div className="adminpage-agent-info">
                               <h4>{agent.user.fio}</h4>
                               <p className="adminpage-agent-email">{agent.user.email}</p>
                               <p className="adminpage-agent-phone">{agent.user.phone_num}</p>
                             </div>
-                            <span className="adminpage-agent-rating">
-                              <i className="fas fa-star"></i> {agent.rating.toFixed(1)}
-                            </span>
+                            <span className="adminpage-agent-rating"><i className="fas fa-star"></i> {agent.rating.toFixed(1)}</span>
                           </div>
-                          
                           <div className="adminpage-agent-details">
-                            <div className="adminpage-agent-detail">
-                              <span className="adminpage-detail-label">Специализация:</span>
-                              <span className="adminpage-detail-value">{agent.specialization}</span>
-                            </div>
-                            <div className="adminpage-agent-detail">
-                              <span className="adminpage-detail-label">Опыт:</span>
-                              <span className="adminpage-detail-value">{agent.experience} лет</span>
-                            </div>
+                            <div className="adminpage-agent-detail"><span className="adminpage-detail-label">Специализация:</span><span className="adminpage-detail-value">{agent.specialization}</span></div>
+                            <div className="adminpage-agent-detail"><span className="adminpage-detail-label">Опыт:</span><span className="adminpage-detail-value">{agent.experience} лет</span></div>
                           </div>
-                          
                           <div className="adminpage-agent-actions">
-                            <button 
-                              className="adminpage-action-btn adminpage-action-danger"
-                              onClick={() => handleDeleteAgent(agent.id, agent.user.fio)}
-                            >
-                              <i className="fas fa-trash"></i> Удалить
-                            </button>
+                            <button className="adminpage-action-btn adminpage-action-danger" onClick={() => handleDeleteAgent(agent.id, agent.user.fio)}><i className="fas fa-trash"></i> Удалить</button>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="adminpage-empty">
-                      <div className="adminpage-empty-illustration">
-                        <i className="fas fa-user-tie fa-3x"></i>
-                      </div>
-                      <h3>Нет организаторов</h3>
-                      <p>В системе пока нет зарегистрированных организаторов</p>
-                    </div>
+                    <div className="adminpage-empty"><div className="adminpage-empty-illustration"><i className="fas fa-user-tie fa-3x"></i></div><h3>Нет организаторов</h3><p>В системе пока нет зарегистрированных организаторов</p></div>
                   )}
                 </div>
               </div>
             </div>
           )}
-
           {activeTab === 'feedback' && (
             <div className="adminpage-tab">
               <div className="adminpage-header">
@@ -1160,160 +924,39 @@ const AdminPanel: React.FC = () => {
                   <p>Просмотр обращений пользователей</p>
                 </div>
               </div>
-
               <div className="adminpage-feedback-container">
                 {loading ? (
-                  <div className="adminpage-loading-inner">
-                    <div className="adminpage-loading-spinner adminpage-small"></div>
-                    <p>Загрузка обращений...</p>
-                  </div>
+                  <div className="adminpage-loading-inner"><div className="adminpage-loading-spinner adminpage-small"></div><p>Загрузка обращений...</p></div>
                 ) : feedback.length > 0 ? (
                   <div className="adminpage-feedback-list">
                     {feedback.map(item => (
                       <div key={item.id} className="adminpage-feedback-card">
                         <div className="adminpage-feedback-header">
                           <div className="adminpage-feedback-user">
-                            <div className="adminpage-feedback-avatar">
-                              {item.user.fio.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </div>
+                            <div className="adminpage-feedback-avatar">{item.user.fio.split(' ').map(n => n[0]).join('').toUpperCase()}</div>
                             <div className="adminpage-feedback-user-info">
                               <strong>{item.user.fio}</strong>
-                              <div className="adminpage-feedback-user-contacts">
-                                <span>{item.user.email}</span>
-                                {item.user.phone_num && <span>• {item.user.phone_num}</span>}
-                              </div>
+                              <div className="adminpage-feedback-user-contacts"><span>{item.user.email}</span>{item.user.phone_num && <span>• {item.user.phone_num}</span>}</div>
                             </div>
                           </div>
                           <div className="adminpage-feedback-meta">
                             <span className="adminpage-feedback-topic">{item.topic}</span>
-                            <span className="adminpage-feedback-date">{formatDate(item.createdAt)}</span>
-                            <button 
-                              className="adminpage-action-btn adminpage-action-danger"
-                              onClick={() => handleDeleteFeedback(item.id, item.topic)}
-                              title="Удалить обращение"
-                            >
-                              <i className="fas fa-trash"></i>
-                            </button>
+                            {/* ========== ИСПРАВЛЕНА ДАТА ========== */}
+                            <span className="adminpage-feedback-date">{formatDateOnly(item.createdAt)}</span>
+                            <button className="adminpage-action-btn adminpage-action-danger" onClick={() => handleDeleteFeedback(item.id, item.topic)}><i className="fas fa-trash"></i></button>
                           </div>
                         </div>
-                        <div className="adminpage-feedback-content">
-                          <p>{item.text}</p>
-                        </div>
+                        <div className="adminpage-feedback-content"><p>{item.text}</p></div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="adminpage-empty">
-                    <div className="adminpage-empty-illustration">
-                      <i className="fas fa-comments fa-3x"></i>
-                    </div>
-                    <h3>Нет обращений</h3>
-                    <p>Пользователи еще не отправляли обращения в поддержку</p>
-                  </div>
+                  <div className="adminpage-empty"><div className="adminpage-empty-illustration"><i className="fas fa-comments fa-3x"></i></div><h3>Нет обращений</h3><p>Пользователи еще не отправляли обращения в поддержку</p></div>
                 )}
               </div>
             </div>
           )}
-
-          {/* Вкладка ТОЛЬКО КЕЙТЕРИНГ - убрана колонка "Услуга" */}
-          {activeTab === 'services' && (
-            <div className="adminpage-tab">
-              <div className="adminpage-header">
-                <div className="adminpage-header-title">
-                  <h2>Заявки на кейтеринг</h2>
-                  <p>Предложения от пользователей (кейтеринг)</p>
-                </div>
-              </div>
-              <div className="adminpage-table-container">
-                {loading ? (
-                  <div className="adminpage-loading-inner">
-                    <div className="adminpage-loading-spinner adminpage-small"></div>
-                    <p>Загрузка заявок...</p>
-                  </div>
-                ) : serviceRequests.length === 0 ? (
-                  <div className="adminpage-empty">
-                    <div className="adminpage-empty-illustration">
-                      <FontAwesomeIcon icon={faConciergeBell} size="3x" />
-                    </div>
-                    <h3>Нет заявок</h3>
-                    <p>Пользователи пока не отправляли предложения по кейтерингу</p>
-                  </div>
-                ) : (
-                  <div className="adminpage-table-wrapper">
-                    <table className="adminpage-table">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Пользователь</th>
-                          <th>Телефон</th>
-                          <th>Компания</th>
-                          <th>Город</th>
-                          <th>Описание</th>
-                          <th>Дата</th>
-                          <th>Статус</th>
-                          <th>Действия</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {serviceRequests.map(req => (
-                          <tr key={req.id}>
-                            <td className="adminpage-table-id">#{req.id}</td>
-                            <td>
-                              {req.userFio}<br/>
-                              <small>{req.userEmail}</small>
-                            </td>
-                            <td>{req.phone}</td>
-                            <td>{req.companyName}</td>
-                            <td>{req.city}</td>
-                            <td className="adminpage-description-cell">{req.description.substring(0, 80)}...</td>
-                            <td>{new Date(req.createdAt).toLocaleDateString()}</td>
-                            <td>
-                              <span className={`adminpage-status-badge ${
-                                req.status === 'approved' ? 'adminpage-status-approved' :
-                                req.status === 'rejected' ? 'adminpage-status-rejected' :
-                                'adminpage-status-pending'
-                              }`}>
-                                {req.status === 'approved' ? 'Одобрено' : req.status === 'rejected' ? 'Отклонено' : 'На рассмотрении'}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="adminpage-table-actions">
-                                {req.status === 'pending' && (
-                                  <>
-                                    <button 
-                                      className="adminpage-action-btn adminpage-action-success"
-                                      onClick={() => handleUpdateServiceStatus(req.id, 'approved')}
-                                      title="Одобрить"
-                                    >
-                                      <FontAwesomeIcon icon={faCheck} />
-                                    </button>
-                                    <button 
-                                      className="adminpage-action-btn adminpage-action-warning"
-                                      onClick={() => handleUpdateServiceStatus(req.id, 'rejected')}
-                                      title="Отклонить"
-                                    >
-                                      <FontAwesomeIcon icon={faTimes} />
-                                    </button>
-                                  </>
-                                )}
-                                <button 
-                                  className="adminpage-action-btn adminpage-action-danger"
-                                  onClick={() => handleDeleteServiceRequest(req.id)}
-                                  title="Удалить заявку"
-                                >
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {activeTab === 'services' && renderServicesTab()}
         </div>
       </div>
     </div>

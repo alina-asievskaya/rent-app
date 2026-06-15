@@ -1,4 +1,3 @@
-
 import React from 'react';
 import './ConfirmationModal.css';
 
@@ -10,9 +9,9 @@ interface ConfirmationModalProps {
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
-  type?: 'danger' | 'warning' | 'info';
+  type?: 'danger' | 'warning' | 'info'; // опционально, влияет только на цвет кнопки подтверждения
 }
- 
+
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen,
   title,
@@ -25,56 +24,34 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const getTypeClasses = () => {
+  const getConfirmButtonClass = () => {
     switch (type) {
       case 'danger':
-        return 'confirmationmodal-danger';
+        return 'confirm-btn-danger';
       case 'warning':
-        return 'confirmationmodal-warning';
+        return 'confirm-btn-warning';
       case 'info':
-        return 'confirmationmodal-info';
+        return 'confirm-btn-info';
       default:
-        return 'confirmationmodal-danger';
-    }
-  };
-
-  const getIcon = () => {
-    switch (type) {
-      case 'danger':
-        return 'fas fa-exclamation-triangle';
-      case 'warning':
-        return 'fas fa-exclamation-circle';
-      case 'info':
-        return 'fas fa-info-circle';
-      default:
-        return 'fas fa-exclamation-triangle';
+        return 'confirm-btn-danger';
     }
   };
 
   return (
-    <div className="confirmationmodal-overlay">
-      <div className="confirmationmodal-container">
-        <div className={`confirmationmodal-header ${getTypeClasses()}`}>
-          <div className="confirmationmodal-icon">
-            <i className={getIcon()}></i>
-          </div>
-          <h3 className="confirmationmodal-title">{title}</h3>
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 className="modal-title">{title}</h3>
         </div>
         
-        <div className="confirmationmodal-content">
-          <p className="confirmationmodal-message">{message}</p>
+        <div className="modal-content">
+          <p className="modal-message">{message}</p>
           
-          <div className="confirmationmodal-actions">
-            <button
-              className="confirmationmodal-btn confirmationmodal-btn-cancel"
-              onClick={onCancel}
-            >
+          <div className="modal-actions">
+            <button className="modal-btn modal-btn-cancel" onClick={onCancel}>
               {cancelText}
             </button>
-            <button
-              className={`confirmationmodal-btn confirmationmodal-btn-confirm ${getTypeClasses()}`}
-              onClick={onConfirm}
-            >
+            <button className={`modal-btn modal-btn-confirm ${getConfirmButtonClass()}`} onClick={onConfirm}>
               {confirmText}
             </button>
           </div>

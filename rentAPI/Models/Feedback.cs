@@ -27,7 +27,7 @@ namespace RentApp.API.Models
         public string Text { get; set; } = string.Empty;
 
         [Column("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateOnly CreatedAt { get; set; }
 
         // Навигационное свойство
         public User User { get; set; } = null!;

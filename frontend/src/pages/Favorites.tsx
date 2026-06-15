@@ -35,6 +35,7 @@ interface FavoriteItem {
   photos: string[];
   city: string;
   street: string;
+  houseNumber?: string;   // добавлено поле для номера дома
   rooms: number;
   bathrooms: number;
   floor: number;
@@ -635,6 +636,7 @@ const Favorites: React.FC = () => {
                   <div className="property-item-address-favorit">
                     <FontAwesomeIcon icon={faMapMarkerAlt} />
                     {property.city}, {property.street}
+                    {property.houseNumber && `, ${property.houseNumber}`}
                   </div>
                   <p className="property-item-info-favorit">
                     {property.houseType}, {property.area} м², {property.rooms} комн.

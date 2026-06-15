@@ -1,4 +1,4 @@
-/* AdminPanel.css – полностью согласован с ProfilePage.css (тёмно-изумрудная тема) */
+/* ProfilePage.css - Тёмный изумрудный градиент + шрифты из Home */
 
 :root {
   --primary: #1b4d3c;
@@ -1353,4 +1353,133 @@
 }
 .adminpage-services-icon::before {
     content: "\f0f5"; /* иконка консьерж-колокольчик, если используете Font Awesome через псевдоэлементы */
+}
+
+/* ==================== НОВЫЕ СТИЛИ ДЛЯ КАРТОЧЕК КЕЙТЕРИНГА И КНОПКИ WARNING ==================== */
+.adminpage-services-container {
+  width: 100%;
+}
+
+.adminpage-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+}
+
+.adminpage-service-card {
+  background: var(--white);
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(10, 46, 36, 0.05);
+}
+
+.adminpage-service-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(10, 46, 36, 0.12);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.adminpage-service-card__image {
+  height: 140px;
+  background: linear-gradient(145deg, #e9f0ed, #dce6e2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-light);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.adminpage-service-card__content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adminpage-service-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.adminpage-service-card__header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.adminpage-service-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+}
+
+.adminpage-service-card__details p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adminpage-service-card__details svg {
+  width: 14px;
+  color: var(--accent);
+}
+
+.adminpage-service-card__desc {
+  background: var(--bg);
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  border-left: 3px solid var(--accent);
+}
+
+.adminpage-service-card__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.adminpage-service-card__actions .adminpage-action-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* Кнопка "Отклонить" (warning) */
+.adminpage-action-warning {
+  background: rgba(212, 175, 55, 0.15);
+  color: #b87c00;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+.adminpage-action-warning:hover {
+  background: var(--warning);
+  color: var(--text-dark);
+}
+
+@media (max-width: 640px) {
+  .adminpage-services-grid {
+    grid-template-columns: 1fr;
+  }
+  .adminpage-service-card__actions .adminpage-action-btn {
+    flex: auto;
+  }
 }

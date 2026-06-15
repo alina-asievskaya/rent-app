@@ -19,7 +19,7 @@ import {
   faBell,
   faCalendarAlt,
   faUtensils,
-  faTrash,          // добавлено для кнопки очистки уведомлений
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import "./Header.css";
@@ -44,6 +44,7 @@ interface FavoriteItem {
   photos: string[];
   city: string;
   street: string;
+  houseNumber?: string;
   rooms: number;
   bathrooms: number;
   floor: number;
@@ -154,25 +155,21 @@ const Header: React.FC = () => {
   const isAdmin = userData?.email?.toLowerCase() === 'admin@gmail.com';
   const shouldShowFavorites = isLoggedIn && !isAdmin;
 
-  // State for notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   const bellBtnRef = useRef<HTMLButtonElement>(null);
   const isFetchingNotifications = useRef(false);
   const isFetchingBookings = useRef(false);
-
-  // State for tracking user's own bookings (to detect status change)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userBookings, setUserBookings] = useState<UserBookingStatus[]>([]);
-
+  
   const favoritesDropdownRef = useRef<HTMLDivElement>(null);
   const userBtnRef = useRef<HTMLDivElement>(null);
   const favoritesBtnRef = useRef<HTMLButtonElement>(null);
   const isFetchingCount = useRef(false);
   const isFetchingList = useRef(false);
 
-  // ---------- Helper functions ----------
   const removeToast = useCallback((id: number) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
@@ -183,7 +180,6 @@ const Header: React.FC = () => {
     setTimeout(() => removeToast(id), 5000);
   }, [removeToast]);
 
-  // ---------- API calls ----------
   const fetchFavoritesCount = useCallback(async () => {
     if (isFetchingCount.current) return;
     try {
@@ -266,7 +262,6 @@ const Header: React.FC = () => {
     }
   }, []);
 
-  // Очистка всех уведомлений
   const clearAllNotifications = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -287,7 +282,6 @@ const Header: React.FC = () => {
     }
   }, [showToast]);
 
-  // Fetch user's own bookings to detect status changes
   const fetchUserBookingsStatus = useCallback(async () => {
     if (!isLoggedIn || isAdmin) return;
     if (isFetchingBookings.current) return;
@@ -308,7 +302,6 @@ const Header: React.FC = () => {
           houseAddress: b.houseAddress,
         }));
         
-        // Compare with previous state to generate notifications
         setUserBookings(prev => {
           const prevMap = new Map(prev.map(b => [b.id, b]));
           const newNotifications: Notification[] = [];
@@ -355,7 +348,6 @@ const Header: React.FC = () => {
     }
   }, [isLoggedIn, isAdmin]);
 
-  // Main notification fetcher (messages, incoming requests, catering requests)
   const fetchNotifications = useCallback(async () => {
     if (!isLoggedIn || isAdmin) return;
     if (isFetchingNotifications.current) return;
@@ -381,7 +373,6 @@ const Header: React.FC = () => {
 
       const notifs: Notification[] = [];
       
-      // Messages
       if (chatsJson.success && Array.isArray(chatsJson.data)) {
         (chatsJson.data as RawChat[]).filter(c => c.unread_count && c.unread_count > 0)
           .forEach(chat => {
@@ -395,7 +386,6 @@ const Header: React.FC = () => {
           });
       }
       
-      // Booking requests for owner
       if (bookingsJson.success && Array.isArray(bookingsJson.data)) {
         (bookingsJson.data as RawBooking[]).forEach(booking => {
           notifs.push({
@@ -408,7 +398,6 @@ const Header: React.FC = () => {
         });
       }
       
-      // Catering notifications (from backend when admin approves/rejects)
       if (cateringJson.success && Array.isArray(cateringJson.data)) {
         (cateringJson.data as ServerNotification[]).forEach(notif => {
           if (!notif.isRead) {
@@ -442,7 +431,6 @@ const Header: React.FC = () => {
     setUserBookings([]);
   }, []);
 
-  // ---------- Effects ----------
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
@@ -494,7 +482,6 @@ const Header: React.FC = () => {
     }
   }, [isLoggedIn, isAdmin, fetchFavoritesCount, fetchNotifications, fetchUserBookingsStatus, resetUserData]);
 
-  // Periodic refresh
   useEffect(() => {
     if (!isLoggedIn || isAdmin) return;
     const interval = setInterval(() => {
@@ -504,7 +491,6 @@ const Header: React.FC = () => {
     return () => clearInterval(interval);
   }, [isLoggedIn, isAdmin, fetchNotifications, fetchUserBookingsStatus]);
 
-  // Listen for explicit events from ProfilePage
   useEffect(() => {
     const handleNotificationsUpdate = () => {
       if (isLoggedIn && !isAdmin) {
@@ -525,7 +511,6 @@ const Header: React.FC = () => {
     };
   }, [isLoggedIn, isAdmin, fetchNotifications, fetchUserBookingsStatus]);
 
-  // Load favorites list when dropdown opens
   useEffect(() => {
     if (showFavorites && isLoggedIn && !isAdmin && favoritesList.length === 0) {
       fetchFavoritesList();
@@ -540,7 +525,6 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
   }, [isLoggedIn, isAdmin, fetchFavoritesCount]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showFavorites && 
@@ -582,7 +566,6 @@ const Header: React.FC = () => {
     };
   }, [showFavorites, showNotifications]);
 
-  // ---------- UI action handlers ----------
   const openAuthModal = useCallback((isLogin: boolean) => {
     setIsLoginForm(isLogin);
     setShowAuthModal(true);
@@ -822,13 +805,12 @@ const Header: React.FC = () => {
     }
   }, []);
 
-  // Обновлённая обработка клика по уведомлению с немедленным обновлением списка
   const handleNotificationClick = useCallback(async (notification: Notification) => {
     setShowNotifications(false);
     
     if (notification.type === 'cateringRequest') {
       await markNotificationAsRead(notification.id);
-      await fetchNotifications(); // сразу обновляем уведомления
+      await fetchNotifications();
     }
     
     if (notification.type === 'message') {
@@ -868,7 +850,6 @@ const Header: React.FC = () => {
     return description.substring(0, maxLength) + '...';
   }, []);
 
-  // ---------- Render ----------
   return (
     <>
       <header className={headerClass}>
@@ -1002,7 +983,10 @@ const Header: React.FC = () => {
                             <div className="favorites-item-price">
                               {formatPriceWithIcon(item.price, item.rentType || 'day')}
                             </div>
-                            <div className="favorites-item-address">{item.city}, {item.street}</div>
+                            <div className="favorites-item-address">
+                              {item.city}, {item.street}
+                              {item.houseNumber && `, ${item.houseNumber}`}
+                            </div>
                           </div>
                           <button className="favorites-item-remove" onClick={() => removeFromFavorites(item.id)} aria-label="Удалить из избранного" disabled={isLoadingFavorites}>
                             <FontAwesomeIcon icon={faTimes} />
@@ -1044,7 +1028,12 @@ const Header: React.FC = () => {
                   </div>
                 </button>
                 <div className="user-dropdown">
-                  <Link to="/profile" className="dropdown-item" onClick={() => setShowFavorites(false)}>
+                  {/* ИСПРАВЛЕНО: для админа ведет на /admin, иначе на /profile */}
+                  <Link 
+                    to={isAdmin ? "/admin" : "/profile"} 
+                    className="dropdown-item" 
+                    onClick={() => setShowFavorites(false)}
+                  >
                     <FontAwesomeIcon icon={faUser} /><span>Профиль</span>
                   </Link>
                   <button className="dropdown-item logout" onClick={handleLogout}>

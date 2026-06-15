@@ -80,6 +80,7 @@ interface Property {
   region?: string;
   city?: string;
   street?: string;
+  houseNumber?: string;
   rooms?: number;
   bathrooms?: number;
   floor?: number;
@@ -565,6 +566,7 @@ const Catalog: React.FC = () => {
             region: house.region,
             city: city,
             street: house.street,
+            houseNumber: house.houseNumber, 
             rooms: house.rooms,
             bathrooms: house.bathrooms,
             floor: house.floor,
@@ -1212,7 +1214,11 @@ const Catalog: React.FC = () => {
                                 {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
                               </div>
                             </div>
-                            <div className="property-address"><FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}</div>
+                           <div className="property-address">
+                            <FontAwesomeIcon icon={faMapMarkerAlt} /> 
+                            {property.city}, {property.street}
+                            {property.houseNumber && `, ${property.houseNumber}`}
+                          </div>
                             <div className="property-features">
                               <span><FontAwesomeIcon icon={faBed} /> {property.beds} комн.</span>
                               <span><FontAwesomeIcon icon={faBath} /> {property.baths}</span>

@@ -12,5 +12,5 @@ namespace RentApp.API.DTOs
         [MinLength(10, ErrorMessage = "Отзыв должен содержать минимум 10 символов")]
         [MaxLength(1000, ErrorMessage = "Отзыв не должен превышать 1000 символов")]
         public string Text { get; set; } = string.Empty;
-    }
+    }   
 }

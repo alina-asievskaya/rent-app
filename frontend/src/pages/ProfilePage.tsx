@@ -8,7 +8,7 @@ import {
   faSave, faPlus, faPaperPlane, faEraser, faCheckDouble,
   faCheck, faTrash, faBed, faRulerCombined, faMapMarkerAlt,
   faPause, faPlay, faClock, faCheckCircle, faTag, faUpload,
-  faUtensils, faBuilding, faPhone
+  faUtensils, faBuilding, faPhone, faReply  
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
 import OfferServiceModal from '../components/OfferServiceModal';
@@ -88,11 +88,22 @@ interface FeedbackData {
   id: number;
   topic: string;
   text: string;
- createdAt: string;
+  createdAt: string;
   user: {
     fio: string;
     email: string;
   };
+  replies?: SupportReply[];
+  showReplies?: boolean;
+  loadingReplies?: boolean;
+}
+
+interface SupportReply {
+  id: number;
+  feedbackId: number;
+  adminName: string;
+  message: string;
+  createdAt: string;
 }
 
 interface ChatData {
@@ -522,6 +533,49 @@ const ProfilePage: React.FC = () => {
       setFeedbackLoading(false);
     }
   };
+
+  // Загрузка ответов для конкретного обращения
+const fetchRepliesForFeedback = async (feedbackId: number) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:5213/api/support/${feedbackId}/replies`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        setUserFeedback(prev => prev.map(fb => 
+          fb.id === feedbackId ? { ...fb, replies: result.data, loadingReplies: false, showReplies: true } : fb
+        ));
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки ответов', error);
+  }
+};
+
+// Обработчик показа/скрытия ответов
+const handleToggleReplies = async (feedbackId: number) => {
+  const feedback = userFeedback.find(f => f.id === feedbackId);
+  if (!feedback) return;
+  if (!feedback.showReplies) {
+    // Если ответы уже загружены – просто показываем, иначе загружаем
+    if (!feedback.replies || feedback.replies.length === 0) {
+      setUserFeedback(prev => prev.map(fb => 
+        fb.id === feedbackId ? { ...fb, loadingReplies: true } : fb
+      ));
+      await fetchRepliesForFeedback(feedbackId);
+    } else {
+      setUserFeedback(prev => prev.map(fb => 
+        fb.id === feedbackId ? { ...fb, showReplies: true } : fb
+      ));
+    }
+  } else {
+    setUserFeedback(prev => prev.map(fb => 
+      fb.id === feedbackId ? { ...fb, showReplies: false } : fb
+    ));
+  }
+};
 
   const fetchUserChats = async () => {
     try {
@@ -1736,21 +1790,59 @@ const ProfilePage: React.FC = () => {
                     <div className="profilepage-loading-placeholder"><div className="profilepage-loading-spinner profilepage-small"></div><p>Загрузка истории...</p></div>
                   ) : userFeedback.length > 0 ? (
                     <div className="profilepage-feedback-list">
-                      {userFeedback.map((feedback) => (
-                        <div key={feedback.id} className="profilepage-feedback-item">
-                          <div className="profilepage-feedback-header">
-                            <div className="profilepage-feedback-topic">{translateTopic(feedback.topic)}</div>
-                            <div className="profilepage-feedback-date">
-                              {safeFormatDate(feedback.createdAt)}
-                              <button className="profilepage-btn-delete-feedback" onClick={(e) => { e.stopPropagation(); handleDeleteFeedback(feedback.id); }} disabled={deletingFeedback === feedback.id} title="Удалить обращение">
-                                {deletingFeedback === feedback.id ? <div className="profilepage-spinner-small"></div> : <FontAwesomeIcon icon={faTrash} />}
-                              </button>
-                            </div>
+                    {userFeedback.map((feedback) => (
+                      <div key={feedback.id} className="profilepage-feedback-item">
+                        <div className="profilepage-feedback-header">
+                          <div className="profilepage-feedback-topic">{translateTopic(feedback.topic)}</div>
+                          <div className="profilepage-feedback-date">
+                            {safeFormatDate(feedback.createdAt)}
+                            <button 
+                              className="profilepage-btn-delete-feedback" 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteFeedback(feedback.id); }} 
+                              disabled={deletingFeedback === feedback.id} 
+                              title="Удалить обращение"
+                            >
+                              {deletingFeedback === feedback.id ? <div className="profilepage-spinner-small"></div> : <FontAwesomeIcon icon={faTrash} />}
+                            </button>
                           </div>
-                          <div className="profilepage-feedback-text">{feedback.text}</div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="profilepage-feedback-text">{feedback.text}</div>
+                        
+                        {/* Кнопка показа ответов */}
+                        <div className="profilepage-feedback-actions">
+                          <button
+                            className="profilepage-show-replies-btn"
+                            onClick={() => handleToggleReplies(feedback.id)}
+                            disabled={feedback.loadingReplies}
+                          >
+                            <FontAwesomeIcon icon={faReply} />
+                            {feedback.showReplies ? 'Скрыть ответы' : 'Показать ответы'}
+                          </button>
+                        </div>
+
+                        {/* Блок с ответами */}
+                        {feedback.showReplies && (
+                          <div className="profilepage-replies-list">
+                            {feedback.loadingReplies ? (
+                              <div className="profilepage-loading-replies">Загрузка ответов...</div>
+                            ) : feedback.replies && feedback.replies.length > 0 ? (
+                              feedback.replies.map(reply => (
+                                <div key={reply.id} className="profilepage-reply-item">
+                                  <div className="profilepage-reply-header">
+                                    <strong>{reply.adminName}</strong>
+                                    <span>{safeFormatDate(reply.createdAt)}</span>
+                                  </div>
+                                  <div className="profilepage-reply-message">{reply.message}</div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="profilepage-no-replies">Нет ответов от поддержки</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                   ) : (
                     <div className="profilepage-empty-feedback"><p>У вас пока нет обращений в поддержку</p></div>
                   )}

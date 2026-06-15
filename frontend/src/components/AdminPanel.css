@@ -1483,3 +1483,154 @@
     flex: auto;
   }
 }
+/* ========== Ответы администратора на обращения (адаптировано под ваш дизайн) ========== */
+.adminpage-feedback-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.adminpage-reply-btn {
+  background: transparent;
+  border: 1px solid var(--border-light, #e2e8f0);
+  color: var(--primary, #1b4d3c);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 30px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.adminpage-reply-btn:hover {
+  background: rgba(27, 77, 60, 0.08);
+  border-color: var(--accent, #D4AF37);
+  color: var(--accent, #D4AF37);
+  transform: translateY(-1px);
+}
+
+.adminpage-replies-list {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8f9fc;
+  border-radius: 12px;
+  border-left: 3px solid var(--accent, #D4AF37);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.adminpage-reply-item {
+  padding: 12px 14px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s;
+}
+
+.adminpage-reply-item:last-child {
+  margin-bottom: 0;
+}
+
+.adminpage-reply-item:hover {
+  border-color: var(--accent, #D4AF37);
+  box-shadow: 0 2px 8px rgba(10, 46, 36, 0.08);
+}
+
+.adminpage-reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #6c757d;
+  border-bottom: 1px dashed #e9ecef;
+  padding-bottom: 6px;
+}
+
+.adminpage-reply-header strong {
+  color: var(--primary, #1b4d3c);
+  font-weight: 600;
+}
+
+.adminpage-reply-message {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #212529;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Форма ответа администратора */
+.adminpage-reply-form {
+  margin-top: 20px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.adminpage-reply-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.adminpage-reply-form textarea:focus {
+  outline: none;
+  border-color: var(--primary, #1b4d3c);
+  box-shadow: 0 0 0 3px rgba(27, 77, 60, 0.1);
+}
+
+.adminpage-reply-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.adminpage-submit-reply {
+  background: linear-gradient(135deg, var(--primary, #1b4d3c), #40916c);
+  color: white;
+  border: none;
+  padding: 8px 24px;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(27, 77, 60, 0.3);
+}
+
+.adminpage-submit-reply:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(27, 77, 60, 0.4);
+}
+
+.adminpage-cancel-reply {
+  background: transparent;
+  color: var(--text-muted, #6c757d);
+  border: 1px solid #dee2e6;
+  padding: 8px 20px;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.adminpage-cancel-reply:hover {
+  background: #f8f9fa;
+  border-color: var(--danger, #dc3545);
+  color: var(--danger, #dc3545);
+}

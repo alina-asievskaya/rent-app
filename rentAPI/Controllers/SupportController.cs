@@ -79,6 +79,98 @@ namespace RentApp.API.Controllers
                 });
             }
         }
+        // POST: api/support/{feedbackId}/reply (только для администратора)
+        [HttpPost("{feedbackId}/reply")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ReplyToFeedback(int feedbackId, [FromBody] CreateSupportReplyDto replyDto)
+        {
+            try
+            {
+                // Получаем ID администратора из токена
+                var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+                {
+                    return Unauthorized(new { success = false, message = "Неверный токен" });
+                }
+
+                // Проверяем существование обращения
+                var feedback = await _context.Feedback.FindAsync(feedbackId);
+                if (feedback == null)
+                {
+                    return NotFound(new { success = false, message = "Обращение не найдено" });
+                }
+
+                // Создаём ответ
+                var reply = new SupportReply
+                {
+                    FeedbackId = feedbackId,
+                    AdminId = adminId,
+                    Message = replyDto.Message,
+                    CreatedAt = DateOnly.FromDateTime(DateTime.Now)
+                };
+
+                await _context.SupportReplies.AddAsync(reply);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Администратор {AdminId} ответил на обращение {FeedbackId}", adminId, feedbackId);
+
+                return Ok(new { success = true, message = "Ответ отправлен", replyId = reply.Id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при добавлении ответа на обращение");
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+            }
+        }
+
+            // GET: api/support/{feedbackId}/replies (для администратора или владельца обращения)
+            [HttpGet("{feedbackId}/replies")]
+            [Authorize]
+            public async Task<IActionResult> GetReplies(int feedbackId)
+            {
+                try
+                {
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+                    {
+                        return Unauthorized(new { success = false, message = "Неверный токен" });
+                    }
+
+                    var feedback = await _context.Feedback.FindAsync(feedbackId);
+                    if (feedback == null)
+                    {
+                        return NotFound(new { success = false, message = "Обращение не найдено" });
+                    }
+
+                    // Проверяем права: администратор или владелец обращения
+                    bool isAdmin = User.IsInRole("Admin");
+                    if (!isAdmin && feedback.UserId != currentUserId)
+                    {
+                        return Forbid();
+                    }
+
+                    var replies = await _context.SupportReplies
+                        .Where(r => r.FeedbackId == feedbackId)
+                        .Include(r => r.Admin)
+                        .OrderBy(r => r.CreatedAt)
+                        .Select(r => new SupportReplyDto
+                        {
+                            Id = r.Id,
+                            FeedbackId = r.FeedbackId,
+                            AdminName = r.Admin.Fio,
+                            Message = r.Message,
+                            CreatedAt = r.CreatedAt
+                        })
+                        .ToListAsync();
+
+                    return Ok(new { success = true, data = replies });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Ошибка при получении ответов на обращение");
+                    return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+                }
+            }
 
         [HttpGet("my-feedback")]
         public async Task<IActionResult> GetMyFeedback()
@@ -88,13 +180,9 @@ namespace RentApp.API.Controllers
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
-                    return Unauthorized(new { 
-                        success = false, 
-                        message = "Неверный токен" 
-                    });
+                    return Unauthorized(new { success = false, message = "Неверный токен" });
                 }
 
-                // Получаем все обращения пользователя
                 var feedback = await _context.Feedback
                     .Where(f => f.UserId == userId)
                     .OrderByDescending(f => f.CreatedAt)
@@ -108,62 +196,68 @@ namespace RentApp.API.Controllers
                         {
                             f.User.Fio,
                             f.User.Email
-                        }
+                        },
+                        // Включаем ответы администратора
+                        Replies = f.Replies.OrderBy(r => r.CreatedAt).Select(r => new
+                        {
+                            r.Id,
+                            r.Message,
+                            r.CreatedAt,
+                            AdminName = r.Admin.Fio
+                        }).ToList()
                     })
                     .ToListAsync();
 
-                return Ok(new { 
-                    success = true, 
-                    data = feedback 
-                });
+                return Ok(new { success = true, data = feedback });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении обращений пользователя");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Внутренняя ошибка сервера" 
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
             }
         }
 
         [HttpGet("all")]
-        [Authorize(Roles = "Admin")] // Только для администраторов
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllFeedback()
         {
             try
             {
                 var feedback = await _context.Feedback
                     .Include(f => f.User)
+                    .Include(f => f.Replies)           
+                        .ThenInclude(r => r.Admin)     
                     .OrderByDescending(f => f.CreatedAt)
-                    .Select(f => new
-                    {
-                        f.Id,
-                        f.Topic,
-                        f.Text,
-                        f.CreatedAt,
-                        User = new
-                        {
-                            f.User.Id,
-                            f.User.Fio,
-                            f.User.Email,
-                            f.User.Phone_num
-                        }
-                    })
                     .ToListAsync();
 
-                return Ok(new { 
-                    success = true, 
-                    data = feedback 
+                var result = feedback.Select(f => new
+                {
+                    f.Id,
+                    f.Topic,
+                    f.Text,
+                    f.CreatedAt,
+                    User = new
+                    {
+                        f.User.Id,
+                        f.User.Fio,
+                        f.User.Email,
+                        f.User.Phone_num
+                    },
+                    Replies = f.Replies.OrderBy(r => r.CreatedAt).Select(r => new
+                    {
+                        r.Id,
+                        r.Message,
+                        r.CreatedAt,
+                        AdminName = r.Admin.Fio
+                    }).ToList()
                 });
+
+                return Ok(new { success = true, data = result });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при получении всех обращений");
-                return StatusCode(500, new { 
-                    success = false, 
-                    message = "Внутренняя ошибка сервера" 
-                });
+                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
             }
         }
 

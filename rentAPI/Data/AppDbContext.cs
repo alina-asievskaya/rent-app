@@ -29,6 +29,7 @@ namespace RentApp.API.Data
         public DbSet<HouseCatering> HouseCaterings { get; set; }
         public DbSet<CateringOrder> CateringOrders { get; set; }
         public DbSet<HouseCateringRequest> HouseCateringRequests { get; set; }
+        public DbSet<SupportReply> SupportReplies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -712,6 +713,27 @@ namespace RentApp.API.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(co => co.UserId);
+            });
+            
+            modelBuilder.Entity<SupportReply>(entity =>
+            {
+                entity.ToTable("SupportReplies");
+                entity.HasKey(r => r.Id);
+                entity.Property(r => r.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(r => r.FeedbackId).HasColumnName("feedback_id").IsRequired();
+                entity.Property(r => r.AdminId).HasColumnName("admin_id").IsRequired();
+                entity.Property(r => r.Message).HasColumnName("message").HasMaxLength(2000).IsRequired();
+                entity.Property(r => r.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("GETUTCDATE()");
+
+                entity.HasOne(r => r.Feedback)
+                    .WithMany(f => f.Replies)
+                    .HasForeignKey(r => r.FeedbackId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Admin)
+                    .WithMany()
+                    .HasForeignKey(r => r.AdminId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // НОВАЯ КОНФИГУРАЦИЯ ДЛЯ Notification

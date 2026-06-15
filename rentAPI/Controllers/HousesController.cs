@@ -125,7 +125,7 @@ namespace RentApp.API.Controllers
                     Area = houseDto.Area,
                     IdOwner = userId,
                     Description = houseDto.Description,
-                    AnnouncementData = DateOnly.FromDateTime(DateTime.UtcNow),
+                    AnnouncementData = DateOnly.FromDateTime(DateTime.Now),
                     HouseType = houseDto.HouseType,
                     RentType = houseDto.RentType, // <-- ДОБАВЛЕНО RentType
                     Active = true
@@ -202,8 +202,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/houses/catalog
-       // GET: api/houses/catalog
         [HttpGet("catalog")]
         [AllowAnonymous]
         public async Task<IActionResult> GetCatalogHouses()
@@ -849,7 +847,7 @@ public async Task<IActionResult> GetAvailableCaterings()
                     IdHouses = id,
                     Rating = reviewDto.Rating,
                     Text = reviewDto.Text.Trim(),
-                    DataReviews = DateOnly.FromDateTime(DateTime.UtcNow)
+                    DataReviews = DateOnly.FromDateTime(DateTime.Now)
                 };
                 
                 await _context.ReviewHouses.AddAsync(review);

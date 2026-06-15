@@ -42,6 +42,37 @@ import {
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
 
+// ========== КОМПОНЕНТ УВЕДОМЛЕНИЙ ==========
+const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
+  message, 
+  type, 
+  onClose 
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: 'fas fa-check-circle',
+    error: 'fas fa-exclamation-circle',
+    warning: 'fas fa-exclamation-triangle'
+  };
+
+  return (
+    <div className={`createad-notification createad-${type}`}>
+      <div className="createad-notification-content">
+        <i className={`createad-notification-icon ${icons[type]}`}></i>
+        <span className="createad-notification-text">{message}</span>
+      </div>
+      <button className="createad-notification-close" onClick={onClose}>&times;</button>
+    </div>
+  );
+};
+// ==========================================
+
 interface ApiHouseInfo {
   id: number;
   price: number;
@@ -135,7 +166,7 @@ interface Review {
   rating: number;
   text: string;
   id_houses: number;
-  data_reviews: string;
+  dataReviews: string; 
   user?: {
     fio?: string;
   };
@@ -211,6 +242,7 @@ type IconType = typeof faCheck;
 const HouseInfo: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [checkingFavorite, setCheckingFavorite] = useState(true);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
@@ -239,6 +271,14 @@ const HouseInfo: React.FC = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [thumbnailScrollPosition, setThumbnailScrollPosition] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
+    setNotification({ message, type });
+  }, []);
+
+  const closeNotification = useCallback(() => {
+    setNotification(null);
+  }, []);
 
   const getRentTypeText = (rentType?: 'day' | 'month'): string => {
     if (rentType === 'day') return 'Посуточно';
@@ -593,24 +633,24 @@ const HouseInfo: React.FC = () => {
 
   const handleStartChat = async () => {
     if (!id) {
-      alert('Невозможно начать чат: ID дома не найден');
+      showNotification('Невозможно начать чат: ID дома не найден', 'error');
       return;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Для начала чата необходимо авторизоваться');
+      showNotification('Для начала чата необходимо авторизоваться', 'warning');
       navigate('/login');
       return;
     }
 
     if (isOwner) {
-      alert('Вы не можете написать себе по своему объявлению');
+      showNotification('Вы не можете написать себе по своему объявлению', 'warning');
       return;
     }
 
     if (isAdmin) {
-      alert('Администратор может писать только в ответ на сообщения пользователей');
+      showNotification('Администратор может писать только в ответ на сообщения пользователей', 'warning');
       return;
     }
 
@@ -635,7 +675,7 @@ const HouseInfo: React.FC = () => {
           console.log('✅ Получен ID владельца с сервера:', finalOwnerId);
           
           if (ownerInfoFromServer.email?.toLowerCase() === 'admin@gmail.com') {
-            alert('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.');
+            showNotification('Вы не можете написать администратору. Пожалуйста, свяжитесь с поддержкой через форму обратной связи.', 'error');
             setCheckingOwner(false);
             return;
           }
@@ -644,12 +684,12 @@ const HouseInfo: React.FC = () => {
 
       if (!finalOwnerId) {
         console.error('❌ Не удалось определить ID владельца после всех попыток');
-        alert('Не удалось определить владельца объявления. Пожалуйста, попробуйте позже.');
+        showNotification('Не удалось определить владельца объявления. Пожалуйста, попробуйте позже.', 'error');
         return;
       }
 
       if (finalOwnerId === currentUserId) {
-        alert('Вы не можете написать себе');
+        showNotification('Вы не можете написать себе', 'warning');
         return;
       }
 
@@ -682,11 +722,11 @@ const HouseInfo: React.FC = () => {
         navigate(`/chat/${result.data.chat_id}`);
       } else {
         console.error('❌ Ошибка создания чата:', result);
-        alert(result.message || 'Ошибка при создании чата');
+        showNotification(result.message || 'Ошибка при создании чата', 'error');
       }
     } catch (error) {
       console.error('❌ Ошибка при создании чата:', error);
-      alert('Не удалось создать чат. Попробуйте позже.');
+      showNotification('Не удалось создать чат. Попробуйте позже.', 'error');
     } finally {
       setCheckingOwner(false);
     }
@@ -697,7 +737,7 @@ const HouseInfo: React.FC = () => {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Необходима авторизация');
+      showNotification('Необходима авторизация', 'warning');
       return;
     }
 
@@ -711,15 +751,15 @@ const HouseInfo: React.FC = () => {
       });
 
       if (response.ok) {
-        alert('Объявление успешно удалено');
+        showNotification('Объявление успешно удалено', 'success');
         navigate('/catalog');
       } else {
         const data = await response.json();
-        alert(data.message || 'Ошибка при удалении объявления');
+        showNotification(data.message || 'Ошибка при удалении объявления', 'error');
       }
     } catch (error) {
       console.error('Ошибка удаления:', error);
-      alert('Не удалось удалить объявление');
+      showNotification('Не удалось удалить объявление', 'error');
     }
   };
 
@@ -803,6 +843,7 @@ const HouseInfo: React.FC = () => {
         }
       } catch (error) {
         console.error('Ошибка при загрузке данных о доме:', error);
+        showNotification('Не удалось загрузить данные о доме', 'error');
       } finally {
         setLoading(false);
       }
@@ -812,30 +853,30 @@ const HouseInfo: React.FC = () => {
   }, [id, fetchReviews, fetchOwnerInfo, currentUserId]);
 
   const handleStarClickUnauthorized = () => {
-    alert('Для оценки необходимо авторизоваться');
+    showNotification('Для оценки необходимо авторизоваться', 'warning');
     navigate('/login');
   };
 
   const handleTextareaClickUnauthorized = () => {
-    alert('Для оставления отзыва необходимо авторизоваться');
+    showNotification('Для оставления отзыва необходимо авторизоваться', 'warning');
     navigate('/login');
   };
 
   const toggleFavorite = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Для добавления в избранное необходимо авторизоваться');
+      showNotification('Для добавления в избранное необходимо авторизоваться', 'warning');
       navigate('/login');
       return;
     }
 
     if (!id) {
-      alert('Ошибка: ID дома не найден');
+      showNotification('Ошибка: ID дома не найден', 'error');
       return;
     }
 
     if (isAdmin) {
-      alert('Администраторы не могут добавлять в избранное');
+      showNotification('Администраторы не могут добавлять в избранное', 'warning');
       return;
     }
 
@@ -856,11 +897,12 @@ const HouseInfo: React.FC = () => {
             setIsFavorite(false);
             console.log('✅ Удалено из избранного:', id);
             window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+            showNotification('Объявление удалено из избранного', 'success');
           } else {
-            alert(data.message || 'Ошибка при удалении из избранного');
+            showNotification(data.message || 'Ошибка при удалении из избранного', 'error');
           }
         } else {
-          alert('Ошибка при удалении из избранного');
+          showNotification('Ошибка при удалении из избранного', 'error');
         }
       } else {
         const response = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
@@ -877,16 +919,17 @@ const HouseInfo: React.FC = () => {
             setIsFavorite(true);
             console.log('✅ Добавлено в избранное:', id);
             window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+            showNotification('Объявление добавлено в избранное', 'success');
           } else {
-            alert(data.message || 'Ошибка при добавлении в избранное');
+            showNotification(data.message || 'Ошибка при добавлении в избранное', 'error');
           }
         } else {
-          alert('Ошибка при добавлении в избранное');
+          showNotification('Ошибка при добавлении в избранное', 'error');
         }
       }
     } catch (error) {
       console.error('❌ Ошибка при изменении избранного:', error);
-      alert('Произошла ошибка. Пожалуйста, попробуйте еще раз.');
+      showNotification('Произошла ошибка. Пожалуйста, попробуйте еще раз.', 'error');
     } finally {
       setTogglingFavorite(false);
     }
@@ -904,41 +947,41 @@ const HouseInfo: React.FC = () => {
     });
     
     if (!id) {
-      alert('Ошибка: ID дома не найден');
+      showNotification('Ошибка: ID дома не найден', 'error');
       return;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Для отправки отзыва необходимо авторизоваться');
+      showNotification('Для отправки отзыва необходимо авторизоваться', 'warning');
       navigate('/login');
       return;
     }
 
     if (isAdmin) {
-      alert('Администраторы не могут оставлять отзывы');
+      showNotification('Администраторы не могут оставлять отзывы', 'warning');
       return;
     }
 
     if (isOwner) {
-      alert('Владелец не может оставлять отзыв на свое объявление');
+      showNotification('Владелец не может оставлять отзыв на свое объявление', 'warning');
       return;
     }
 
     if (!currentUserId) {
-      alert('Ошибка: не удалось определить пользователя. Пожалуйста, войдите снова.');
+      showNotification('Ошибка: не удалось определить пользователя. Пожалуйста, войдите снова.', 'error');
       localStorage.removeItem('token');
       navigate('/login');
       return;
     }
 
     if (newReview.text.trim().length < 10) {
-      alert('Текст отзыва должен содержать минимум 10 символов');
+      showNotification('Текст отзыва должен содержать минимум 10 символов', 'warning');
       return;
     }
 
     if (newReview.text.length > 1000) {
-      alert('Текст отзыва не должен превышать 1000 символов');
+      showNotification('Текст отзыва не должен превышать 1000 символов', 'warning');
       return;
     }
 
@@ -969,15 +1012,15 @@ const HouseInfo: React.FC = () => {
       console.log('📥 Response data:', result);
       
       if (response.ok && result.success) {
-        alert('Отзыв успешно добавлен!');
+        showNotification('Отзыв успешно добавлен!', 'success');
         setNewReview({ rating: 5, text: "" });
         fetchReviews();
       } else {
-        alert(result.message || 'Ошибка при добавлении отзыва');
+        showNotification(result.message || 'Ошибка при добавлении отзыва', 'error');
       }
     } catch (error) {
       console.error('Ошибка при отправке отзыва:', error);
-      alert('Ошибка при отправке отзыва');
+      showNotification('Ошибка при отправке отзыва', 'error');
     } finally {
       setSubmittingReview(false);
     }
@@ -992,7 +1035,7 @@ const HouseInfo: React.FC = () => {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        alert('Для ответа на отзыв необходимо авторизоваться');
+        showNotification('Для ответа на отзыв необходимо авторизоваться', 'warning');
         return;
       }
 
@@ -1010,17 +1053,17 @@ const HouseInfo: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          alert('Ответ успешно отправлен!');
+          showNotification('Ответ успешно отправлен!', 'success');
           fetchReviews();
         } else {
-          alert(result.message || 'Ошибка при отправке ответа');
+          showNotification(result.message || 'Ошибка при отправке ответа', 'error');
         }
       } else {
-        alert('Ошибка сервера при отправке ответа');
+        showNotification('Ошибка сервера при отправке ответа', 'error');
       }
     } catch (error) {
       console.error('Ошибка при отправке ответа на отзыв:', error);
-      alert('Ошибка при отправке ответа');
+      showNotification('Ошибка при отправке ответа', 'error');
     }
   };
 
@@ -1044,42 +1087,38 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  const formatReviewDate = (dateString: string) => {
+  // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ ДЛЯ ДАТЫ ОТЗЫВОВ ==========
+  const parseReviewDate = (dateString: string): Date => {
+    if (!dateString) return new Date();
+    if (dateString.includes('T')) {
+      return new Date(dateString);
+    }
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    return new Date(dateString);
+  };
+
+  const formatReviewDate = (dateString: string): string => {
+    if (!dateString) return 'Дата не указана';
     try {
-      if (!dateString) return 'Дата не указана';
-      
-      if (dateString.includes('T')) {
-        const date = new Date(dateString);
-        if (!isNaN(date.getTime())) {
-          return date.toLocaleDateString('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-          });
-        }
-      }
-      
-      if (dateString.includes('-')) {
-        const [year, month, day] = dateString.split('-').map(Number);
-        if (year && month && day) {
-          const date = new Date(year, month - 1, day);
-          if (!isNaN(date.getTime())) {
-            return date.toLocaleDateString('ru-RU', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
-            });
-          }
-        }
-      }
-      
-      console.log('Неизвестный формат даты:', dateString);
-      return 'Дата не указана';
+      const date = parseReviewDate(dateString);
+      if (isNaN(date.getTime())) return 'Дата не указана';
+      return date.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
     } catch (error) {
-      console.error('Ошибка при форматировании даты отзыва:', error, 'dateString:', dateString);
+      console.error('Ошибка форматирования даты отзыва:', error);
       return 'Дата не указана';
     }
   };
+  // ============================================================
 
   const getFeatureIcon = (feature: string): IconType => {
     const iconMap: Record<string, IconType> = {
@@ -1149,7 +1188,7 @@ const HouseInfo: React.FC = () => {
     if (ownerInfo?.phone_num) {
       window.location.href = `tel:${ownerInfo.phone_num}`;
     } else {
-      alert('Телефон владельца не указан');
+      showNotification('Телефон владельца не указан', 'warning');
     }
   };
 
@@ -1250,7 +1289,7 @@ const HouseInfo: React.FC = () => {
   return (
     <>
       <Header />
-      
+      {notification && <Notification message={notification.message} type={notification.type} onClose={closeNotification} />}
       <div className="house-info-page">
         <div className="container-house">
           <button className="back-button-house" onClick={handleBack}>
@@ -1342,8 +1381,6 @@ const HouseInfo: React.FC = () => {
                     <span>{lightboxIndex + 1} / {images.length}</span>
                   </div>
                 </div>
-                
-                
               </div>
             </div>
           )}
@@ -1478,11 +1515,10 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Раздел отзывов - показывается всем, но форма отправки скрыта для админа */}
+                {/* Раздел отзывов */}
                 <div className="reviews-section-house">
                   <h3>Отзывы о доме</h3>
                   
-                  {/* Форма добавления отзыва - только для обычных пользователей (не админ) */}
                   {!isAdmin && (
                     <div className="review-form-house">
                       <h4>Оставить отзыв</h4>
@@ -1568,7 +1604,7 @@ const HouseInfo: React.FC = () => {
                               {renderStars(review.rating)}
                               <span className="review-date-house">
                                 <FontAwesomeIcon icon={faCalendarAlt} />
-                                {formatReviewDate(review.data_reviews)}
+                                {formatReviewDate(review.dataReviews)}
                               </span>
                             </div>
                           </div>
@@ -1621,7 +1657,6 @@ const HouseInfo: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Контактные действия (кнопки) - только для обычных пользователей */}
                   {!isAdmin && (
                     <>
                       <div className="contact-actions-house">

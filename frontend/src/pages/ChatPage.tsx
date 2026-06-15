@@ -76,7 +76,30 @@ const ChatPage: React.FC = () => {
 
   const getToken = () => localStorage.getItem('token');
 
-  // ── Форматирование цены ──────────────────────────────────────────────────
+  // ================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДАТ (FIXED) ==================
+  const parseServerDate = (dateString: string): Date => {
+    // Если строка уже содержит временную зону (Z или +-hh:mm), оставляем как есть
+    if (dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString)) {
+      return new Date(dateString);
+    }
+    // Иначе добавляем 'Z', чтобы интерпретировать строку как UTC
+    return new Date(dateString + 'Z');
+  };
+
+  const formatTime = (dateString: string) =>
+    parseServerDate(dateString).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+  const formatDate = (dateString: string) => {
+    const date = parseServerDate(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === today.toDateString()) return 'Сегодня';
+    if (date.toDateString() === yesterday.toDateString()) return 'Вчера';
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  };
+  // =========================================================================
+
   const formatPriceWithIcon = (price: number): React.ReactNode => {
     if (price == null || isNaN(price)) return null;
     return (
@@ -86,7 +109,6 @@ const ChatPage: React.FC = () => {
     );
   };
 
-  // ── Лейбл статуса собеседника ────────────────────────────────────────────
   const getOtherUserStatus = (): string => {
     if (!chat) return '';
     if (chat.chat_type === 'catering') return 'Владелец кейтеринга';
@@ -94,7 +116,6 @@ const ChatPage: React.FC = () => {
     return chat.other_user.is_agent ? 'Организатор' : 'Пользователь';
   };
 
-  // ── Блок информации в шапке (справа) ────────────────────────────────────
   const renderHeaderInfo = (): React.ReactNode => {
     if (!chat) return null;
 
@@ -126,7 +147,6 @@ const ChatPage: React.FC = () => {
       );
     }
 
-    // Обычный чат по дому
     return (
       <div className="chat-house-info" onClick={handleViewHouse} style={{ cursor: 'pointer' }}>
         <FontAwesomeIcon icon={faHome} />
@@ -141,7 +161,6 @@ const ChatPage: React.FC = () => {
     );
   };
 
-  // ── Пункт меню "О доме" показываем только для house-чатов ───────────────
   const renderMenuHouseItem = (): React.ReactNode => {
     if (!chat || chat.chat_type !== 'house') return null;
     return (
@@ -151,7 +170,6 @@ const ChatPage: React.FC = () => {
     );
   };
 
-  // ── API ──────────────────────────────────────────────────────────────────
   const fetchChat = useCallback(async () => {
     try {
       setLoading(true);
@@ -333,19 +351,7 @@ const ChatPage: React.FC = () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); }
   };
 
-  const formatTime = (dateString: string) =>
-    new Date(dateString).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === today.toDateString()) return 'Сегодня';
-    if (date.toDateString() === yesterday.toDateString()) return 'Вчера';
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  };
-
+  // Группировка сообщений по датам (использует исправленный formatDate)
   const groupMessagesByDate = () => {
     if (!chat?.messages) return {};
     const groups: { [key: string]: ChatMessage[] } = {};
@@ -357,14 +363,22 @@ const ChatPage: React.FC = () => {
     return groups;
   };
 
-  // ── Effects ──────────────────────────────────────────────────────────────
+  // Функция для определения, является ли сообщение первым в группе (исправлена)
+  const isFirstInGroup = (message: ChatMessage, prevMessage: ChatMessage | undefined): boolean => {
+    if (!prevMessage) return true;
+    if (prevMessage.sender_id !== message.sender_id) return true;
+    const currentDate = parseServerDate(message.created_at);
+    const prevDate = parseServerDate(prevMessage.created_at);
+    const diffMinutes = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60);
+    return diffMinutes > 5; // больше 5 минут – новая группа
+  };
+
   useEffect(() => {
     if (chatId) { fetchChat(); markAsRead(); }
   }, [chatId, fetchChat, markAsRead]);
 
   useEffect(() => { scrollToBottom(); }, [chat?.messages]);
 
-  // ── Loading / Error states ───────────────────────────────────────────────
   if (loading) {
     return (
       <>
@@ -395,14 +409,13 @@ const ChatPage: React.FC = () => {
 
   const groupedMessages = groupMessagesByDate();
 
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <>
       <Header />
       <div className="chat-page">
         <div className="chat-container">
 
-          {/* ── Шапка чата ── */}
+          {/* Шапка чата */}
           <div className="chat-header">
             <div className="chat-header-left">
               <button className="chat-back-btn" onClick={() => navigate('/profile#chats')}>
@@ -445,7 +458,7 @@ const ChatPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Сообщения ── */}
+          {/* Сообщения */}
           <div
             className="chat-messages"
             ref={messagesContainerRef}
@@ -470,13 +483,10 @@ const ChatPage: React.FC = () => {
                 <div key={date} className="message-date-group">
                   <div className="date-divider"><span>{date}</span></div>
                   {messages.map((message, idx) => {
-                    const prev = messages[idx - 1];
-                    const next = messages[idx + 1];
-                    const isFirst =
-                      !prev ||
-                      prev.sender_id !== message.sender_id ||
-                      new Date(message.created_at).getTime() - new Date(prev.created_at).getTime() > 300000;
-                    const isLast = !next || next.sender_id !== message.sender_id;
+                    const prevMessage = messages[idx - 1];
+                    const isFirst = isFirstInGroup(message, prevMessage);
+                    // isLast – не используется для стилей, но оставим для возможных расширений
+                    const isLast = idx === messages.length - 1 || messages[idx + 1]?.sender_id !== message.sender_id;
 
                     return (
                       <div
@@ -533,7 +543,7 @@ const ChatPage: React.FC = () => {
             <div ref={bottomRef} />
           </div>
 
-          {/* ── Форма отправки ── */}
+          {/* Форма отправки */}
           <form className="chat-input-form" onSubmit={handleSendMessage}>
             <div className="input-tools">
               <button type="button" className="btn-tool" onClick={() => fileInputRef.current?.click()}>

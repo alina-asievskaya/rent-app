@@ -167,6 +167,7 @@ namespace RentApp.API.Controllers
             }
         }
 
+        // ========== ИЗМЕНЕННЫЙ МЕТОД: теперь включает ответы администратора ==========
         [HttpGet("feedback")]
         public async Task<IActionResult> GetAllFeedback()
         {
@@ -174,6 +175,8 @@ namespace RentApp.API.Controllers
             {
                 var feedback = await _context.Feedback
                     .Include(f => f.User)
+                    .Include(f => f.Replies)           // ← добавляем ответы
+                        .ThenInclude(r => r.Admin)     // ← и данные администратора
                     .OrderByDescending(f => f.CreatedAt)
                     .Select(f => new
                     {
@@ -181,7 +184,16 @@ namespace RentApp.API.Controllers
                         f.Topic,
                         f.Text,
                         f.CreatedAt,
-                        User = new { f.User.Id, f.User.Fio, f.User.Email, f.User.Phone_num }
+                        User = new { f.User.Id, f.User.Fio, f.User.Email, f.User.Phone_num },
+                        // Добавляем Replies
+                        Replies = f.Replies.OrderBy(r => r.CreatedAt).Select(r => new
+                        {
+                            r.Id,
+                            r.FeedbackId,
+                            AdminName = r.Admin.Fio,
+                            r.Message,
+                            r.CreatedAt
+                        }).ToList()
                     })
                     .ToListAsync();
                 return Ok(new { success = true, data = feedback });
@@ -230,7 +242,7 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // ========== Методы для управления заявками на услуги ==========
+        // ========== Методы для управления заявками на услуги (без изменений) ==========
         [HttpGet("service-requests")]
         public async Task<IActionResult> GetOffers()
         {
@@ -263,7 +275,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // ИЗМЕНЕННЫЙ МЕТОД: теперь при одобрении создаётся CateringOwner и уведомление
         [HttpPut("service-requests/{id}/status")]
         public async Task<IActionResult> UpdateOfferStatus(int id, [FromBody] UpdateOfferStatusDto dto)
         {
@@ -280,7 +291,6 @@ namespace RentApp.API.Controllers
                 request.Status = dto.Status;
                 await _context.SaveChangesAsync();
 
-                // Создаём уведомление для пользователя
                 var notification = new Notification
                 {
                     UserId = request.UserId,
@@ -294,7 +304,6 @@ namespace RentApp.API.Controllers
                 };
                 _context.Notifications.Add(notification);
 
-                // Если заявка одобрена и пользователь ещё не является владельцем кейтеринга, создаём запись в CateringOwners
                 if (dto.Status == "approved")
                 {
                     var existingOwner = await _context.CateringOwners

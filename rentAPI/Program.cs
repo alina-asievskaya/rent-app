@@ -20,6 +20,7 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAgentService, AgentService>();
 
+
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
 {

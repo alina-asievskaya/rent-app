@@ -4,10 +4,11 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faConciergeBell, faCheck, faTimes, faTrash,
-  faMapMarkerAlt, faPhone, faEnvelope, faCalendarAlt, faUser
+  faMapMarkerAlt, faPhone, faEnvelope, faCalendarAlt, faUser, faReply
 } from '@fortawesome/free-solid-svg-icons';
 import './AdminPanel.css';
 
+// ==================== Интерфейсы ====================
 interface User {
   id: number;
   email: string;
@@ -31,6 +32,14 @@ interface Agent {
   };
 }
 
+interface SupportReply {
+  id: number;
+  feedbackId: number;
+  adminName: string;
+  message: string;
+  createdAt: string;
+}
+
 interface Feedback {
   id: number;
   topic: string;
@@ -42,6 +51,9 @@ interface Feedback {
     email: string;
     phone_num: string;
   };
+  replies?: SupportReply[];
+  showReplyForm?: boolean;
+  replyText?: string;
 }
 
 interface ServiceRequest {
@@ -65,6 +77,7 @@ interface AdminStats {
   totalFeedback: number;
 }
 
+// ==================== Форматирование даты ====================
 const formatDateOnly = (dateStr: string): string => {
   if (!dateStr) return '—';
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -135,11 +148,12 @@ const AdminPanel: React.FC = () => {
   const user = userStr ? JSON.parse(userStr) : null;
   const API_BASE_URL = 'http://localhost:5213';
 
-  const showToast = (text: string, type: 'success' | 'error' | 'info' | 'warning') => {
+  // Вспомогательные функции
+  const showToast = useCallback((text: string, type: 'success' | 'error' | 'info' | 'warning') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
     setTimeout(() => removeToast(id), 5000);
-  };
+  }, []);
 
   const removeToast = (id: number) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
@@ -153,12 +167,19 @@ const AdminPanel: React.FC = () => {
     setConfirmationModal(prev => ({ ...prev, isOpen: false }));
   };
 
+  const handleLogoutConfirmation = useCallback(() => {
+    showConfirmation('Выход из системы', 'Вы уверены, что хотите выйти из административной панели?', 'warning', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/');
+    });
+  }, [navigate]);
+
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', 'rent_app');
     formData.append('cloud_name', 'dnblbt7wc');
-
     try {
       const response = await fetch('https://api.cloudinary.com/v1_1/dnblbt7wc/image/upload', {
         method: 'POST',
@@ -189,7 +210,7 @@ const AdminPanel: React.FC = () => {
       console.error('Ошибка загрузки статистики:', error);
       showToast('Ошибка загрузки статистики', 'error');
     }
-  }, [token, API_BASE_URL]);
+  }, [token, API_BASE_URL, handleLogoutConfirmation, showToast]);
 
   const fetchServiceRequests = useCallback(async () => {
     try {
@@ -206,7 +227,64 @@ const AdminPanel: React.FC = () => {
       console.error('Ошибка загрузки заявок:', error);
       showToast('Ошибка загрузки заявок', 'error');
     }
-  }, [token, API_BASE_URL]);
+  }, [token, API_BASE_URL, handleLogoutConfirmation, showToast]);
+
+  // Загрузка обращений (включая ответы) – с диагностикой
+  const fetchFeedback = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/feedback`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error(`Feedback fetch failed: ${response.status}`);
+      const data = await response.json();
+      if (data.success) {
+        console.log('API /admin/feedback вернул данные:', data.data);
+        // Проверим, есть ли replies (типизация)
+        (data.data as Feedback[]).forEach((fb: Feedback) => {
+          console.log(`Обращение ${fb.id} имеет replies:`, fb.replies);
+        });
+        const feedbackWithUI = (data.data as Feedback[]).map((fb) => ({
+          ...fb,
+          showReplyForm: false,
+          replyText: ''
+        }));
+        setFeedback(feedbackWithUI);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки обращений:', error);
+      showToast('Ошибка загрузки обращений', 'error');
+    }
+  }, [token, API_BASE_URL, showToast]);
+
+  // Отправить ответ на обращение
+  const handleReplySubmit = useCallback(async (feedbackId: number, message: string) => {
+    if (!message.trim()) {
+      showToast('Введите текст ответа', 'warning');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/support/${feedbackId}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ message })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('Ответ отправлен', 'success');
+        // Закрываем форму
+        setFeedback(prev => prev.map(fb =>
+          fb.id === feedbackId ? { ...fb, showReplyForm: false, replyText: '' } : fb
+        ));
+        // Принудительно перезагружаем список обращений, чтобы показать ответ
+        await fetchFeedback();
+      } else {
+        showToast(data.message || 'Ошибка отправки', 'error');
+      }
+    } catch (error) {
+      console.error('Ошибка отправки ответа:', error);
+      showToast('Ошибка соединения', 'error');
+    }
+  }, [API_BASE_URL, token, showToast, fetchFeedback]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -237,7 +315,14 @@ const AdminPanel: React.FC = () => {
       const data = await response.json();
       if (activeTab === 'users') setUsers(data.data);
       if (activeTab === 'agents') setAgents(data.data);
-      if (activeTab === 'feedback') setFeedback(data.data);
+      if (activeTab === 'feedback') {
+        const feedbackWithUI = (data.data as Feedback[]).map((fb) => ({
+          ...fb,
+          showReplyForm: false,
+          replyText: ''
+        }));
+        setFeedback(feedbackWithUI);
+      }
       if (activeTab === 'services') setServiceRequests(data.data);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
@@ -245,7 +330,7 @@ const AdminPanel: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, token, API_BASE_URL, fetchStats]);
+  }, [activeTab, token, API_BASE_URL, fetchStats, handleLogoutConfirmation, showToast]);
 
   useEffect(() => {
     if (!token || user?.email !== 'admin@gmail.com') {
@@ -259,14 +344,7 @@ const AdminPanel: React.FC = () => {
     if (token && user?.email === 'admin@gmail.com') fetchData();
   }, [activeTab, fetchData, token, user?.email]);
 
-  const handleLogoutConfirmation = () => {
-    showConfirmation('Выход из системы', 'Вы уверены, что хотите выйти из административной панели?', 'warning', () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      navigate('/');
-    });
-  };
-
+  // Остальные обработчики (удаление, создание агента и т.д.) без изменений
   const handleDeleteUser = (userId: number, userEmail: string, userFio: string) => {
     showConfirmation(
       'Удаление пользователя',
@@ -337,7 +415,7 @@ const AdminPanel: React.FC = () => {
           if (!response.ok) throw new Error(`Delete feedback failed: ${response.status}`);
           const data = await response.json();
           if (data.success) {
-            setFeedback(feedback.filter(f => f.id !== feedbackId));
+            setFeedback(prev => prev.filter(f => f.id !== feedbackId));
             showToast('Обращение успешно удалено', 'success');
             fetchStats();
           } else {
@@ -506,7 +584,7 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  // --- Рендер статистики ---
+  // ==================== Рендер вкладок ====================
   const renderStatsTab = () => (
     <div className="adminpage-tab">
       <div className="adminpage-header">
@@ -564,7 +642,6 @@ const AdminPanel: React.FC = () => {
     </div>
   );
 
-  // --- Рендер пользователей ---
   const renderUsersTab = () => (
     <div className="adminpage-tab">
       <div className="adminpage-header">
@@ -629,7 +706,121 @@ const AdminPanel: React.FC = () => {
     </div>
   );
 
-  // --- Рендер заявок на кейтеринг (карточки) ---
+  const renderFeedbackTab = () => (
+    <div className="adminpage-tab">
+      <div className="adminpage-header">
+        <div className="adminpage-header-title">
+          <h2>Обращения в поддержку</h2>
+          <p>Просмотр и ответ на обращения пользователей</p>
+        </div>
+      </div>
+      <div className="adminpage-feedback-container">
+        {loading ? (
+          <div className="adminpage-loading-inner"><div className="adminpage-loading-spinner adminpage-small"></div><p>Загрузка обращений...</p></div>
+        ) : feedback.length > 0 ? (
+          <div className="adminpage-feedback-list">
+            {feedback.map(item => (
+              <div key={item.id} className="adminpage-feedback-card">
+                <div className="adminpage-feedback-header">
+                  <div className="adminpage-feedback-user">
+                    <div className="adminpage-feedback-avatar">{item.user.fio.split(' ').map(n => n[0]).join('').toUpperCase()}</div>
+                    <div className="adminpage-feedback-user-info">
+                      <strong>{item.user.fio}</strong>
+                      <div className="adminpage-feedback-user-contacts">
+                        <span>{item.user.email}</span>
+                        {item.user.phone_num && <span>• {item.user.phone_num}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="adminpage-feedback-meta">
+                    <span className="adminpage-feedback-topic">{item.topic}</span>
+                    <span className="adminpage-feedback-date">{formatDateOnly(item.createdAt)}</span>
+                    <button className="adminpage-action-btn adminpage-action-danger" onClick={() => handleDeleteFeedback(item.id, item.topic)}>
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div className="adminpage-feedback-content">
+                  <p>{item.text}</p>
+                </div>
+
+                {/* Отображение существующих ответов */}
+                {item.replies && item.replies.length > 0 && (
+                  <div className="adminpage-replies-list">
+                    <h4>Ответы администратора:</h4>
+                    {item.replies.map(reply => (
+                      <div key={reply.id} className="adminpage-reply-item">
+                        <div className="adminpage-reply-header">
+                          <strong>{reply.adminName}</strong>
+                          <span>{formatDateOnly(reply.createdAt)}</span>
+                        </div>
+                        <div className="adminpage-reply-message">{reply.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Кнопка "Ответить" всегда видна для возможности многократных ответов */}
+                <div className="adminpage-feedback-actions">
+                  <button
+                    className="adminpage-reply-btn"
+                    onClick={() => {
+                      setFeedback(prev => prev.map(fb =>
+                        fb.id === item.id ? { ...fb, showReplyForm: !fb.showReplyForm } : fb
+                      ));
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faReply} /> Ответить
+                  </button>
+                </div>
+
+                {/* Форма ответа */}
+                {item.showReplyForm && (
+                  <div className="adminpage-reply-form">
+                    <textarea
+                      placeholder="Введите ответ..."
+                      value={item.replyText || ''}
+                      onChange={(e) => {
+                        setFeedback(prev => prev.map(fb =>
+                          fb.id === item.id ? { ...fb, replyText: e.target.value } : fb
+                        ));
+                      }}
+                      rows={3}
+                    />
+                    <div className="adminpage-reply-form-actions">
+                      <button
+                        className="adminpage-submit-reply"
+                        onClick={() => handleReplySubmit(item.id, item.replyText || '')}
+                      >
+                        Отправить ответ
+                      </button>
+                      <button
+                        className="adminpage-cancel-reply"
+                        onClick={() => {
+                          setFeedback(prev => prev.map(fb =>
+                            fb.id === item.id ? { ...fb, showReplyForm: false, replyText: '' } : fb
+                          ));
+                        }}
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="adminpage-empty">
+            <div className="adminpage-empty-illustration"><i className="fas fa-comments fa-3x"></i></div>
+            <h3>Нет обращений</h3>
+            <p>Пользователи еще не отправляли обращения в поддержку</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderServicesTab = () => (
     <div className="adminpage-tab">
       <div className="adminpage-header">
@@ -674,7 +865,6 @@ const AdminPanel: React.FC = () => {
                     <p><FontAwesomeIcon icon={faPhone} /> {req.phone}</p>
                     <p><FontAwesomeIcon icon={faMapMarkerAlt} /> {req.city}</p>
                     <p className="adminpage-service-card__desc">{req.description}</p>
-                    {/* ========== ИСПРАВЛЕНА ДАТА ========== */}
                     <p><FontAwesomeIcon icon={faCalendarAlt} /> {formatDateOnly(req.createdAt)}</p>
                   </div>
                   <div className="adminpage-service-card__actions">
@@ -916,46 +1106,7 @@ const AdminPanel: React.FC = () => {
               </div>
             </div>
           )}
-          {activeTab === 'feedback' && (
-            <div className="adminpage-tab">
-              <div className="adminpage-header">
-                <div className="adminpage-header-title">
-                  <h2>Обращения в поддержку</h2>
-                  <p>Просмотр обращений пользователей</p>
-                </div>
-              </div>
-              <div className="adminpage-feedback-container">
-                {loading ? (
-                  <div className="adminpage-loading-inner"><div className="adminpage-loading-spinner adminpage-small"></div><p>Загрузка обращений...</p></div>
-                ) : feedback.length > 0 ? (
-                  <div className="adminpage-feedback-list">
-                    {feedback.map(item => (
-                      <div key={item.id} className="adminpage-feedback-card">
-                        <div className="adminpage-feedback-header">
-                          <div className="adminpage-feedback-user">
-                            <div className="adminpage-feedback-avatar">{item.user.fio.split(' ').map(n => n[0]).join('').toUpperCase()}</div>
-                            <div className="adminpage-feedback-user-info">
-                              <strong>{item.user.fio}</strong>
-                              <div className="adminpage-feedback-user-contacts"><span>{item.user.email}</span>{item.user.phone_num && <span>• {item.user.phone_num}</span>}</div>
-                            </div>
-                          </div>
-                          <div className="adminpage-feedback-meta">
-                            <span className="adminpage-feedback-topic">{item.topic}</span>
-                            {/* ========== ИСПРАВЛЕНА ДАТА ========== */}
-                            <span className="adminpage-feedback-date">{formatDateOnly(item.createdAt)}</span>
-                            <button className="adminpage-action-btn adminpage-action-danger" onClick={() => handleDeleteFeedback(item.id, item.topic)}><i className="fas fa-trash"></i></button>
-                          </div>
-                        </div>
-                        <div className="adminpage-feedback-content"><p>{item.text}</p></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="adminpage-empty"><div className="adminpage-empty-illustration"><i className="fas fa-comments fa-3x"></i></div><h3>Нет обращений</h3><p>Пользователи еще не отправляли обращения в поддержку</p></div>
-                )}
-              </div>
-            </div>
-          )}
+          {activeTab === 'feedback' && renderFeedbackTab()}
           {activeTab === 'services' && renderServicesTab()}
         </div>
       </div>

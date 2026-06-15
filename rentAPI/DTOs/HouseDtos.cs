@@ -20,12 +20,10 @@ namespace RentApp.API.DTOs
         [Required(ErrorMessage = "Тип дома обязателен")]
         public string HouseType { get; set; } = "Коттедж";
 
-        // НОВОЕ ПОЛЕ – тип аренды
         [Required(ErrorMessage = "Тип аренды обязателен")]
         [RegularExpression("^(day|month)$", ErrorMessage = "Тип аренды должен быть 'day' или 'month'")]
         public string RentType { get; set; } = "month";
 
-        // HouseInfo
         [Required(ErrorMessage = "Область обязательна")]
         [MaxLength(100)]
         public string Region { get; set; } = string.Empty;
@@ -54,7 +52,6 @@ namespace RentApp.API.DTOs
         [Range(0, 10, ErrorMessage = "Этаж должен быть от 0 до 10")]
         public int Floor { get; set; } = 1;
 
-        // Convenience
         public bool Conditioner { get; set; }
         public bool Furniture { get; set; }
         public bool Internet { get; set; }
@@ -76,7 +73,6 @@ namespace RentApp.API.DTOs
         [MaxLength(500)]
         public string Shops { get; set; } = string.Empty;
 
-        // Фотографии – массив Cloudinary URL
         public List<string> PhotoUrls { get; set; } = new List<string>();
     }
 }

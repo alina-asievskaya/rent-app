@@ -31,5 +31,6 @@ namespace RentApp.API.Models
 
         // Навигационное свойство
         public User User { get; set; } = null!;
+        public ICollection<SupportReply> Replies { get; set; } = new List<SupportReply>();
     }
 }

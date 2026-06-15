@@ -35,7 +35,7 @@ const Footer: React.FC = () => {
             <h4>Навигация</h4>
             <ul className="footer-links">
               <li><a href="/catalog">Каталог домов</a></li>
-              <li><a href="/agents">Наши агенты</a></li>
+              <li><a href="/agents">Наши организаторы</a></li>
               <li><a href="/about">О нас</a></li>
               <li><a href="/contacts">Контакты</a></li>
             </ul>

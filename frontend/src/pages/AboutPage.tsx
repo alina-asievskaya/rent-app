@@ -3,42 +3,11 @@ import Header from "../components/Header";
 import "./AboutPage.css";
 
 const AboutPage: React.FC = () => {
-  const team = [
-    {
-      id: 1,
-      name: "Дмитрий Медов",
-      role: "Основатель",
-      image: "https://i.pinimg.com/736x/47/b4/08/47b408d514b99960bd5041e7f9153e3f.jpg",
-      description: "Инженер-строитель. Специализация — элитная загородная недвижимость.",
-    },
-    {
-      id: 2,
-      name: "Анна Медова",
-      role: "Директор по подбору",
-      image: "https://i.pinimg.com/736x/87/ab/fa/87abfa0103a3bb7e801b7e90bc58260a.jpg",
-      description: "Экономист. Эксперт по загородным резиденциям.",
-    },
-    {
-      id: 3,
-      name: "Михаил Богдашевич",
-      role: "Стратегическое развитие",
-      image: "https://i.pinimg.com/736x/96/fb/a5/96fba5ba9dbbc8b6f67dc282c050a568.jpg",
-      description: "БГУ, факультет международного туризма.",
-    },
-    {
-      id: 4,
-      name: "Ольга Богдашевич",
-      role: "Клиентский сервис",
-      image: "https://img.freepik.com/premium-photo/portrait-young-woman-standing-against-white-background_1048944-8425580.jpg?semt=ais_hybrid&w=740",
-      description: "Эксперт по гостеприимству премиум-класса.",
-    },
-  ];
-
   return (
     <>
       <Header />
       <main className="about-page">
-        {/* Hero — без годов */}
+        {/* Hero — без цифр и статистики */}
         <section className="hero">
           <div className="hero__inner">
             <div className="hero__overline">PrimeHouse</div>
@@ -54,26 +23,8 @@ const AboutPage: React.FC = () => {
               Мы помогаем найти идеальные дома для аренды и отдыха в Беларуси.
               Большой выбор проверенных объектов и прозрачные условия.
             </p>
-            <div className="hero__stats">
-              <div className="stat">
-                <span className="stat__value">1000+</span>
-                <span className="stat__label">объектов в базе</span>
-              </div>
-              <div className="stat">
-                <span className="stat__value">500+</span>
-                <span className="stat__label">довольных арендаторов</span>
-              </div>
-              <div className="stat">
-                <span className="stat__value">100%</span>
-                <span className="stat__label">актуальных объявлений</span>
-              </div>
-            </div>
           </div>
           <div className="hero__visual">
-            <div className="hero__experience">
-              <span className="hero__experience-number">10+</span>
-              <span className="hero__experience-text">лет<br />экспертизы</span>
-            </div>
             <div className="hero__gold-line"></div>
             <div className="hero__quote">
               «Аренда загородного дома — это новый уровень свободы»
@@ -81,7 +32,7 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Принципы работы */}
+        {/* Принципы работы (оставлены из старого кода) */}
         <section className="principles">
           <div className="principles__grid">
             <div className="principle principle--border-left">
@@ -90,11 +41,11 @@ const AboutPage: React.FC = () => {
             </div>
             <div className="principle principle--border-top">
               <h3>Честные фото и описания</h3>
-              <p>Мы публикуем только реальные фотографии и точные характеристики домов.</p>
+              <p>Публикуются только реальные фотографии и точные характеристики домов.</p>
             </div>
             <div className="principle principle--border-right">
               <h3>Помощь с выбором</h3>
-              <p>Учтем все пожелания: от планировки до наличия бани или разрешения на pets.</p>
+              <p>Учтем все пожелания: от планировки до наличия бани или разрешения на животных.</p>
             </div>
             <div className="principle principle--border-bottom">
               <h3>Прямой контакт с владельцем</h3>
@@ -103,74 +54,104 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Команда */}
-        <section className="team">
-          <h2 className="section-title">Наша команда</h2>
-          <div className="team__grid">
-            {team.map((member, idx) => (
-              <div key={member.id} className={`team-card ${idx === 0 ? 'team-card--featured' : ''}`}>
-                <div className="team-card__image">
-                  <img src={member.image} alt={member.name} />
-                  {idx === 0 && <div className="team-card__crown"></div>}
-                </div>
-                <div className="team-card__content">
-                  <h3 className="team-card__name">{member.name}</h3>
-                  <p className="team-card__role">{member.role}</p>
-                  <p className="team-card__desc">{member.description}</p>
-                  <div className="team-card__line"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="team__story">
-            <div className="team__story-inner">
-              <p className="team__story-quote">«Аренда без головной боли — наша главная ценность»</p>
-              <p>
-                PrimeHouse — это команда профессионалов, которые знают про рынок аренды загородного жилья всё.
-                Наша цель — сделать процесс поиска дома быстрым, удобным и максимально прозрачным.
+        {/* Почему выбирают PrimeHouse */}
+        <section className="why">
+          <h2 className="why__heading">Почему выбирают PrimeHouse</h2>
+          <div className="why__grid">
+            <div className="why__card">
+              <h3 className="why__card-title">Проверенные объекты</h3>
+              <p className="why__card-text">
+                Только реальные объявления, актуальные фотографии и честные описания без скрытых условий.
               </p>
-              <p>
-                Мы помогаем гостям находить идеальные дома для отдыха, а владельцам — ответственных арендаторов.
-                Просто выбирайте объект на сайте и связывайтесь с хозяином напрямую. 
-                Если нужна помощь с выбором — мы всегда на связи.
+            </div>
+            <div className="why__card">
+              <h3 className="why__card-title">Онлайн-бронирование</h3>
+              <p className="why__card-text">
+                Удобный выбор дат и мгновенное оформление заявки на аренду в любое время суток.
+              </p>
+            </div>
+            <div className="why__card">
+              <h3 className="why__card-title">Премиум-сервис</h3>
+              <p className="why__card-text">
+                От спокойного семейного отдыха до масштабных мероприятий под ключ — всё в одном месте.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Дополнительные услуги при бронировании */}
-        <section className="partners">
-          <div className="partners__row">
-            <div className="partners__col">
-              <h3 className="partners__heading">Дополнительные услуги</h3>
-              <ul className="partners__list">
-                <li>Доставка еды из ресторанов</li>
-                <li>Кейтеринг и обслуживание мероприятий</li>
-                <li>Фотографы и видеооператоры</li>
-                <li>Аниматоры и ведущие</li>
-                <li>Организация праздников «под ключ»</li>
-              </ul>
-              <p className="partners__note">Можно заказать при бронировании дома</p>
+        {/* Мероприятия + Кейтеринг */}
+        <section className="two-col">
+          <div className="two-col__block">
+            <span className="two-col__label">Мероприятия под ключ</span>
+            <p className="two-col__intro">
+              Подберите идеального организатора и он организует событие, которое запомнится каждому гостю.
+            </p>
+            <ul className="event-list">
+              <li>Свадьбы</li>
+              <li>Дни рождения</li>
+              <li>Корпоративы</li>
+              <li>Мальчишники</li>
+              <li>Девичники</li>
+              <li>Гендер-пати</li>
+              <li>Выпускные</li>
+              <li>Семейные праздники</li>
+            </ul>
+          </div>
+          <div className="two-col__divider"></div>
+          <div className="two-col__block">
+            <span className="two-col__label">Кейтеринг</span>
+            <p className="two-col__intro">
+              Владельцы домов подключают проверенных кейтеринговых партнёров к своему объявлению — вы выбираете питание вместе с домом.
+            </p>
+            <ol className="catering-steps">
+              <li>
+                <span className="catering-steps__n">01</span>
+                <span>Поставщик заполняет анкету и отправляет на проверку</span>
+              </li>
+              <li>
+                <span className="catering-steps__n">02</span>
+                <span>Администратор рассматривает и одобряет заявку</span>
+              </li>
+              <li>
+                <span className="catering-steps__n">03</span>
+                <span>Владелец дома добавляет услуги к своему объявлению</span>
+              </li>
+              <li>
+                <span className="catering-steps__n">04</span>
+                <span>Гость выбирает кейтеринг при бронировании</span>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        {/* Для владельцев домов */}
+        <section className="owners">
+          <div className="owners__label">Для владельцев домов</div>
+          <div className="owners__grid">
+            <div className="owners__item">
+              <span className="owners__n">01</span>
+              <h3>Создайте объявление</h3>
+              <p>Добавьте описание дома, фотографии и условия аренды.</p>
             </div>
-            <div className="partners__col">
-              <h3 className="partners__heading">Популярные рестораны-партнёры</h3>
-              <ul className="partners__list">
-                <li>Мак Бай</li>
-                <li>KFC</li>
-                <li>Burger King</li>
-                <li>Пицца Лисица</li>
-                <li>Пицца Темпо</li>
-                <li>Доминос</li>
-                <li>Суши Wok</li>
-                <li>Papa John's</li>
-              </ul>
-              <p className="partners__note">Доставка на территорию дома в день заезда</p>
+            <div className="owners__item">
+              <span className="owners__n">02</span>
+              <h3>Управляйте календарём</h3>
+              <p>Отмечайте занятые даты и принимайте бронирования онлайн.</p>
+            </div>
+            <div className="owners__item">
+              <span className="owners__n">03</span>
+              <h3>Подключайте кейтеринг</h3>
+              <p>Добавляйте проверенных кейтеринговых партнёров к вашему объявлению.</p>
+            </div>
+            <div className="owners__item">
+              <span className="owners__n">04</span>
+              <h3>Получайте клиентов</h3>
+              <p>Развивайте свой объект и получайте больше бронирований круглый год.</p>
             </div>
           </div>
         </section>
 
-        {/* Контакты */}
+        {/* Контакты (из старого кода) */}
         <section className="contacts">
           <div className="contacts__item">
             <h4>Офис</h4>

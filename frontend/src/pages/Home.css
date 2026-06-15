@@ -366,6 +366,66 @@ body {
   letter-spacing: 2px;
   color: var(--text-dark);
 }
+.category-photo-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  padding: 32px 20px 20px;
+
+  background: linear-gradient(
+    to top,
+    rgba(27, 67, 50, 0.95),
+    rgba(27, 67, 50, 0.15)
+  );
+
+  transition: all 0.35s ease;
+}
+
+.category-photo-overlay h3 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: white;
+  margin: 0;
+  transition: all 0.35s ease;
+}
+
+.category-description {
+  margin-top: 10px;
+
+  font-size: 0.9rem;
+  line-height: 1.5;
+
+  color: rgba(255, 255, 255, 0.85);
+
+  opacity: 0;
+  transform: translateY(10px);
+
+  max-height: 0;
+  overflow: hidden;
+
+  transition: all 0.35s ease;
+}
+
+.category-photo-card:hover .category-description {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 80px;
+}
+
+.category-photo-card:hover .category-photo-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(27, 67, 50, 0.98),
+    rgba(27, 67, 50, 0.45)
+  );
+}
+
+.category-photo-card:hover .category-photo-overlay h3 {
+  color: #d4af37;
+}
 
 /* Премиум предложения */
 .featured-section-modern {

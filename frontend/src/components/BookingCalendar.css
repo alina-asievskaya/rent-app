@@ -1,21 +1,225 @@
+/* Центрирование и основная структура */
+.booking-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Контейнер календаря */
 .booking-calendar .react-datepicker {
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   font-family: inherit;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  background: white;
+  margin: 0 auto;
 }
 
-.booking-calendar .react-datepicker__day--selected {
-  background-color: #2D6A4F;
+/* Контейнер месяца */
+.booking-calendar .react-datepicker__month-container {
+  padding: 10px;
 }
 
+/* Шапка месяца */
+.booking-calendar .react-datepicker__header {
+  background: linear-gradient(135deg, #2D6A4F, #40916C);
+  border-bottom: none;
+  color: white;
+  border-radius: 20px 20px 0 0;
+  padding: 12px 0;
+}
+
+.booking-calendar .react-datepicker__current-month {
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.booking-calendar .react-datepicker__day-name {
+  color: white;
+  font-weight: 600;
+  width: 2.6rem;
+  line-height: 2.6rem;
+  margin: 0.2rem;
+}
+
+/* Дни недели – строка */
+.booking-calendar .react-datepicker__day-names {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 8px;
+}
+
+/* Сетка дней */
+.booking-calendar .react-datepicker__week {
+  display: flex;
+  justify-content: space-around;
+}
+
+.booking-calendar .react-datepicker__day {
+  width: 2.6rem;
+  line-height: 2.6rem;
+  margin: 0.2rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.booking-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled) {
+  background: rgba(45, 106, 79, 0.15);
+  transform: scale(1.08);
+}
+
+/* Выбранная дата (посуточно или начало/конец диапазона) */
+.booking-calendar .react-datepicker__day--selected,
+.booking-calendar .react-datepicker__day--keyboard-selected {
+  background: linear-gradient(135deg, #2D6A4F, #40916C) !important;
+  color: white !important;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(45, 106, 79, 0.3);
+}
+
+/* Забронированные даты – с зачёркнутой красной линией */
 .booking-calendar .booked-day {
-  background-color: #e0e0e0 !important;
-  color: #9e9e9e !important;
-  cursor: not-allowed !important;
+  background: #f1f1f1 !important;
+  color: #b0b0b0 !important;
   text-decoration: line-through;
+  border-radius: 50%;
+  position: relative;
+  cursor: not-allowed !important;
 }
 
-.booking-calendar .react-datepicker__day--disabled {
-  opacity: 0.5;
+.booking-calendar .booked-day::after {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: 50%;
+  height: 2px;
+  background: #d9534f;
+  transform: rotate(-20deg);
+}
+
+/* Диапазон для помесячной аренды (фон) */
+.booking-calendar .selected-range {
+  background: rgba(45, 106, 79, 0.2) !important;
+  color: #1B4332 !important;
+  border-radius: 0 !important;
+}
+
+.booking-calendar .react-datepicker__day--in-range {
+  background: rgba(45, 106, 79, 0.2) !important;
+  color: #1B4332 !important;
+}
+
+.booking-calendar .react-datepicker__day--range-start,
+.booking-calendar .react-datepicker__day--range-end {
+  background: #2D6A4F !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+/* Информационные блоки */
+.booking-calendar .calendar-type-info {
+  background: linear-gradient(135deg, #f0f7f4, #e8f3ef);
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border-left: 4px solid #d4af37;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.booking-calendar .calendar-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #1b4332;
+  font-weight: 500;
+}
+
+.booking-calendar .selected-period-info {
+  margin-top: 20px;
+  padding: 12px 20px;
+  background: rgba(45, 106, 79, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #2d6a4f;
+  font-weight: 500;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 900px) {
+  .booking-calendar .react-datepicker {
+    display: flex;
+    flex-direction: column;
+  }
+  .booking-calendar .react-datepicker__month-container {
+    width: 100%;
+  }
+  .booking-calendar .react-datepicker__day {
+    width: 2rem;
+    line-height: 2rem;
+  }
+  .booking-calendar .react-datepicker__day-name {
+    width: 2rem;
+    line-height: 2rem;
+  }
+}
+/* ===== Навигация календаря ===== */
+
+.booking-calendar .react-datepicker__navigation {
+  top: 18px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+  transition: all 0.25s ease;
+}
+
+.booking-calendar .react-datepicker__navigation:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.booking-calendar .react-datepicker__navigation--previous {
+  left: 12px;
+}
+
+.booking-calendar .react-datepicker__navigation--next {
+  right: 12px;
+}
+
+/* Сами стрелки */
+
+.booking-calendar .react-datepicker__navigation-icon::before {
+  border-color: white;
+  border-width: 2px 2px 0 0;
+  width: 8px;
+  height: 8px;
+  top: 10px;
+  transition: all 0.25s ease;
+}
+
+.booking-calendar .react-datepicker__navigation:hover
+.react-datepicker__navigation-icon::before {
+  transform: scale(1.15);
+}
+
+/* Отключённые стрелки */
+
+.booking-calendar .react-datepicker__navigation--disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }

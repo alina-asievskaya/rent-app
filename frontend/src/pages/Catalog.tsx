@@ -36,7 +36,9 @@ import {
   faChevronRight,
   faEllipsisH,
   faSun,
-  faCalendarAlt
+  faCalendarAlt,
+  faTrash,
+  faEye
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -144,6 +146,12 @@ interface ChatsResponse {
   message?: string;
 }
 
+interface Toast {
+  id: number;
+  text: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
 const Catalog: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate(); 
@@ -155,6 +163,8 @@ const Catalog: React.FC = () => {
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [apiError, setApiError] = useState<string | null>(null);
   const [creatingChatForProperty, setCreatingChatForProperty] = useState<number | null>(null);
+  const [deletingProperty, setDeletingProperty] = useState<number | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -172,6 +182,9 @@ const Catalog: React.FC = () => {
     features: [],
     rentType: ''
   });
+
+  // Получение информации о текущем пользователе
+  const [currentUser, setCurrentUser] = useState<{ email: string; isAdmin: boolean } | null>(null);
 
   // Данные для фильтров - города и типы из БД
   const cities = useMemo(() => {
@@ -213,6 +226,18 @@ const Catalog: React.FC = () => {
     { id: 'popular', label: 'Популярные', icon: faFire }
   ];
 
+  const showToast = (text: string, type: 'success' | 'error' | 'info' | 'warning') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, text, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
   const formatPriceWithIcon = (priceStr: string): React.ReactNode => {
     const match = priceStr.match(/^([\d\s]+)\s*Br\s*(.*)$/i);
     if (match) {
@@ -226,6 +251,36 @@ const Catalog: React.FC = () => {
     }
     return priceStr;
   };
+
+  // Проверка прав администратора при загрузке
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+        const roles = payload.role || payload.roles || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        
+        let isAdmin = false;
+        if (Array.isArray(roles)) {
+          isAdmin = roles.includes('Admin');
+        } else if (typeof roles === 'string') {
+          isAdmin = roles === 'Admin';
+        }
+        
+        if (userEmail?.toLowerCase() === 'admin@gmail.com') {
+          isAdmin = true;
+        }
+        
+        setCurrentUser({ email: userEmail, isAdmin });
+      } catch (error) {
+        console.error('Ошибка при декодировании токена:', error);
+        setCurrentUser(null);
+      }
+    } else {
+      setCurrentUser(null);
+    }
+  }, []);
 
   // Функция для получения информации о владельце дома
   const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
@@ -340,6 +395,7 @@ const Catalog: React.FC = () => {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const userEmail = payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
       if (userEmail?.toLowerCase() === 'admin@gmail.com') {
+        showToast('Администратор не может использовать чат', 'warning');
         return;
       }
     } catch (error) {
@@ -351,6 +407,7 @@ const Catalog: React.FC = () => {
     try {
       const ownerId = await getHouseOwnerInfo(propertyId);
       if (!ownerId) {
+        showToast('Не удалось найти владельца объявления', 'error');
         return;
       }
 
@@ -365,12 +422,67 @@ const Catalog: React.FC = () => {
       
       if (newChatId) {
         navigate(`/chat/${newChatId}`);
+      } else {
+        showToast('Не удалось создать чат', 'error');
       }
     } catch (error) {
       console.error('Ошибка при открытии чата:', error);
+      showToast('Ошибка при открытии чата', 'error');
     } finally {
       setCreatingChatForProperty(null);
     }
+  };
+
+  // Функция для удаления объявления администратором
+  const handleDeleteProperty = async (propertyId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    if (!currentUser?.isAdmin) {
+      showToast('У вас нет прав для удаления объявлений', 'error');
+      return;
+    }
+
+    setDeletingProperty(propertyId);
+    
+    try {
+      const response = await fetch(`http://localhost:5213/api/houses/admin/${propertyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setProperties(prevProperties => prevProperties.filter(p => p.id !== propertyId));
+        showToast('Объявление успешно удалено', 'success');
+        
+        const remainingOnPage = currentProperties.filter(p => p.id !== propertyId).length;
+        if (remainingOnPage === 0 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+      } else {
+        showToast(result.message || 'Ошибка при удалении объявления', 'error');
+      }
+    } catch (error) {
+      console.error('Ошибка при удалении объявления:', error);
+      showToast('Ошибка соединения с сервером', 'error');
+    } finally {
+      setDeletingProperty(null);
+    }
+  };
+
+  // Функция для просмотра объявления (для админа)
+  const handleViewProperty = (propertyId: number) => {
+    navigate(`/house/${propertyId}`);
   };
 
   // Функция для загрузки данных из API
@@ -456,8 +568,8 @@ const Catalog: React.FC = () => {
             rooms: house.rooms,
             bathrooms: house.bathrooms,
             floor: house.floor,
-            isPremium: house.isPremium,
-            isHot: house.isHot,
+            isPremium: false,
+            isHot: false,
             photos: house.photos,
             ownerName: house.ownerName,
             ownerEmail: house.ownerEmail,
@@ -594,6 +706,7 @@ const Catalog: React.FC = () => {
       }
       
       if (isAdmin) {
+        showToast('Администраторы не могут использовать избранное', 'warning');
         return;
       }
     } catch (error) {
@@ -618,10 +731,11 @@ const Catalog: React.FC = () => {
             newSet.delete(id);
             return newSet;
           });
-          // Уведомляем другие компоненты (шапку) об изменении
           window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+          showToast('Удалено из избранного', 'success');
         } else {
           console.error('Ошибка при удалении из избранного');
+          showToast('Ошибка при удалении из избранного', 'error');
         }
       } else {
         const addResponse = await fetch(`http://localhost:5213/api/favorites/add/${id}`, {
@@ -638,14 +752,16 @@ const Catalog: React.FC = () => {
             newSet.add(id);
             return newSet;
           });
-          // Уведомляем другие компоненты (шапку) об изменении
           window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+          showToast('Добавлено в избранное', 'success');
         } else {
           console.error('Ошибка при добавлении в избранное');
+          showToast('Ошибка при добавлении в избранное', 'error');
         }
       }
     } catch (error) {
       console.error('Ошибка при обновлении избранного:', error);
+      showToast('Ошибка при обновлении избранного', 'error');
     }
   };
 
@@ -840,6 +956,36 @@ const Catalog: React.FC = () => {
     <>
       <Header />
       
+      {/* Toast уведомления */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id} 
+            className={`toast toast-${toast.type}`}
+            onClick={() => removeToast(toast.id)}
+          >
+            <div className="toast-icon">
+              {toast.type === 'success' && <i className="fas fa-check-circle"></i>}
+              {toast.type === 'error' && <i className="fas fa-exclamation-circle"></i>}
+              {toast.type === 'warning' && <i className="fas fa-exclamation-triangle"></i>}
+              {toast.type === 'info' && <i className="fas fa-info-circle"></i>}
+            </div>
+            <div className="toast-content">
+              <div className="toast-message">{toast.text}</div>
+            </div>
+            <button 
+              className="toast-close" 
+              onClick={(e) => {
+                e.stopPropagation();
+                removeToast(toast.id);
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+        ))}
+      </div>
+      
       <main className="catalog-page">
         <section className="catalog-hero-premium">
           <div className="catalog-hero-premium-bg"></div>
@@ -1029,12 +1175,7 @@ const Catalog: React.FC = () => {
                 </div>
               </div>
 
-              {loading ? (
-                <div className="loading-premium">
-                  <div className="spinner-premium"></div>
-                  <p>Загрузка предложений...</p>
-                </div>
-              ) : currentProperties.length === 0 ? (
+              {currentProperties.length === 0 ? (
                 <div className="no-results-premium">
                   <FontAwesomeIcon icon={faFilter} size="3x" />
                   <h3>Предложения не найдены</h3>
@@ -1044,53 +1185,73 @@ const Catalog: React.FC = () => {
               ) : (
                 <>
                   <div className={viewMode === "grid" ? "properties-grid-premium" : "properties-list-premium"}>
-                    {currentProperties.map(property => (
-                      <div 
-                        key={property.id} 
-                        className={viewMode === "grid" ? "property-card-premium" : "property-card-list"}
-                        onClick={() => navigate(`/house/${property.id}`)}
-                      >
-                        <div className="property-image">
-                          <img src={property.imageUrl} alt={property.address} onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop")} />
-                          <div className="property-badges">
+                    {currentProperties.map(property => {
+                      const isAdminView = currentUser?.isAdmin === true;
+                      return (
+                        <div 
+                          key={property.id} 
+                          className={viewMode === "grid" ? "property-card-premium" : "property-card-list"}
+                          onClick={() => isAdminView ? handleViewProperty(property.id) : navigate(`/house/${property.id}`)}
+                        >
+                          <div className="property-image">
+                            <img src={property.imageUrl} alt={property.address} onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop")} />
+                            <div className="property-badges">
+                            </div>
+                            {!isAdminView && (
+                              <button className={`favorite-btn-premium ${favorites.has(property.id) ? "active" : ""}`} onClick={(e) => handleFavoriteClick(property.id, e)}>
+                                <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
+                              </button>
+                            )}
                           </div>
-                          <button className={`favorite-btn-premium ${favorites.has(property.id) ? "active" : ""}`} onClick={(e) => handleFavoriteClick(property.id, e)}>
-                            <FontAwesomeIcon icon={favorites.has(property.id) ? faHeartSolid : faHeartOutline} />
-                          </button>
-                        </div>
-                        <div className="property-details">
-                          <div className="property-header-row">
-                            <div className="property-price">{formatPriceWithIcon(property.price)}</div>
-                            <div className="property-rating">
-                              <FontAwesomeIcon icon={faStar} />
-                              <span>{property.rating || 0}</span>
-                              {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
+                          <div className="property-details">
+                            <div className="property-header-row">
+                              <div className="property-price">{formatPriceWithIcon(property.price)}</div>
+                              <div className="property-rating">
+                                <FontAwesomeIcon icon={faStar} />
+                                <span>{property.rating || 0}</span>
+                                {property.rating === 0 && <span style={{ fontSize: '0.7rem', color: '#666' }}> (нет отзывов)</span>}
+                              </div>
+                            </div>
+                            <div className="property-address"><FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}</div>
+                            <div className="property-features">
+                              <span><FontAwesomeIcon icon={faBed} /> {property.beds} комн.</span>
+                              <span><FontAwesomeIcon icon={faBath} /> {property.baths}</span>
+                              <span><FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²</span>
+                              <span><FontAwesomeIcon icon={faClock} /> {property.year}</span>
+                            </div>
+                            <p className="property-description">{property.description}</p>
+                            <div className="property-tags">
+                              {property.features.map((feat, idx) => (
+                                <span key={idx} className="tag-premium">
+                                  <FontAwesomeIcon icon={getFeatureIcon(feat)} /> {feat}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="property-actions">
+                              {isAdminView ? (
+                                <>
+                                  <button className="btn-premium-secondary-profile" onClick={(e) => { e.stopPropagation(); handleViewProperty(property.id); }}>
+                                    <FontAwesomeIcon icon={faEye} /> Просмотр
+                                  </button>
+                                  <button className="btn-premium-danger-profile" onClick={(e) => handleDeleteProperty(property.id, e)} disabled={deletingProperty === property.id}>
+                                    {deletingProperty === property.id ? <FontAwesomeIcon icon={faSpinner} spin /> : <><FontAwesomeIcon icon={faTrash} /> Удалить</>}
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button className="btn-premium-primary" onClick={(e) => { e.stopPropagation(); navigate(`/house/${property.id}`); }}>
+                                    Подробнее
+                                  </button>
+                                  <button className="btn-premium-outline" onClick={(e) => handleOpenChat(property.id, e)} disabled={creatingChatForProperty === property.id}>
+                                    {creatingChatForProperty === property.id ? <FontAwesomeIcon icon={faSpinner} spin /> : <><FontAwesomeIcon icon={faComment} /> Чат</>}
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
-                          <div className="property-address"><FontAwesomeIcon icon={faMapMarkerAlt} /> {property.address}</div>
-                          <div className="property-features">
-                            <span><FontAwesomeIcon icon={faBed} /> {property.beds} комн.</span>
-                            <span><FontAwesomeIcon icon={faBath} /> {property.baths}</span>
-                            <span><FontAwesomeIcon icon={faRulerCombined} /> {property.area} м²</span>
-                            <span><FontAwesomeIcon icon={faClock} /> {property.year}</span>
-                          </div>
-                          <p className="property-description">{property.description}</p>
-                          <div className="property-tags">
-                            {property.features.map((feat, idx) => (
-                              <span key={idx} className="tag-premium">
-                                <FontAwesomeIcon icon={getFeatureIcon(feat)} /> {feat}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="property-actions">
-                            <button className="btn-premium-primary" onClick={(e) => { e.stopPropagation(); navigate(`/house/${property.id}`); }}>Подробнее</button>
-                            <button className="btn-premium-outline" onClick={(e) => handleOpenChat(property.id, e)} disabled={creatingChatForProperty === property.id}>
-                              {creatingChatForProperty === property.id ? <FontAwesomeIcon icon={faSpinner} spin /> : <><FontAwesomeIcon icon={faComment} /> Чат</>}
-                            </button>
-                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {totalPages > 1 && (

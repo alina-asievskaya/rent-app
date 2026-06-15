@@ -34,7 +34,9 @@ import {
   faTimes,
   faChevronRight,
   faChevronLeft as faChevronLeftDouble,
-  faExpand
+  faExpand,
+  faSun,
+  faCalendarAlt as faCalendarAltSolid
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
@@ -48,6 +50,7 @@ interface ApiHouseInfo {
   announcementData: string;
   active: boolean;
   photos: string[];
+  rentType?: 'day' | 'month'; // Добавлено поле для типа аренды
   houseInfo?: {
     region?: string;
     city?: string;
@@ -91,6 +94,7 @@ interface HouseInfo {
   announcementData: string;
   active: boolean;
   photos: string[];
+  rentType?: 'day' | 'month'; // Добавлено поле для типа аренды
   region?: string;
   city?: string;
   street?: string;
@@ -234,6 +238,24 @@ const HouseInfo: React.FC = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [thumbnailScrollPosition, setThumbnailScrollPosition] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  // Функции для типа аренды
+  const getRentTypeText = (rentType?: 'day' | 'month'): string => {
+    if (rentType === 'day') return 'Посуточно';
+    if (rentType === 'month') return 'Помесячно';
+    return 'Помесячно';
+  };
+
+  const getRentTypeShortText = (rentType?: 'day' | 'month'): string => {
+    if (rentType === 'day') return 'сутки';
+    if (rentType === 'month') return 'месяц';
+    return 'месяц';
+  };
+
+  const getRentTypeIcon = (rentType?: 'day' | 'month'): typeof faSun | typeof faCalendarAltSolid => {
+    if (rentType === 'day') return faSun;
+    return faCalendarAltSolid;
+  };
 
   const decodeToken = (token: string) => {
     try {
@@ -671,6 +693,14 @@ const HouseInfo: React.FC = () => {
   };
 
   const transformApiDataToHouseInfo = (apiData: ApiHouseInfo): HouseInfo => {
+    // Определяем тип аренды из данных API
+    let rentType: 'day' | 'month' | undefined = apiData.rentType;
+    if (!rentType) {
+      // Если rentType не пришел, пытаемся определить по цене или другим признакам
+      // Здесь можно добавить логику определения, если нужно
+      rentType = 'month'; // значение по умолчанию
+    }
+    
     return {
       id: apiData.id,
       price: apiData.price,
@@ -680,6 +710,7 @@ const HouseInfo: React.FC = () => {
       announcementData: apiData.announcementData,
       active: apiData.active,
       photos: apiData.photos,
+      rentType: rentType, // Добавляем тип аренды
       region: apiData.houseInfo?.region,
       city: apiData.houseInfo?.city,
       street: apiData.houseInfo?.street,
@@ -796,7 +827,6 @@ const HouseInfo: React.FC = () => {
           if (data.success) {
             setIsFavorite(false);
             console.log('✅ Удалено из избранного:', id);
-            // Уведомляем другие компоненты (шапку, каталог) об изменении
             window.dispatchEvent(new CustomEvent('favoritesUpdated'));
           } else {
             alert(data.message || 'Ошибка при удалении из избранного');
@@ -818,7 +848,6 @@ const HouseInfo: React.FC = () => {
           if (data.success) {
             setIsFavorite(true);
             console.log('✅ Добавлено в избранное:', id);
-            // Уведомляем другие компоненты (шапку, каталог) об изменении
             window.dispatchEvent(new CustomEvent('favoritesUpdated'));
           } else {
             alert(data.message || 'Ошибка при добавлении в избранное');
@@ -1130,6 +1159,16 @@ const HouseInfo: React.FC = () => {
     }
   };
 
+  const formatPriceWithIcon = (price: number, rentType?: 'day' | 'month'): React.ReactNode => {
+    const numberStr = price?.toLocaleString('ru-RU') || '0';
+    const rentText = getRentTypeShortText(rentType);
+    return (
+      <>
+        {numberStr} <i className="nbrb-icon">&#xe901;</i>/{rentText}
+      </>
+    );
+  };
+
   const canLeaveReviewResult = canLeaveReview();
   
   console.log('🔐 canLeaveReview check:', {
@@ -1176,14 +1215,6 @@ const HouseInfo: React.FC = () => {
   console.log('📦 Сформирован полный адрес:', fullAddress);
   
   const info = `${house.houseType || 'Дом'}, ${house.area} м²`;
-  const formatPriceWithIcon = (price: number): React.ReactNode => {
-    const numberStr = price?.toLocaleString('ru-RU') || '0';
-    return (
-      <>
-        {numberStr} <i className="nbrb-icon">&#xe901;</i>/сутки
-      </>
-    );
-  };
   const announcementDate = formatAnnouncementDate(house.announcementData);
   const hasManyPhotos = images.length > 5;
   const displayedThumbnails = showAllThumbnails ? images : images.slice(0, 5);
@@ -1299,7 +1330,8 @@ const HouseInfo: React.FC = () => {
                     {fullAddress}
                   </p>
                   <div className="price-section-house">
-                    <h2>{formatPriceWithIcon(house.price)}</h2>
+                    <h2>{formatPriceWithIcon(house.price, house.rentType)}</h2>
+                    {/* Добавляем бейдж типа аренды */}
                   </div>
                 </div>
 
@@ -1341,6 +1373,16 @@ const HouseInfo: React.FC = () => {
                       <span className="feature-label-house">Дата публикации</span>
                     </div>
                   </div>
+                  {/* Добавляем тип аренды в характеристики */}
+                  {house.rentType && (
+                    <div className="feature-item-house">
+                      <FontAwesomeIcon icon={getRentTypeIcon(house.rentType)} />
+                      <div>
+                        <span className="feature-value-house">{getRentTypeText(house.rentType)}</span>
+                        <span className="feature-label-house">Тип аренды</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="description-section-house">
@@ -1627,11 +1669,12 @@ const HouseInfo: React.FC = () => {
       </div>
       
       <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        houseId={house.id}
-        onBookingSuccess={() => {}}
-      />
+    isOpen={isBookingModalOpen}
+    onClose={() => setIsBookingModalOpen(false)}
+    houseId={house.id}
+    rentType={house.rentType || 'month'}   // ← добавлено
+    onBookingSuccess={() => {}}
+/>
     </>
   );
 };

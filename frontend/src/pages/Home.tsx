@@ -223,31 +223,69 @@ const Home: React.FC = () => {
         <section className="categories-section">
           <div className="container">
             <h2 className="section-title-modern">Типы элитного жилья</h2>
+
             <div className="categories-grid-photo">
+
               <div className="category-photo-card">
                 <img src="/photo/cotagge.jpeg" alt="Коттеджи" />
-                <div className="category-photo-overlay"><h3>Коттеджи</h3></div>
+                <div className="category-photo-overlay">
+                  <h3>Коттеджи</h3>
+                  <p className="category-description">
+                    Загородный отдых в окружении природы и тишины
+                  </p>
+                </div>
               </div>
+
               <div className="category-photo-card">
                 <img src="/photo/villa.jpg" alt="Виллы" />
-                <div className="category-photo-overlay"><h3>Виллы</h3></div>
+                <div className="category-photo-overlay">
+                  <h3>Виллы</h3>
+                  <p className="category-description">
+                    Роскошные дома с бассейнами и просторными террасами
+                  </p>
+                </div>
               </div>
+
               <div className="category-photo-card">
                 <img src="/photo/osobnnak.jpg" alt="Особняки" />
-                <div className="category-photo-overlay"><h3>Особняки</h3></div>
+                <div className="category-photo-overlay">
+                  <h3>Особняки</h3>
+                  <p className="category-description">
+                    Просторные резиденции премиум-класса для больших компаний
+                  </p>
+                </div>
               </div>
+
               <div className="category-photo-card">
                 <img src="/photo/taynhouse.jpg" alt="Таунхаусы" />
-                <div className="category-photo-overlay"><h3>Таунхаусы</h3></div>
+                <div className="category-photo-overlay">
+                  <h3>Таунхаусы</h3>
+                  <p className="category-description">
+                    Современное жильё с комфортом загородной жизни
+                  </p>
+                </div>
               </div>
+
               <div className="category-photo-card">
                 <img src="/photo/ysadba.jpg" alt="Усадьбы" />
-                <div className="category-photo-overlay"><h3>Усадьбы</h3></div>
+                <div className="category-photo-overlay">
+                  <h3>Усадьбы</h3>
+                  <p className="category-description">
+                    Атмосферные дома для отдыха и семейных мероприятий
+                  </p>
+                </div>
               </div>
+
               <div className="category-photo-card">
                 <img src="/photo/home.jpg" alt="Резиденции" />
-                <div className="category-photo-overlay"><h3>Резиденции</h3></div>
+                <div className="category-photo-overlay">
+                  <h3>Резиденции</h3>
+                  <p className="category-description">
+                    Эксклюзивная недвижимость для взыскательных гостей
+                  </p>
+                </div>
               </div>
+
             </div>
           </div>
         </section>

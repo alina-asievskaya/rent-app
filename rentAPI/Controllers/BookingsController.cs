@@ -39,10 +39,9 @@ namespace RentApp.API.Controllers
                     return NotFound(new { success = false, message = "Дом не найден" });
 
                 var bookingDate = DateOnly.FromDateTime(dto.BookingDate);
-                var existingApproved = await _context.Bookings
-                    .AnyAsync(b => b.HouseId == dto.HouseId && b.BookingDate == bookingDate && b.Approved);
-                if (existingApproved)
-                    return BadRequest(new { success = false, message = "Выбранная дата уже занята" });
+
+                // Разрешаем подавать любые заявки, даже если на эту дату есть одобренные.
+                // Автоматическое отклонение лишних заявок происходит при одобрении одной из них.
 
                 var booking = new Booking
                 {
@@ -61,13 +60,13 @@ namespace RentApp.API.Controllers
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
-                // Уведомление владельцу дома
+                // Короткое уведомление владельцу дома
                 var ownerNotification = new Notification
                 {
                     UserId = house.IdOwner,
                     Type = "booking",
                     ReferenceId = booking.Id,
-                    Text = $"Новая заявка на бронирование дома {house.Description} на {bookingDate}",
+                    Text = $"Новая заявка на бронирование дома #{house.Id} на {bookingDate:yyyy-MM-dd}",
                     CreatedAt = DateTime.UtcNow,
                     IsRead = false
                 };
@@ -179,6 +178,31 @@ namespace RentApp.API.Controllers
             booking.RejectedAt = null;
             await _context.SaveChangesAsync();
 
+            // Отклоняем все остальные заявки на этот дом и дату
+            var otherRequests = await _context.Bookings
+                .Where(b => b.HouseId == booking.HouseId
+                         && b.BookingDate == booking.BookingDate
+                         && b.Id != booking.Id
+                         && !b.Approved
+                         && b.RejectedAt == null)
+                .ToListAsync();
+
+            foreach (var other in otherRequests)
+            {
+                other.RejectedAt = DateTime.UtcNow;
+                var rejectNotification = new Notification
+                {
+                    UserId = other.UserId,
+                    Type = "bookingStatus",
+                    ReferenceId = other.Id,
+                    Text = $"Ваша заявка на {other.BookingDate:yyyy-MM-dd} для дома #{other.HouseId} отклонена – дата занята другим бронированием.",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                };
+                _context.Notifications.Add(rejectNotification);
+            }
+            await _context.SaveChangesAsync();
+
             // Создание заказа кейтеринга, если есть данные
             if (booking.CateringOwnerId.HasValue && !string.IsNullOrEmpty(booking.CateringItemsJson))
             {
@@ -209,7 +233,7 @@ namespace RentApp.API.Controllers
                             UserId = cateringOwner.UserId,
                             Type = "cateringOrder",
                             ReferenceId = order.Id,
-                            Text = $"Новый заказ на кейтеринг для дома {booking.House.Description}",
+                            Text = $"Новый заказ на кейтеринг для дома #{booking.HouseId}",
                             CreatedAt = DateTime.UtcNow,
                             IsRead = false
                         };
@@ -219,13 +243,13 @@ namespace RentApp.API.Controllers
                 }
             }
 
-            // Уведомление пользователю
+            // Уведомление пользователю, чья заявка одобрена
             var userNotification = new Notification
             {
                 UserId = booking.UserId,
                 Type = "bookingStatus",
                 ReferenceId = booking.Id,
-                Text = $"Ваше бронирование дома {booking.House.Description} на {booking.BookingDate} одобрено!",
+                Text = $"Ваше бронирование дома #{booking.HouseId} на {booking.BookingDate:yyyy-MM-dd} одобрено!",
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false
             };
@@ -257,7 +281,7 @@ namespace RentApp.API.Controllers
                 UserId = booking.UserId,
                 Type = "bookingStatus",
                 ReferenceId = booking.Id,
-                Text = $"К сожалению, ваше бронирование дома {booking.House.Description} на {booking.BookingDate} отклонено.",
+                Text = $"К сожалению, бронирование дома #{booking.HouseId} на {booking.BookingDate:yyyy-MM-dd} отклонено.",
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false
             };
@@ -275,25 +299,103 @@ namespace RentApp.API.Controllers
             if (userId == null) return Unauthorized();
 
             var bookings = await _context.Bookings
+                .Include(b => b.House)
+                    .ThenInclude(h => h.HouseInfo)
                 .Include(b => b.House).ThenInclude(h => h.Photos)
+                .Include(b => b.House).ThenInclude(h => h.Owner)
                 .Where(b => b.UserId == userId)
                 .OrderByDescending(b => b.BookingDate)
-                .Select(b => new
+                .ToListAsync();
+
+            var result = new List<BookingWithCateringDto>();
+            foreach (var b in bookings)
+            {
+                CateringOrderInfoDto? cateringInfo = null;
+                OwnerInfoDto? cateringOwnerInfo = null;
+
+                var cateringOrder = await _context.CateringOrders
+                    .FirstOrDefaultAsync(co => co.BookingId == b.Id);
+                
+                if (cateringOrder != null)
                 {
-                    b.Id,
-                    b.HouseId,
+                    var items = JsonSerializer.Deserialize<List<CateringOrderItemDto>>(cateringOrder.ItemsJson) ?? new();
+                    cateringInfo = new CateringOrderInfoDto
+                    {
+                        Id = cateringOrder.Id,
+                        Status = cateringOrder.Status,
+                        Items = items,
+                        TotalPrice = items.Sum(i => i.Price * i.Quantity)
+                    };
+                    var cateringOwner = await _context.CateringOwners
+                        .Include(co => co.User)
+                        .FirstOrDefaultAsync(co => co.Id == cateringOrder.CateringOwnerId);
+                    if (cateringOwner?.User != null)
+                    {
+                        cateringOwnerInfo = new OwnerInfoDto
+                        {
+                            UserId = cateringOwner.User.Id,
+                            Name = cateringOwner.User.Fio,
+                            Phone = cateringOwner.User.Phone_num,
+                            Email = cateringOwner.User.Email
+                        };
+                    }
+                }
+                else if (b.CateringOwnerId.HasValue && !string.IsNullOrEmpty(b.CateringItemsJson))
+                {
+                    var items = JsonSerializer.Deserialize<List<CateringOrderItemDto>>(b.CateringItemsJson) ?? new();
+                    cateringInfo = new CateringOrderInfoDto
+                    {
+                        Id = 0,
+                        Status = b.Approved ? "pending" : "waiting_owner",
+                        Items = items,
+                        TotalPrice = items.Sum(i => i.Price * i.Quantity)
+                    };
+                    if (b.CateringOwnerId.HasValue)
+                    {
+                        var cateringOwner = await _context.CateringOwners
+                            .Include(co => co.User)
+                            .FirstOrDefaultAsync(co => co.Id == b.CateringOwnerId);
+                        if (cateringOwner?.User != null)
+                        {
+                            cateringOwnerInfo = new OwnerInfoDto
+                            {
+                                UserId = cateringOwner.User.Id,
+                                Name = cateringOwner.User.Fio,
+                                Phone = cateringOwner.User.Phone_num,
+                                Email = cateringOwner.User.Email
+                            };
+                        }
+                    }
+                }
+
+                var houseOwner = b.House.Owner;
+                var ownerInfo = new OwnerInfoDto
+                {
+                    UserId = houseOwner.Id,
+                    Name = houseOwner.Fio,
+                    Phone = houseOwner.Phone_num,
+                    Email = houseOwner.Email
+                };
+
+                result.Add(new BookingWithCateringDto
+                {
+                    Id = b.Id,
+                    HouseId = b.HouseId,
                     HouseAddress = b.House.HouseInfo != null
                         ? $"{b.House.HouseInfo.City}, {b.House.HouseInfo.Street}"
                         : "Адрес не указан",
-                    MainPhoto = b.House.Photos.FirstOrDefault().Photo,
-                    b.BookingDate,
-                    b.Approved,
+                    MainPhoto = b.House.Photos.FirstOrDefault()?.Photo,
+                    BookingDate = b.BookingDate,
+                    Approved = b.Approved,
                     RejectedAt = b.RejectedAt,
-                    b.CreatedAt
-                })
-                .ToListAsync();
+                    CreatedAt = b.CreatedAt,
+                    Catering = cateringInfo,
+                    HouseOwner = ownerInfo,
+                    CateringOwnerInfo = cateringOwnerInfo
+                });
+            }
 
-            return Ok(new { success = true, data = bookings });
+            return Ok(new { success = true, data = result });
         }
 
         // GET: api/bookings/history
@@ -301,29 +403,109 @@ namespace RentApp.API.Controllers
         public async Task<IActionResult> GetBookingHistory()
         {
             var userId = GetCurrentUserId();
+            if (userId == null) return Unauthorized();
+
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            var pastBookings = await _context.Bookings
+            var bookings = await _context.Bookings
+                .Include(b => b.House)
+                    .ThenInclude(h => h.HouseInfo)
                 .Include(b => b.House).ThenInclude(h => h.Photos)
+                .Include(b => b.House).ThenInclude(h => h.Owner)
                 .Where(b => b.UserId == userId &&
                             (b.BookingDate < today || (b.RejectedAt != null && b.BookingDate >= today)))
                 .OrderByDescending(b => b.BookingDate)
-                .Select(b => new
+                .ToListAsync();
+
+            var result = new List<BookingWithCateringDto>();
+            foreach (var b in bookings)
+            {
+                CateringOrderInfoDto? cateringInfo = null;
+                OwnerInfoDto? cateringOwnerInfo = null;
+
+                var cateringOrder = await _context.CateringOrders
+                    .FirstOrDefaultAsync(co => co.BookingId == b.Id);
+                
+                if (cateringOrder != null)
                 {
-                    b.Id,
-                    b.HouseId,
+                    var items = JsonSerializer.Deserialize<List<CateringOrderItemDto>>(cateringOrder.ItemsJson) ?? new();
+                    cateringInfo = new CateringOrderInfoDto
+                    {
+                        Id = cateringOrder.Id,
+                        Status = cateringOrder.Status,
+                        Items = items,
+                        TotalPrice = items.Sum(i => i.Price * i.Quantity)
+                    };
+                    var cateringOwner = await _context.CateringOwners
+                        .Include(co => co.User)
+                        .FirstOrDefaultAsync(co => co.Id == cateringOrder.CateringOwnerId);
+                    if (cateringOwner?.User != null)
+                    {
+                        cateringOwnerInfo = new OwnerInfoDto
+                        {
+                            UserId = cateringOwner.User.Id,
+                            Name = cateringOwner.User.Fio,
+                            Phone = cateringOwner.User.Phone_num,
+                            Email = cateringOwner.User.Email
+                        };
+                    }
+                }
+                else if (b.CateringOwnerId.HasValue && !string.IsNullOrEmpty(b.CateringItemsJson))
+                {
+                    var items = JsonSerializer.Deserialize<List<CateringOrderItemDto>>(b.CateringItemsJson) ?? new();
+                    cateringInfo = new CateringOrderInfoDto
+                    {
+                        Id = 0,
+                        Status = b.Approved ? "pending" : "waiting_owner",
+                        Items = items,
+                        TotalPrice = items.Sum(i => i.Price * i.Quantity)
+                    };
+                    if (b.CateringOwnerId.HasValue)
+                    {
+                        var cateringOwner = await _context.CateringOwners
+                            .Include(co => co.User)
+                            .FirstOrDefaultAsync(co => co.Id == b.CateringOwnerId);
+                        if (cateringOwner?.User != null)
+                        {
+                            cateringOwnerInfo = new OwnerInfoDto
+                            {
+                                UserId = cateringOwner.User.Id,
+                                Name = cateringOwner.User.Fio,
+                                Phone = cateringOwner.User.Phone_num,
+                                Email = cateringOwner.User.Email
+                            };
+                        }
+                    }
+                }
+
+                var houseOwner = b.House.Owner;
+                var ownerInfo = new OwnerInfoDto
+                {
+                    UserId = houseOwner.Id,
+                    Name = houseOwner.Fio,
+                    Phone = houseOwner.Phone_num,
+                    Email = houseOwner.Email
+                };
+
+                result.Add(new BookingWithCateringDto
+                {
+                    Id = b.Id,
+                    HouseId = b.HouseId,
                     HouseAddress = b.House.HouseInfo != null
                         ? $"{b.House.HouseInfo.City}, {b.House.HouseInfo.Street}"
                         : "Адрес не указан",
-                    MainPhoto = b.House.Photos.FirstOrDefault().Photo,
-                    b.BookingDate,
-                    b.Approved,
+                    MainPhoto = b.House.Photos.FirstOrDefault()?.Photo,
+                    BookingDate = b.BookingDate,
+                    Approved = b.Approved,
                     RejectedAt = b.RejectedAt,
-                    b.CreatedAt
-                })
-                .ToListAsync();
+                    CreatedAt = b.CreatedAt,
+                    Catering = cateringInfo,
+                    HouseOwner = ownerInfo,
+                    CateringOwnerInfo = cateringOwnerInfo
+                });
+            }
 
-            return Ok(new { success = true, data = pastBookings });
+            return Ok(new { success = true, data = result });
         }
 
         // GET: api/bookings/upcoming

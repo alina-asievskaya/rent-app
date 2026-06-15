@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentApp.API.Data;
 
@@ -11,9 +12,11 @@ using RentApp.API.Data;
 namespace rentAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260614224050_AddFilteredUniqueIndexForApprovedBookings")]
+    partial class AddFilteredUniqueIndexForApprovedBookings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -190,7 +193,9 @@ namespace rentAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("HouseId", "BookingDate");
+                    b.HasIndex("HouseId", "BookingDate")
+                        .IsUnique()
+                        .HasFilter("[approved] = 1");
 
                     b.ToTable("Bookings", (string)null);
                 });

@@ -1,10 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 import BookingCalendar from './BookingCalendar';
 import CateringSelector from './CateringSelector';
 import './BookingModal.css';
 
 Modal.setAppElement('#root');
+
+// Компонент уведомления (аналог из EditHousePage)
+const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
+  message, 
+  type, 
+  onClose 
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: 'fas fa-check-circle',
+    error: 'fas fa-exclamation-circle',
+    warning: 'fas fa-exclamation-triangle'
+  };
+
+  return (
+    <div className={`createad-notification createad-${type}`}>
+      <div className="createad-notification-content">
+        <i className={`createad-notification-icon ${icons[type]}`}></i>
+        <span className="createad-notification-text">{message}</span>
+      </div>
+      <button className="createad-notification-close" onClick={onClose}>&times;</button>
+    </div>
+  );
+};
 
 // Типы для кейтеринга
 interface CateringItem {
@@ -43,10 +73,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, o
     const [step, setStep] = useState<'calendar' | 'catering'>('calendar');
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
+    const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
+        setNotification({ message, type });
+    };
+
+    const closeNotification = () => {
+        setNotification(null);
+    };
 
     const resetState = () => {
         setStep('calendar');
         setSelectedDate(null);
+        setNotification(null);
     };
 
     const handleClose = () => {
@@ -76,7 +116,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, o
         setIsSubmitting(true);
         const token = localStorage.getItem('token');
         if (!token) {
-            alert('Необходимо авторизоваться');
+            showNotification('Необходимо авторизоваться', 'error');
             setIsSubmitting(false);
             return;
         }
@@ -114,16 +154,19 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, o
             });
             const result = await response.json();
             if (!response.ok || !result.success) {
-                alert(result.message || 'Ошибка при создании бронирования');
+                showNotification(result.message || 'Ошибка при создании бронирования', 'error');
                 setIsSubmitting(false);
                 return;
             }
-            alert('Заявка на бронирование отправлена владельцу дома');
+            showNotification('Заявка на бронирование отправлена владельцу дома', 'success');
             onBookingSuccess();
-            handleClose();
+            // Закрываем модалку через секунду, чтобы уведомление успели увидеть
+            setTimeout(() => {
+                handleClose();
+            }, 1500);
         } catch (error) {
             console.error(error);
-            alert('Ошибка сети');
+            showNotification('Ошибка сети', 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -145,6 +188,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, o
             overlayClassName="booking-modal-overlay"
             contentLabel="Бронирование дома"
         >
+            {notification && <Notification message={notification.message} type={notification.type} onClose={closeNotification} />}
             <div className="modal-header">
                 <h2>Бронирование дома</h2>
                 <button onClick={handleClose} className="close-btn">&times;</button>

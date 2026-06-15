@@ -149,10 +149,11 @@ const ChatPage: React.FC = () => {
       if (response.ok && result.success) {
         setNewMessage('');
         await fetchChat();
-      } else alert(result.message || 'Ошибка при отправке');
+      } else {
+        console.error(result.message || 'Ошибка при отправке');
+      }
     } catch (error) {
       console.error(error);
-      alert('Ошибка при отправке');
     } finally {
       setSending(false);
     }
@@ -160,7 +161,6 @@ const ChatPage: React.FC = () => {
 
   const handleDeleteMessage = async (messageId: number) => {
     if (!chatId) return;
-    if (!window.confirm('Удалить это сообщение?')) return;
     try {
       const token = getToken();
       const response = await fetch(`http://localhost:5213/api/chats/${chatId}/messages/${messageId}`, {
@@ -170,10 +170,11 @@ const ChatPage: React.FC = () => {
       const result = await response.json();
       if (response.ok && result.success) {
         setChat(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
-      } else alert(result.message || 'Ошибка удаления');
+      } else {
+        console.error(result.message || 'Ошибка удаления');
+      }
     } catch (error) {
       console.error(error);
-      alert('Ошибка');
     }
   };
 
@@ -181,7 +182,7 @@ const ChatPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      alert('Можно загружать только изображения');
+      console.error('Можно загружать только изображения');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -198,10 +199,11 @@ const ChatPage: React.FC = () => {
       const result = await response.json();
       if (response.ok && result.success) {
         setChat(prev => prev ? { ...prev, messages: [...prev.messages, result.data] } : null);
-      } else alert(result.message || 'Ошибка загрузки изображения');
+      } else {
+        console.error(result.message || 'Ошибка загрузки изображения');
+      }
     } catch (error) {
       console.error(error);
-      alert('Ошибка');
     } finally {
       setSending(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -225,7 +227,7 @@ const ChatPage: React.FC = () => {
   }, [chatId]);
 
   const handleDeleteChat = async () => {
-    if (!chatId || !window.confirm('Удалить чат? Все сообщения будут удалены.')) return;
+    if (!chatId) return;
     try {
       const token = getToken();
       const response = await fetch(`http://localhost:5213/api/chats/${chatId}`, {
@@ -233,11 +235,13 @@ const ChatPage: React.FC = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const result = await response.json();
-      if (response.ok && result.success) navigate('/profile#chats');
-      else alert(result.message || 'Ошибка удаления');
+      if (response.ok && result.success) {
+        navigate('/profile#chats');
+      } else {
+        console.error(result.message || 'Ошибка удаления');
+      }
     } catch (error) {
       console.error(error);
-      alert('Ошибка');
     }
   };
 

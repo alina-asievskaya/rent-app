@@ -542,82 +542,81 @@ const EditHousePage: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setIsSubmitting(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      showNotification('Требуется авторизация', 'error');
-      navigate('/login');
+  e.preventDefault();
+  if (!validateForm()) return;
+  setIsSubmitting(true);
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showNotification('Требуется авторизация', 'error');
+    navigate('/login');
+    return;
+  }
+
+  try {
+    const uploadedImageUrls: string[] = [];
+    for (const photo of formData.newPhotos) {
+      const url = await uploadToCloudinary(photo);
+      if (url) uploadedImageUrls.push(url);
+    }
+    const allPhotoUrls = [...formData.existingPhotos, ...uploadedImageUrls];
+    if (allPhotoUrls.length === 0) {
+      showNotification('Добавьте хотя бы одну фотографию', 'error');
+      setIsSubmitting(false);
       return;
     }
 
-    try {
-      const uploadedImageUrls: string[] = [];
-      for (const photo of formData.newPhotos) {
-        const url = await uploadToCloudinary(photo);
-        if (url) uploadedImageUrls.push(url);
-      }
-      const allPhotoUrls = [...formData.existingPhotos, ...uploadedImageUrls];
-      if (allPhotoUrls.length === 0) {
-        showNotification('Добавьте хотя бы одну фотографию', 'error');
-        setIsSubmitting(false);
-        return;
-      }
+    const housePayload = {
+      Price: parseFloat(formData.price) || 0,
+      Area: parseFloat(formData.area) || 0,
+      Description: formData.description || '',
+      HouseType: formData.houseType,
+      RentType: formData.rentType,
+      Region: formData.region,
+      City: formData.city,
+      Street: formData.street,
+      HouseNumber: formData.houseNumber,
+      Rooms: parseInt(formData.rooms) || 1,
+      Bathrooms: parseInt(formData.bathrooms) || 1,
+      Floor: parseInt(formData.floor) || 1,
+      Conditioner: formData.conditioner,
+      Furniture: formData.furniture,
+      Internet: formData.internet,
+      Security: formData.security,
+      VideoSurveillance: formData.videoSurveillance,
+      FireAlarm: formData.fireAlarm,
+      Parking: formData.parking,
+      Garage: formData.garage,
+      Garden: formData.garden,
+      SwimmingPool: formData.swimmingPool,
+      Sauna: formData.sauna,
+      Transport: formData.transport || '',
+      Education: formData.education || '',
+      Shops: formData.shops || '',
+      PhotoUrls: allPhotoUrls,
+      DeleteExistingPhotos: true
+    };
 
-      const housePayload = {
-        Price: parseFloat(formData.price) || 0,
-        Area: parseFloat(formData.area) || 0,
-        Description: formData.description || '',
-        HouseType: formData.houseType,
-        RentType: formData.rentType,
-        Region: formData.region,
-        City: formData.city,
-        Street: formData.street,
-        HouseNumber: formData.houseNumber,
-        Rooms: parseInt(formData.rooms) || 1,
-        Bathrooms: parseInt(formData.bathrooms) || 1,
-        Floor: parseInt(formData.floor) || 1,
-        Conditioner: formData.conditioner,
-        Furniture: formData.furniture,
-        Internet: formData.internet,
-        Security: formData.security,
-        VideoSurveillance: formData.videoSurveillance,
-        FireAlarm: formData.fireAlarm,
-        Parking: formData.parking,
-        Garage: formData.garage,
-        Garden: formData.garden,
-        SwimmingPool: formData.swimmingPool,
-        Sauna: formData.sauna,
-        Transport: formData.transport || '',
-        Education: formData.education || '',
-        Shops: formData.shops || '',
-        PhotoUrls: allPhotoUrls,
-        DeleteExistingPhotos: true
-      };
+    const response = await fetch(`http://localhost:5213/api/houses/${id}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(housePayload)
+    });
+    const result = await response.json();
 
-      const response = await fetch(`http://localhost:5213/api/houses/${id}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(housePayload)
-      });
-      const result = await response.json();
-      if (response.ok && result.success) {
-        // После успешного обновления основных данных – обновляем привязку кейтеринга
-        await updateCaterings(token, parseInt(id!), selectedCaterings);
-        showNotification('Объявление успешно обновлено', 'success');
-        // Перезагружаем данные, чтобы обновить форму
-        setTimeout(() => { if (token) fetchHouseData(token); }, 1000);
-      } else {
-        showNotification(result.message || 'Ошибка при обновлении', 'error');
-      }
-    } catch (error) {
-      console.error('Update error:', error);
-      showNotification('Ошибка соединения с сервером', 'error');
-    } finally {
-      setIsSubmitting(false);
+    if (response.ok && result.success) {
+      await updateCaterings(token, parseInt(id!), selectedCaterings);
+      showNotification('Объявление успешно обновлено', 'success');
+      navigate('/profile'); // ✅ Переход в профиль после сохранения
+    } else {
+      showNotification(result.message || 'Ошибка при обновлении', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Update error:', error);
+    showNotification('Ошибка соединения с сервером', 'error');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (loading) {
     return (

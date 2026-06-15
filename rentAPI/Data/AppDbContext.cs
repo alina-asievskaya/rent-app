@@ -599,6 +599,7 @@ namespace RentApp.API.Data
                 entity.HasIndex(c => c.CreatedAt);
                 entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId });
             });
+            
             // Bookings
             modelBuilder.Entity<Booking>(entity =>
             {
@@ -617,7 +618,8 @@ namespace RentApp.API.Data
                 entity.HasIndex(b => b.HouseId);
                 entity.HasIndex(b => b.UserId);
                 entity.HasIndex(b => b.BookingDate);
-                entity.HasIndex(b => new { b.HouseId, b.BookingDate }).IsUnique(); // одна дата - одно бронирование на дом
+                // Вместо уникального индекса создайте обычный (не уникальный) для ускорения запросов
+                entity.HasIndex(b => new { b.HouseId, b.BookingDate }); // одна дата - одно бронирование на дом
             });
 
             modelBuilder.Entity<Message>(entity =>

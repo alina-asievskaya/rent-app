@@ -1,5 +1,5 @@
 // frontend/src/pages/ProfilePage.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -8,7 +8,7 @@ import {
   faSave, faPlus, faPaperPlane, faEraser, faCheckDouble,
   faCheck, faTrash, faBed, faRulerCombined, faMapMarkerAlt,
   faPause, faPlay, faClock, faCheckCircle, faTag, faUpload,
-  faUtensils, faBuilding
+  faUtensils, faBuilding, faPhone
 } from '@fortawesome/free-solid-svg-icons';
 import './ProfilePage.css';
 import OfferServiceModal from '../components/OfferServiceModal';
@@ -118,6 +118,27 @@ interface BookingRequest {
   userId: number;
 }
 
+interface CateringItem {
+  menuItemId: number;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+interface CateringInfo {
+  id: number;
+  status: string;
+  items: CateringItem[];
+  totalPrice: number;
+}
+
+interface OwnerInfo {
+  userId: number;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 interface UserBooking {
   id: number;
   houseId: number;
@@ -127,6 +148,9 @@ interface UserBooking {
   approved: boolean;
   rejectedAt: string | null;
   createdAt: string;
+  catering?: CateringInfo;
+  houseOwner: OwnerInfo;
+  cateringOwnerInfo?: OwnerInfo;
 }
 
 interface ApiResponse {
@@ -165,6 +189,14 @@ interface RawUserBooking {
   approved: boolean;
   rejectedAt: string | null;
   createdAt: string;
+  catering?: {
+    id: number;
+    status: string;
+    items: { menuItemId: number; name: string; price: number; quantity: number }[];
+    totalPrice: number;
+  };
+  houseOwner: OwnerInfo;
+  cateringOwnerInfo?: OwnerInfo;
 }
 
 type ProfileTab = 'profile' | 'ads' | 'chats' | 'support' | 'requests' | 'bookings' | 'history' | 'menu' | 'cateringAddRequests';
@@ -180,6 +212,11 @@ const safeFormatDate = (dateStr: string): string => {
 const isValidTab = (tab: string): tab is ProfileTab => {
   return ['profile', 'ads', 'chats', 'support', 'requests', 'bookings', 'history', 'menu', 'cateringAddRequests'].includes(tab);
 };
+
+// Компонент иконки BYN
+const BynIcon: React.FC = () => (
+  <i className="nbrb-icon" aria-label="бел. руб.">&#xe901;</i>
+);
 
 // ==================== Компонент ====================
 const ProfilePage: React.FC = () => {
@@ -218,6 +255,9 @@ const ProfilePage: React.FC = () => {
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [isCateringOwner, setIsCateringOwner] = useState(false);
+  
+  // Ref для отслеживания предыдущего статуса кейтеринга, чтобы показывать сообщение только один раз
+  const prevCateringStatusRef = useRef<boolean | null>(null);
 
   const navigate = useNavigate();
 
@@ -232,10 +272,7 @@ const ProfilePage: React.FC = () => {
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.href = '/';
-        return;
-      }
+      if (!token) { window.location.href = '/'; return; }
       const response = await fetch('http://localhost:5213/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -265,15 +302,29 @@ const ProfilePage: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         const newStatus = data.isOwner;
+        
+        // Если статус изменился с false на true – показываем поздравление (только один раз)
+        if (prevCateringStatusRef.current !== null && 
+            prevCateringStatusRef.current === false && 
+            newStatus === true) {
+          setMessage({ 
+            text: 'Поздравляем! Ваша заявка на кейтеринг одобрена. Теперь вам доступно управление меню.', 
+            type: 'success' 
+          });
+          setTimeout(() => setMessage({ text: '', type: 'success' }), 5000);
+        }
+        
+        // Обновляем состояние и ref
         if (newStatus !== isCateringOwner) {
           setIsCateringOwner(newStatus);
-          if (newStatus === true) {
-            setMessage({ text: 'Поздравляем! Ваша заявка на кейтеринг одобрена. Теперь вам доступно управление меню.', type: 'success' });
-            setTimeout(() => setMessage({ text: '', type: 'success' }), 5000);
-            if (activeTab !== 'profile' && activeTab !== 'requests' && activeTab !== 'menu' && activeTab !== 'support' && activeTab !== 'cateringAddRequests') {
-              setActiveTab('profile');
-            }
-          }
+        }
+        prevCateringStatusRef.current = newStatus;
+        
+        // Переключение вкладки при первом получении статуса true (опционально)
+        if (newStatus === true && activeTab !== 'profile' && 
+            activeTab !== 'requests' && activeTab !== 'menu' && 
+            activeTab !== 'support' && activeTab !== 'cateringAddRequests') {
+          setActiveTab('profile');
         }
       }
     } catch (error) {
@@ -305,7 +356,6 @@ const ProfilePage: React.FC = () => {
     formData.append('file', file);
     formData.append('upload_preset', 'rent_app');
     formData.append('cloud_name', 'dnblbt7wc');
-
     try {
       const response = await fetch('https://api.cloudinary.com/v1_1/dnblbt7wc/image/upload', {
         method: 'POST',
@@ -324,19 +374,14 @@ const ProfilePage: React.FC = () => {
   const handleAgentPhotoUpload = async (file: File) => {
     setUploadingPhoto(true);
     const url = await uploadToCloudinary(file);
-    if (url) {
-      setEditedAgent(prev => ({ ...prev, photo: url }));
-    }
+    if (url) setEditedAgent(prev => ({ ...prev, photo: url }));
     setUploadingPhoto(false);
   };
 
   const handleUploadPortfolioPhoto = async (file: File) => {
     if (!agentData || !editingAgent) return;
     const token = localStorage.getItem('token');
-    if (!token) {
-      setMessage({ text: 'Требуется авторизация', type: 'error' });
-      return;
-    }
+    if (!token) { setMessage({ text: 'Требуется авторизация', type: 'error' }); return; }
     const formData = new FormData();
     formData.append('file', file);
     setUploadingPortfolio(true);
@@ -387,15 +432,12 @@ const ProfilePage: React.FC = () => {
         PortfolioPhotos: portfolioPhotos,
         Price: editedAgent.price
       };
-
       const response = await fetch(`http://localhost:5213/api/agents/${agentData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
-
       const result = await response.json();
-
       if (response.ok && result.success) {
         setMessage({ text: 'Данные организатора обновлены', type: 'success' });
         setEditingAgent(false);
@@ -415,10 +457,7 @@ const ProfilePage: React.FC = () => {
     try {
       setAdsLoading(true);
       const token = localStorage.getItem('token');
-      if (!token) {
-        setMessage({ text: 'Требуется авторизация', type: 'error' });
-        return;
-      }
+      if (!token) { setMessage({ text: 'Требуется авторизация', type: 'error' }); return; }
       const response = await fetch('http://localhost:5213/api/houses/my-houses', {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
@@ -546,7 +585,10 @@ const ProfilePage: React.FC = () => {
           bookingDate: b.bookingDate,
           approved: b.approved,
           rejectedAt: b.rejectedAt,
-          createdAt: b.createdAt
+          createdAt: b.createdAt,
+          catering: b.catering ? { ...b.catering } : undefined,
+          houseOwner: b.houseOwner,
+          cateringOwnerInfo: b.cateringOwnerInfo
         }));
         setUserBookings(bookings);
       }
@@ -574,7 +616,10 @@ const ProfilePage: React.FC = () => {
           bookingDate: b.bookingDate,
           approved: b.approved,
           rejectedAt: b.rejectedAt,
-          createdAt: b.createdAt
+          createdAt: b.createdAt,
+          catering: b.catering ? { ...b.catering } : undefined,
+          houseOwner: b.houseOwner,
+          cateringOwnerInfo: b.cateringOwnerInfo
         }));
         setHistoryBookings(bookings);
       }
@@ -589,9 +634,7 @@ const ProfilePage: React.FC = () => {
     const numberStr = price?.toLocaleString('ru-RU') || '0';
     const suffix = rentType === 'month' ? '/мес' : '/сутки';
     return (
-      <>
-        {numberStr} <i className="nbrb-icon">&#xe901;</i>{suffix}
-      </>
+      <>{numberStr} <BynIcon />{suffix}</>
     );
   };
 
@@ -614,15 +657,15 @@ const ProfilePage: React.FC = () => {
         if (activeTab === 'bookings') fetchUserBookings();
         if (activeTab === 'history') fetchHistoryBookings();
       } else {
-        alert('Ошибка подтверждения');
+        setMessage({ text: data.message || 'Ошибка подтверждения', type: 'error' });
       }
     } catch (error) {
       console.error(error);
+      setMessage({ text: 'Ошибка соединения', type: 'error' });
     }
   };
 
   const handleRejectRequest = async (requestId: number) => {
-    if (!window.confirm('Отклонить заявку?')) return;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`http://localhost:5213/api/bookings/${requestId}/reject`, {
@@ -639,10 +682,35 @@ const ProfilePage: React.FC = () => {
         if (activeTab === 'bookings') fetchUserBookings();
         if (activeTab === 'history') fetchHistoryBookings();
       } else {
-        alert('Ошибка отклонения');
+        setMessage({ text: data.message || 'Ошибка отклонения', type: 'error' });
       }
     } catch (error) {
       console.error(error);
+      setMessage({ text: 'Ошибка соединения', type: 'error' });
+    }
+  };
+
+  const handleCreateChat = async (otherUserId: number, houseId: number) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setMessage({ text: 'Необходимо авторизоваться', type: 'error' });
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:5213/api/chats/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ otherUserId, houseId })
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        navigate(`/chat/${result.data.chat_id}`);
+      } else {
+        setMessage({ text: result.message || 'Не удалось создать чат', type: 'error' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage({ text: 'Ошибка сети', type: 'error' });
     }
   };
 
@@ -662,11 +730,7 @@ const ProfilePage: React.FC = () => {
       const response = await fetch('http://localhost:5213/api/auth/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          fio: editedData.fio,
-          email: editedData.email,
-          phone_num: editedData.phone_num,
-        }),
+        body: JSON.stringify({ fio: editedData.fio, email: editedData.email, phone_num: editedData.phone_num }),
       });
       if (response.ok) {
         const data = await response.json();
@@ -674,7 +738,6 @@ const ProfilePage: React.FC = () => {
         setEditedData(data);
         setIsEditing(false);
         setMessage({ text: 'Профиль успешно обновлен!', type: 'success' });
-
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const user = JSON.parse(storedUser);
@@ -699,14 +762,8 @@ const ProfilePage: React.FC = () => {
     const formData = new FormData(e.currentTarget);
     const messageText = formData.get('message') as string;
     const topic = formData.get('topic') as string;
-    if (!topic || !messageText.trim()) {
-      setMessage({ text: 'Заполните все поля', type: 'error' });
-      return;
-    }
-    if (messageText.length > 2000) {
-      setMessage({ text: 'Сообщение не более 2000 символов', type: 'error' });
-      return;
-    }
+    if (!topic || !messageText.trim()) { setMessage({ text: 'Заполните все поля', type: 'error' }); return; }
+    if (messageText.length > 2000) { setMessage({ text: 'Сообщение не более 2000 символов', type: 'error' }); return; }
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5213/api/support', {
@@ -730,7 +787,6 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleDeleteAd = async (adId: number) => {
-    if (!window.confirm('Удалить объявление?')) return;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5213/api/houses/${adId}`, {
@@ -779,7 +835,6 @@ const ProfilePage: React.FC = () => {
   };
   
   const handleDeleteFeedback = async (feedbackId: number) => {
-    if (!window.confirm('Удалить обращение?')) return;
     try {
       setDeletingFeedback(feedbackId);
       const token = localStorage.getItem('token');
@@ -797,6 +852,7 @@ const ProfilePage: React.FC = () => {
       }
     } catch (error) {
       console.error(error);
+      setMessage({ text: 'Ошибка соединения', type: 'error' });
     } finally {
       setDeletingFeedback(null);
     }
@@ -832,30 +888,22 @@ const ProfilePage: React.FC = () => {
   };
 
   // ==================== Эффекты ====================
-  useEffect(() => {
-    fetchUserData();
-  }, []);
+  useEffect(() => { fetchUserData(); }, []);
 
   useEffect(() => {
     if (!userData) return;
-    const intervalId = setInterval(() => {
-      refreshCateringStatus();
-    }, 30000);
+    const intervalId = setInterval(() => { refreshCateringStatus(); }, 30000);
     return () => clearInterval(intervalId);
   }, [userData, refreshCateringStatus]);
 
   useEffect(() => {
-    const handleNotificationsUpdate = () => {
-      refreshCateringStatus();
-    };
+    const handleNotificationsUpdate = () => { refreshCateringStatus(); };
     window.addEventListener('notificationsUpdate', handleNotificationsUpdate);
     return () => window.removeEventListener('notificationsUpdate', handleNotificationsUpdate);
   }, [refreshCateringStatus]);
 
   useEffect(() => {
-    if (activeTab === 'profile') {
-      refreshCateringStatus();
-    }
+    if (activeTab === 'profile') refreshCateringStatus();
   }, [activeTab, refreshCateringStatus]);
 
   useEffect(() => {
@@ -865,9 +913,7 @@ const ProfilePage: React.FC = () => {
     }
   }, [userData, refreshCateringStatus]);
 
-  useEffect(() => {
-    sessionStorage.setItem('profileLastTab', activeTab);
-  }, [activeTab]);
+  useEffect(() => { sessionStorage.setItem('profileLastTab', activeTab); }, [activeTab]);
 
   useEffect(() => {
     const handleUserLoggedIn = () => {
@@ -887,11 +933,8 @@ const ProfilePage: React.FC = () => {
     if (activeTab === 'support' && userData) fetchUserFeedback();
   }, [activeTab, userData]);
 
-  // ИЗМЕНЕНИЕ: разрешаем загрузку чатов для любого пользователя (включая владельца кейтеринга)
   useEffect(() => {
-    if (activeTab === 'chats' && userData) {
-      fetchUserChats();
-    }
+    if (activeTab === 'chats' && userData) fetchUserChats();
   }, [activeTab, userData]);
 
   useEffect(() => {
@@ -926,16 +969,133 @@ const ProfilePage: React.FC = () => {
 
   const renderBookingStatus = (booking: UserBooking) => {
     const isExpired = !booking.approved && !booking.rejectedAt && new Date(booking.bookingDate) < new Date();
-    if (booking.approved === true) {
-      return { text: 'Подтверждено', class: 'confirmed', icon: faCheckCircle };
-    }
-    if (booking.rejectedAt !== null) {
-      return { text: 'Отклонено', class: 'rejected', icon: faTimes };
-    }
-    if (isExpired) {
-      return { text: 'Не состоялось', class: 'expired', icon: faClock };
-    }
+    if (booking.approved === true) return { text: 'Подтверждено', class: 'confirmed', icon: faCheckCircle };
+    if (booking.rejectedAt !== null) return { text: 'Отклонено', class: 'rejected', icon: faTimes };
+    if (isExpired) return { text: 'Не состоялось', class: 'expired', icon: faClock };
     return { text: 'Ожидает подтверждения', class: 'pending', icon: faClock };
+  };
+
+  const getCateringStatusLabel = (status: string) => {
+    switch (status) {
+      case 'rejected': return { text: 'Отказано', cls: 'rejected' };
+      case 'approved': return { text: 'Подтверждён', cls: 'approved' };
+      case 'pending': return { text: 'Ожидает', cls: 'pending' };
+      case 'waiting_owner': return { text: 'Ожидает одобрения', cls: 'waiting' };
+      default: return { text: status, cls: '' };
+    }
+  };
+
+  // Переиспользуемый блок карточки бронирования
+  const renderBookingCard = (b: UserBooking, isPast = false) => {
+    const status = renderBookingStatus(b);
+    const cateringStatus = b.catering ? getCateringStatusLabel(b.catering.status) : null;
+    return (
+      <div key={b.id} className={`booking-card-v2 ${isPast ? 'past' : ''}`}>
+        {/* Верхняя полоса статуса */}
+        <div className={`booking-card-v2__status-bar status-${status.class}`}>
+          <FontAwesomeIcon icon={status.icon} />
+          <span>{status.text}</span>
+          <span className="booking-card-v2__date">Заезд: {safeFormatDate(b.bookingDate)}</span>
+        </div>
+
+        <div className="booking-card-v2__body">
+          {/* Фото */}
+          <div className="booking-card-v2__photo">
+            <img
+              src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'}
+              alt={b.houseAddress}
+              onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'; }}
+            />
+          </div>
+
+          {/* Основная информация */}
+          <div className="booking-card-v2__main">
+            <h4 className="booking-card-v2__address">
+              <FontAwesomeIcon icon={faMapMarkerAlt} />
+              {b.houseAddress}
+            </h4>
+            <p className="booking-card-v2__created">
+              <FontAwesomeIcon icon={faCalendarAlt} />
+              Забронировано: {safeFormatDate(b.createdAt)}
+            </p>
+
+            {/* Кейтеринг */}
+            {b.catering && (
+              <div className="booking-card-v2__catering">
+                <div className="catering-v2__header">
+                  <FontAwesomeIcon icon={faUtensils} />
+                  <span>Кейтеринг</span>
+                  {cateringStatus && (
+                    <span className={`catering-v2__badge ${cateringStatus.cls}`}>{cateringStatus.text}</span>
+                  )}
+                </div>
+                <div className="catering-v2__items">
+                  {b.catering.items.map((item, idx) => (
+                    <div key={idx} className="catering-v2__item">
+                      <span className="catering-v2__item-name">{item.name}</span>
+                      <span className="catering-v2__item-qty">× {item.quantity}</span>
+                      <span className="catering-v2__item-total">
+                        {(item.price * item.quantity).toLocaleString('ru-RU')} <BynIcon />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="catering-v2__total">
+                  Итого: {b.catering.totalPrice.toLocaleString('ru-RU')} <BynIcon />
+                </div>
+              </div>
+            )}
+
+            {/* Контакты владельцев */}
+            <div className="booking-card-v2__owners">
+              <div className="owner-v2">
+                <div className="owner-v2__icon">
+                  <FontAwesomeIcon icon={faHome} />
+                </div>
+                <div className="owner-v2__info">
+                  <span className="owner-v2__role">Владелец жилья</span>
+                  <span className="owner-v2__name">{b.houseOwner.name}</span>
+                  <span className="owner-v2__phone">
+                    <FontAwesomeIcon icon={faPhone} />
+                    {b.houseOwner.phone}
+                  </span>
+                </div>
+                <button
+                  className="owner-v2__chat-btn"
+                  onClick={() => handleCreateChat(b.houseOwner.userId, b.houseId)}
+                >
+                  <FontAwesomeIcon icon={faComment} />
+                  Написать
+                </button>
+              </div>
+
+              {b.cateringOwnerInfo && (
+                <div className="owner-v2">
+                  <div className="owner-v2__icon catering">
+                    <FontAwesomeIcon icon={faUtensils} />
+                  </div>
+                  <div className="owner-v2__info">
+                    <span className="owner-v2__role">Кейтеринг</span>
+                    <span className="owner-v2__name">{b.cateringOwnerInfo.name}</span>
+                    <span className="owner-v2__phone">
+                      <FontAwesomeIcon icon={faPhone} />
+                      {b.cateringOwnerInfo.phone}
+                    </span>
+                  </div>
+                  <button
+                    className="owner-v2__chat-btn"
+                    onClick={() => handleCreateChat(b.cateringOwnerInfo!.userId, b.houseId)}
+                  >
+                    <FontAwesomeIcon icon={faComment} />
+                    Написать
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -972,7 +1132,6 @@ const ProfilePage: React.FC = () => {
                 <FontAwesomeIcon icon={faUtensils} className="profilepage-nav-icon" />
                 <span>Меню</span>
               </button>
-              {/* ДОБАВЛЕНА КНОПКА "Мои чаты" */}
               <button className={`profilepage-nav-item ${activeTab === 'chats' ? 'profilepage-nav-active' : ''}`} onClick={() => setActiveTab('chats')}>
                 <FontAwesomeIcon icon={faComment} className="profilepage-nav-icon" />
                 <span>Мои чаты</span>
@@ -1028,6 +1187,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
+        {/* ========== ПРОФИЛЬ ========== */}
         {activeTab === 'profile' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1054,62 +1214,36 @@ const ProfilePage: React.FC = () => {
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Email</label>
                       {isEditing ? (
-                        <input
-                          type="email"
-                          name="email"
-                          value={editedData?.email || ''}
-                          onChange={handleInputChange}
-                          className="profilepage-stack-input"
-                          placeholder="example@mail.com"
-                        />
+                        <input type="email" name="email" value={editedData?.email || ''} onChange={handleInputChange} className="profilepage-stack-input" placeholder="example@mail.com" />
                       ) : (
                         <div className="profilepage-stack-value">{userData.email}</div>
                       )}
                     </div>
-                    <div className="profilepage-stack-hint">
-                      {isEditing ? 'Введите новый email' : ''}
-                    </div>
+                    <div className="profilepage-stack-hint">{isEditing ? 'Введите новый email' : ''}</div>
                   </div>
                   <div className="profilepage-stack-divider"></div>
-
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Имя и фамилия</label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          name="fio"
-                          value={editedData?.fio || ''}
-                          onChange={handleInputChange}
-                          className="profilepage-stack-input"
-                          placeholder="Иванов Иван"
-                        />
+                        <input type="text" name="fio" value={editedData?.fio || ''} onChange={handleInputChange} className="profilepage-stack-input" placeholder="Иванов Иван" />
                       ) : (
                         <div className="profilepage-stack-value">{userData.fio}</div>
                       )}
                     </div>
                   </div>
                   <div className="profilepage-stack-divider"></div>
-
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Телефон</label>
                       {isEditing ? (
-                        <input
-                          type="tel"
-                          name="phone_num"
-                          value={editedData?.phone_num || ''}
-                          onChange={handleInputChange}
-                          className="profilepage-stack-input"
-                          placeholder="+375 (XX) XXX-XX-XX"
-                        />
+                        <input type="tel" name="phone_num" value={editedData?.phone_num || ''} onChange={handleInputChange} className="profilepage-stack-input" placeholder="+375 (XX) XXX-XX-XX" />
                       ) : (
                         <div className="profilepage-stack-value">{userData.phone_num || 'Не указан'}</div>
                       )}
                     </div>
                   </div>
                   <div className="profilepage-stack-divider"></div>
-
                   <div className="profilepage-info-stack-item">
                     <div className="profilepage-stack-header">
                       <label className="profilepage-stack-label">Статус аккаунта</label>
@@ -1137,92 +1271,49 @@ const ProfilePage: React.FC = () => {
                       <div className="profilepage-stack-header">
                         <label className="profilepage-stack-label">О себе</label>
                         {editingAgent ? (
-                          <textarea
-                            value={editedAgent.displayName || ''}
-                            onChange={(e) => setEditedAgent({ ...editedAgent, displayName: e.target.value })}
-                            className="profilepage-stack-input profilepage-bio-textarea"
-                            rows={10}
-                            placeholder="Расскажите о себе, вашем опыте организации праздников, специализации..."
-                          />
+                          <textarea value={editedAgent.displayName || ''} onChange={(e) => setEditedAgent({ ...editedAgent, displayName: e.target.value })} className="profilepage-stack-input profilepage-bio-textarea" rows={10} placeholder="Расскажите о себе, вашем опыте организации праздников, специализации..." />
                         ) : (
-                          <div className="profilepage-stack-value profilepage-bio-text" style={{ whiteSpace: 'pre-wrap' }}>
-                            {agentData.displayName || 'Не указано'}
-                          </div>
+                          <div className="profilepage-stack-value profilepage-bio-text" style={{ whiteSpace: 'pre-wrap' }}>{agentData.displayName || 'Не указано'}</div>
                         )}
                       </div>
                     </div>
                     <div className="profilepage-stack-divider" />
-
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
                         <label className="profilepage-stack-label">Специализация</label>
                         {editingAgent ? (
-                          <input
-                            type="text"
-                            value={editedAgent.specialization || ''}
-                            onChange={(e) => setEditedAgent({ ...editedAgent, specialization: e.target.value })}
-                            className="profilepage-stack-input"
-                            placeholder="Например: Организация корпоративов, Свадьбы, Детские праздники"
-                          />
+                          <input type="text" value={editedAgent.specialization || ''} onChange={(e) => setEditedAgent({ ...editedAgent, specialization: e.target.value })} className="profilepage-stack-input" placeholder="Например: Организация корпоративов, Свадьбы, Детские праздники" />
                         ) : (
-                          <div className="profilepage-stack-value">
-                            <FontAwesomeIcon icon={faTag} style={{ marginRight: '8px', opacity: 0.7 }} />
-                            {agentData.specialization || 'Не указана'}
-                          </div>
+                          <div className="profilepage-stack-value"><FontAwesomeIcon icon={faTag} style={{ marginRight: '8px', opacity: 0.7 }} />{agentData.specialization || 'Не указана'}</div>
                         )}
                       </div>
                     </div>
                     <div className="profilepage-stack-divider" />
-
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
                         <label className="profilepage-stack-label">Опыт (лет)</label>
                         {editingAgent ? (
-                          <input
-                            type="number"
-                            value={editedAgent.experience || 0}
-                            onChange={(e) => setEditedAgent({ ...editedAgent, experience: parseInt(e.target.value) || 0 })}
-                            className="profilepage-stack-input"
-                          />
+                          <input type="number" value={editedAgent.experience || 0} onChange={(e) => setEditedAgent({ ...editedAgent, experience: parseInt(e.target.value) || 0 })} className="profilepage-stack-input" />
                         ) : (
                           <div className="profilepage-stack-value">{agentData.experience} лет</div>
                         )}
                       </div>
                     </div>
                     <div className="profilepage-stack-divider" />
-
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
-                        <label className="profilepage-stack-label">Цена услуги (BYN)</label>
+                        <label className="profilepage-stack-label">Цена услуги (бел. руб.)</label>
                         {editingAgent ? (
-                          <input
-                            type="number"
-                            value={editedAgent.price ?? ''}
-                            onChange={(e) => setEditedAgent({
-                              ...editedAgent,
-                              price: e.target.value ? parseFloat(e.target.value) : null
-                            })}
-                            className="profilepage-stack-input"
-                            placeholder="Например: 500"
-                            step="50"
-                            min="0"
-                          />
+                          <input type="number" value={editedAgent.price ?? ''} onChange={(e) => setEditedAgent({ ...editedAgent, price: e.target.value ? parseFloat(e.target.value) : null })} className="profilepage-stack-input" placeholder="Например: 500" step="50" min="0" />
                         ) : (
                           <div className="profilepage-stack-value">
-                            {agentData.price ? (
-                              <>
-                                {agentData.price.toLocaleString('ru-RU')} <i className="nbrb-icon">&#xe901;</i>
-                              </>
-                            ) : 'Не указана'}
+                            {agentData.price ? <>{agentData.price.toLocaleString('ru-RU')} <BynIcon /></> : 'Не указана'}
                           </div>
                         )}
                       </div>
-                      <div className="profilepage-stack-hint">
-                        Стоимость организации мероприятия (свадьба, корпоратив, детский праздник)
-                      </div>
+                      <div className="profilepage-stack-hint">Стоимость организации мероприятия (свадьба, корпоратив, детский праздник)</div>
                     </div>
                     <div className="profilepage-stack-divider" />
-
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
                         <label className="profilepage-stack-label">Фото</label>
@@ -1231,35 +1322,22 @@ const ProfilePage: React.FC = () => {
                             {editedAgent.photo ? (
                               <div className="profilepage-photo-preview">
                                 <img src={editedAgent.photo} alt="Фото организатора" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
-                                <button
-                                  type="button"
-                                  className="profilepage-btn-delete-photo"
-                                  onClick={() => setEditedAgent({ ...editedAgent, photo: '' })}
-                                >
+                                <button type="button" className="profilepage-btn-delete-photo" onClick={() => setEditedAgent({ ...editedAgent, photo: '' })}>
                                   <FontAwesomeIcon icon={faTrash} /> Удалить
                                 </button>
                               </div>
                             ) : (
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => {
-                                  if (e.target.files?.[0]) handleAgentPhotoUpload(e.target.files[0]);
-                                }}
-                              />
+                              <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleAgentPhotoUpload(e.target.files[0]); }} />
                             )}
                             {uploadingPhoto && <div className="profilepage-spinner-small"></div>}
                           </div>
                         ) : (
                           <div className="profilepage-stack-value">
-                            {agentData.photo ? (
-                              <img src={agentData.photo} alt="Фото организатора" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
-                            ) : 'Нет фото'}
+                            {agentData.photo ? <img src={agentData.photo} alt="Фото организатора" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} /> : 'Нет фото'}
                           </div>
                         )}
                       </div>
                     </div>
-
                     <div className="profilepage-info-stack-item">
                       <div className="profilepage-stack-header">
                         <label className="profilepage-stack-label">Фотографии работ (портфолио)</label>
@@ -1268,15 +1346,8 @@ const ProfilePage: React.FC = () => {
                             <label htmlFor="portfolioUpload" className="profilepage-btn-secondary" style={{ display: 'inline-flex', gap: '8px', cursor: 'pointer' }}>
                               <FontAwesomeIcon icon={faUpload} /> Добавить фото
                             </label>
-                            <input
-                              type="file"
-                              id="portfolioUpload"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              onChange={(e) => {
-                                if (e.target.files?.[0]) handleUploadPortfolioPhoto(e.target.files[0]);
-                                e.target.value = '';
-                              }}
+                            <input type="file" id="portfolioUpload" accept="image/*" style={{ display: 'none' }}
+                              onChange={(e) => { if (e.target.files?.[0]) handleUploadPortfolioPhoto(e.target.files[0]); e.target.value = ''; }}
                               disabled={uploadingPortfolio}
                             />
                             {uploadingPortfolio && <div className="profilepage-spinner-small"></div>}
@@ -1291,12 +1362,7 @@ const ProfilePage: React.FC = () => {
                             <div key={idx} className="portfolio-item-mini">
                               <img src={url} alt={`Работа ${idx + 1}`} />
                               {editingAgent && (
-                                <button
-                                  type="button"
-                                  className="portfolio-remove-mini"
-                                  onClick={() => handleRemovePortfolioPhoto(idx)}
-                                  title="Удалить"
-                                >
+                                <button type="button" className="portfolio-remove-mini" onClick={() => handleRemovePortfolioPhoto(idx)} title="Удалить">
                                   <FontAwesomeIcon icon={faTrash} />
                                 </button>
                               )}
@@ -1304,9 +1370,7 @@ const ProfilePage: React.FC = () => {
                           ))}
                         </div>
                       )}
-                      {editingAgent && (
-                        <div className="profilepage-stack-hint">Добавьте фотографии ваших лучших работ (свадьбы, корпоративы и т.д.)</div>
-                      )}
+                      {editingAgent && <div className="profilepage-stack-hint">Добавьте фотографии ваших лучших работ (свадьбы, корпоративы и т.д.)</div>}
                     </div>
                   </div>
                   {editingAgent ? (
@@ -1327,6 +1391,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
+        {/* ========== ОБЪЯВЛЕНИЯ ========== */}
         {activeTab === 'ads' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1363,7 +1428,8 @@ const ProfilePage: React.FC = () => {
                   {userAds.map((ad) => (
                     <div key={ad.Id} className={`profilepage-ad-item ${!ad.Active ? 'profilepage-inactive' : ''}`}>
                       <div className="profilepage-ad-item-image">
-                        <img src={ad.MainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt={ad.Description} onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'; }} />
+                        <img src={ad.MainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt={ad.Description}
+                          onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'; }} />
                         <div className={`profilepage-ad-status ${ad.Active ? 'profilepage-active' : 'profilepage-inactive'}`}>
                           {ad.Active ? 'Активно' : 'Неактивно'}
                         </div>
@@ -1375,8 +1441,7 @@ const ProfilePage: React.FC = () => {
                         </div>
                         <div className="profilepage-ad-item-address">
                           <FontAwesomeIcon icon={faMapMarkerAlt} />
-                          {ad.HouseInfo?.City}, {ad.HouseInfo?.Street}
-                          {ad.HouseInfo?.HouseNumber && `, ${ad.HouseInfo.HouseNumber}`}
+                          {ad.HouseInfo?.City}, {ad.HouseInfo?.Street}{ad.HouseInfo?.HouseNumber && `, ${ad.HouseInfo.HouseNumber}`}
                         </div>
                         <div className="profilepage-ad-item-info">
                           <span><FontAwesomeIcon icon={faBed} /> {ad.HouseInfo?.Rooms} комн.</span>
@@ -1405,7 +1470,7 @@ const ProfilePage: React.FC = () => {
                 <div className="profilepage-ads-empty">
                   <div className="profilepage-empty-illustration"></div>
                   <h3>У вас пока нет объявлений</h3>
-                  <p>Разместите свое первое объявление о недвижимости</p>
+                  <p>Разместите своё первое объявление о недвижимости</p>
                   <Link to="/create-ad" className="profilepage-btn-primary">
                     <FontAwesomeIcon icon={faPlus} /> Создать объявление
                   </Link>
@@ -1415,7 +1480,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {/* ИЗМЕНЕНИЕ: убрано && !isCateringOwner – чаты доступны всем */}
+        {/* ========== ЧАТЫ ========== */}
         {activeTab === 'chats' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1467,6 +1532,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )}
 
+        {/* ========== ЗАЯВКИ ========== */}
         {activeTab === 'requests' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1479,8 +1545,9 @@ const ProfilePage: React.FC = () => {
               <CateringOrdersList />
             ) : (
               <>
+                {/* Предстоящие бронирования */}
                 <div className="profilepage-section">
-                  <h3 className="profilepage-section-title">Предстоящие бронирования</h3>
+                  <h3 className="profilepage-section-title">Подтверждённые бронирования</h3>
                   {upcomingLoading ? (
                     <div className="profilepage-loading-placeholder">
                       <div className="profilepage-loading-spinner profilepage-small"></div>
@@ -1489,24 +1556,33 @@ const ProfilePage: React.FC = () => {
                   ) : upcomingBookings.length === 0 ? (
                     <p className="profilepage-empty-text">Нет предстоящих бронирований</p>
                   ) : (
-                    <div className="profilepage-bookings-list">
+                    <div className="requests-upcoming-list">
                       {upcomingBookings.map((b) => (
-                        <div key={b.id} className="profilepage-booking-card">
-                          <div className="booking-card-image">
-                            <img src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
-                            <div className="booking-status-badge confirmed">Подтверждено</div>
+                        <div key={b.id} className="request-upcoming-card">
+                          <div className="request-upcoming-card__img">
+                            <img
+                              src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'}
+                              alt={b.houseAddress}
+                            />
+                            <span className="request-upcoming-card__badge confirmed">
+                              <FontAwesomeIcon icon={faCheckCircle} /> Подтверждено
+                            </span>
                           </div>
-                          <div className="booking-card-info">
-                            <h4>{b.houseAddress}</h4>
-                            <p>Гость: {b.userName}</p>
-                            <p>Дата: {safeFormatDate(b.bookingDate)}</p>
-                            <p>Дата заявки: {safeFormatDate(b.createdAt)}</p>
+                          <div className="request-upcoming-card__info">
+                            <h4><FontAwesomeIcon icon={faMapMarkerAlt} /> {b.houseAddress}</h4>
+                            <div className="request-upcoming-card__meta">
+                              <span><FontAwesomeIcon icon={faUser} /> {b.userName}</span>
+                              <span><FontAwesomeIcon icon={faCalendarAlt} /> Заезд: {safeFormatDate(b.bookingDate)}</span>
+                              <span><FontAwesomeIcon icon={faClock} /> Заявка: {safeFormatDate(b.createdAt)}</span>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+
+                {/* Новые заявки */}
                 <div className="profilepage-section">
                   <h3 className="profilepage-section-title">Новые заявки</h3>
                   {requestsLoading ? (
@@ -1517,21 +1593,33 @@ const ProfilePage: React.FC = () => {
                   ) : incomingRequests.length === 0 ? (
                     <p className="profilepage-empty-text">Нет новых заявок</p>
                   ) : (
-                    <div className="profilepage-requests-list">
+                    <div className="requests-incoming-list">
                       {incomingRequests.map((req) => (
-                        <div key={req.id} className="profilepage-request-card">
-                          <div className="request-card-image">
-                            <img src={req.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
+                        <div key={req.id} className="request-incoming-card">
+                          <div className="request-incoming-card__img">
+                            <img
+                              src={req.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'}
+                              alt={req.houseAddress}
+                            />
+                            <span className="request-incoming-card__badge pending">
+                              <FontAwesomeIcon icon={faClock} /> Ожидает
+                            </span>
                           </div>
-                          <div className="request-card-info">
-                            <h4>{req.houseAddress}</h4>
-                            <p>От: {req.userName}</p>
-                            <p>Дата бронирования: {safeFormatDate(req.bookingDate)}</p>
-                            <p>Заявка создана: {safeFormatDate(req.createdAt)}</p>
+                          <div className="request-incoming-card__info">
+                            <h4><FontAwesomeIcon icon={faMapMarkerAlt} /> {req.houseAddress}</h4>
+                            <div className="request-incoming-card__meta">
+                              <span><FontAwesomeIcon icon={faUser} /> {req.userName}</span>
+                              <span><FontAwesomeIcon icon={faCalendarAlt} /> Дата заезда: {safeFormatDate(req.bookingDate)}</span>
+                              <span><FontAwesomeIcon icon={faClock} /> Заявка от: {safeFormatDate(req.createdAt)}</span>
+                            </div>
                           </div>
-                          <div className="request-card-actions">
-                            <button className="profilepage-btn-approve" onClick={() => handleApproveRequest(req.id)}><FontAwesomeIcon icon={faCheck} /> Принять</button>
-                            <button className="profilepage-btn-reject" onClick={() => handleRejectRequest(req.id)}><FontAwesomeIcon icon={faTimes} /> Отклонить</button>
+                          <div className="request-incoming-card__actions">
+                            <button className="profilepage-btn-approve" onClick={() => handleApproveRequest(req.id)}>
+                              <FontAwesomeIcon icon={faCheck} /> Принять
+                            </button>
+                            <button className="profilepage-btn-reject" onClick={() => handleRejectRequest(req.id)}>
+                              <FontAwesomeIcon icon={faTimes} /> Отклонить
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1547,6 +1635,7 @@ const ProfilePage: React.FC = () => {
           <CateringAddRequestsList />
         )}
 
+        {/* ========== БРОНИРОВАНИЯ ========== */}
         {activeTab === 'bookings' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1563,35 +1652,19 @@ const ProfilePage: React.FC = () => {
             ) : userBookings.length === 0 ? (
               <p className="profilepage-empty-text">У вас пока нет бронирований</p>
             ) : (
-              <div className="profilepage-bookings-list modern">
-                {userBookings.map((b) => {
-                  const status = renderBookingStatus(b);
-                  return (
-                    <div key={b.id} className="profilepage-booking-card">
-                      <div className="booking-card-image">
-                        <img src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
-                        <div className={`booking-status-badge ${status.class}`}>
-                          <FontAwesomeIcon icon={status.icon} /> {status.text}
-                        </div>
-                      </div>
-                      <div className="booking-card-info">
-                        <h4>{b.houseAddress}</h4>
-                        <p>Дата заезда: {safeFormatDate(b.bookingDate)}</p>
-                        <p>Забронировано: {safeFormatDate(b.createdAt)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="bookings-v2-list">
+                {userBookings.map((b) => renderBookingCard(b, false))}
               </div>
             )}
           </div>
         )}
 
+        {/* ========== ИСТОРИЯ ========== */}
         {activeTab === 'history' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
               <div className="profilepage-header-title">
-                <h2>Моя история бронирований</h2>
+                <h2>История бронирований</h2>
                 <p>Прошедшие бронирования</p>
               </div>
             </div>
@@ -1603,34 +1676,19 @@ const ProfilePage: React.FC = () => {
             ) : historyBookings.length === 0 ? (
               <p className="profilepage-empty-text">Нет прошедших бронирований</p>
             ) : (
-              <div className="profilepage-bookings-list history">
-                {historyBookings.map((b) => {
-                  const status = renderBookingStatus(b);
-                  return (
-                    <div key={b.id} className="profilepage-booking-card past">
-                      <div className="booking-card-image">
-                        <img src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'} alt="House" />
-                        <div className={`booking-status-badge ${status.class}`}>
-                          <FontAwesomeIcon icon={status.icon} /> {status.text}
-                        </div>
-                      </div>
-                      <div className="booking-card-info">
-                        <h4>{b.houseAddress}</h4>
-                        <p>Дата заезда: {safeFormatDate(b.bookingDate)}</p>
-                        <p>Забронировано: {safeFormatDate(b.createdAt)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="bookings-v2-list">
+                {historyBookings.map((b) => renderBookingCard(b, true))}
               </div>
             )}
           </div>
         )}
 
+        {/* ========== МЕНЮ КЕЙТЕРИНГА ========== */}
         {activeTab === 'menu' && isCateringOwner && (
           <CateringMenu />
         )}
 
+        {/* ========== ПОДДЕРЖКА ========== */}
         {activeTab === 'support' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1699,9 +1757,9 @@ const ProfilePage: React.FC = () => {
                 <div className="profilepage-faq-section">
                   <h4 className="profilepage-section-title">Частые вопросы</h4>
                   <div className="profilepage-faq-list">
-                    <details className="profilepage-faq-item"><summary>Как добавить объявление?</summary><p>Перейдите на вкладку "Мои объявления" и нажмите кнопку "Добавить объявление". Заполните все необходимые поля формы.</p></details>
-                    <details className="profilepage-faq-item"><summary>Как редактировать профиль?</summary><p>Для редактирования профиля зайдите в раздел "Мой профиль" и нажмите кнопку "Редактировать".</p></details>
-                    <details className="profilepage-faq-item"><summary>Как отвечать на сообщения в чатах?</summary><p>Перейдите во вкладку "Мои чаты", выберите диалог и напишите ответ.</p></details>
+                    <details className="profilepage-faq-item"><summary>Как добавить объявление?</summary><p>Перейдите на вкладку «Мои объявления» и нажмите кнопку «Добавить объявление». Заполните все необходимые поля формы.</p></details>
+                    <details className="profilepage-faq-item"><summary>Как редактировать профиль?</summary><p>Для редактирования профиля зайдите в раздел «Мой профиль» и нажмите кнопку «Редактировать».</p></details>
+                    <details className="profilepage-faq-item"><summary>Как отвечать на сообщения в чатах?</summary><p>Перейдите во вкладку «Мои чаты», выберите диалог и напишите ответ.</p></details>
                   </div>
                 </div>
               </div>

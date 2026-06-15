@@ -1536,3 +1536,19 @@ body:not(.profile-page) .page-content {
   padding: 1.5rem;
   color: #aaa;
 }
+.clear-all-notifications {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.clear-all-notifications:hover {
+    background: rgba(231, 76, 60, 0.1);
+}

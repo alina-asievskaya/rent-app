@@ -24,7 +24,7 @@ namespace RentApp.API.Models
         public int ReferenceId { get; set; }
 
         [Required]
-        [MaxLength(500)]
+        [MaxLength(5000)]
         [Column("text")]
         public string Text { get; set; } = string.Empty;
 
@@ -37,4 +37,4 @@ namespace RentApp.API.Models
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;
     }
-}
+}   

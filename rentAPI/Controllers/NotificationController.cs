@@ -20,7 +20,7 @@ namespace RentApp.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMyNotifications()
+        public async Task<IActionResult> GetMyNotifications([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             var userId = GetUserId();
             if (userId == null) return Unauthorized();
@@ -28,6 +28,8 @@ namespace RentApp.API.Controllers
             var notifications = await _context.Notifications
                 .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(n => new NotificationDto
                 {
                     Id = n.Id,
@@ -39,14 +41,48 @@ namespace RentApp.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new { success = true, data = notifications });
+            var totalCount = await _context.Notifications.CountAsync(n => n.UserId == userId);
+
+            return Ok(new { success = true, data = notifications, total = totalCount, page, pageSize });
         }
+        [HttpPost("mark-all-read")]
+public async Task<IActionResult> MarkAllAsRead()
+{
+    var userId = GetUserId();
+    if (userId == null) return Unauthorized();
+
+    var unreadNotifications = await _context.Notifications
+        .Where(n => n.UserId == userId && !n.IsRead)
+        .ToListAsync();
+
+    foreach (var n in unreadNotifications)
+        n.IsRead = true;
+
+    await _context.SaveChangesAsync();
+    return Ok(new { success = true, count = unreadNotifications.Count });
+}
+[HttpDelete("clear-all")]
+public async Task<IActionResult> ClearAllNotifications()
+{
+    var userId = GetUserId();
+    if (userId == null) return Unauthorized();
+
+    var notifications = await _context.Notifications
+        .Where(n => n.UserId == userId)
+        .ToListAsync();
+
+    _context.Notifications.RemoveRange(notifications);
+    await _context.SaveChangesAsync();
+
+    return Ok(new { success = true, message = "Все уведомления удалены" });
+}
 
         [HttpPost("mark-read/{id}")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
             var userId = GetUserId();
             if (userId == null) return Unauthorized();
+            
 
             var notification = await _context.Notifications
                 .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
@@ -56,6 +92,7 @@ namespace RentApp.API.Controllers
             notification.IsRead = true;
             await _context.SaveChangesAsync();
             return Ok(new { success = true });
+            
         }
 
         private int? GetUserId()

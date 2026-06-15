@@ -19,6 +19,7 @@ import {
   faBell,
   faCalendarAlt,
   faUtensils,
+  faTrash,          // добавлено для кнопки очистки уведомлений
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import "./Header.css";
@@ -264,6 +265,27 @@ const Header: React.FC = () => {
       console.error(error);
     }
   }, []);
+
+  // Очистка всех уведомлений
+  const clearAllNotifications = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch('http://localhost:5213/api/notification/clear-all', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setNotifications([]);
+        showToast('Все уведомления удалены', 'success');
+      } else {
+        showToast('Ошибка при удалении', 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showToast('Ошибка соединения', 'error');
+    }
+  }, [showToast]);
 
   // Fetch user's own bookings to detect status changes
   const fetchUserBookingsStatus = useCallback(async () => {
@@ -800,12 +822,13 @@ const Header: React.FC = () => {
     }
   }, []);
 
+  // Обновлённая обработка клика по уведомлению с немедленным обновлением списка
   const handleNotificationClick = useCallback(async (notification: Notification) => {
     setShowNotifications(false);
     
-    // Помечаем уведомление прочитанным, если оно из кейтеринга
     if (notification.type === 'cateringRequest') {
       await markNotificationAsRead(notification.id);
+      await fetchNotifications(); // сразу обновляем уведомления
     }
     
     if (notification.type === 'message') {
@@ -885,6 +908,11 @@ const Header: React.FC = () => {
                 >
                   <div className="notifications-dropdown-header">
                     <h4>Уведомления ({notifications.length})</h4>
+                    {notifications.length > 0 && (
+                      <button className="clear-all-notifications" onClick={clearAllNotifications}>
+                        <FontAwesomeIcon icon={faTrash} /> Очистить все
+                      </button>
+                    )}
                   </div>
                   <div className="notifications-items">
                     {notifications.length === 0 ? (

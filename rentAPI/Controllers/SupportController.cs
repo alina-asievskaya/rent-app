@@ -27,7 +27,6 @@ namespace RentApp.API.Controllers
         {
             try
             {
-                // Получаем ID пользователя из токена
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
@@ -37,7 +36,6 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Проверяем существование пользователя
                 var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
                 if (!userExists)
                 {
@@ -47,7 +45,6 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Создаем новое обращение
                 var feedback = new Feedback
                 {
                     UserId = userId,
@@ -56,11 +53,9 @@ namespace RentApp.API.Controllers
                     CreatedAt = DateOnly.FromDateTime(DateTime.Now)
                 };
 
-                // Сохраняем в базу данных
                 await _context.Feedback.AddAsync(feedback);
                 await _context.SaveChangesAsync();
 
-                // Логируем создание обращения
                 _logger.LogInformation("Новое обращение в поддержку создано: ID={FeedbackId}, UserID={UserId}, Topic={Topic}", 
                     feedback.Id, userId, feedbackDto.Topic);
 
@@ -79,28 +74,24 @@ namespace RentApp.API.Controllers
                 });
             }
         }
-        // POST: api/support/{feedbackId}/reply (только для администратора)
         [HttpPost("{feedbackId}/reply")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ReplyToFeedback(int feedbackId, [FromBody] CreateSupportReplyDto replyDto)
         {
             try
             {
-                // Получаем ID администратора из токена
                 var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
                 {
                     return Unauthorized(new { success = false, message = "Неверный токен" });
                 }
 
-                // Проверяем существование обращения
                 var feedback = await _context.Feedback.FindAsync(feedbackId);
                 if (feedback == null)
                 {
                     return NotFound(new { success = false, message = "Обращение не найдено" });
                 }
 
-                // Создаём ответ
                 var reply = new SupportReply
                 {
                     FeedbackId = feedbackId,
@@ -123,7 +114,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-            // GET: api/support/{feedbackId}/replies (для администратора или владельца обращения)
             [HttpGet("{feedbackId}/replies")]
             [Authorize]
             public async Task<IActionResult> GetReplies(int feedbackId)
@@ -142,7 +132,6 @@ namespace RentApp.API.Controllers
                         return NotFound(new { success = false, message = "Обращение не найдено" });
                     }
 
-                    // Проверяем права: администратор или владелец обращения
                     bool isAdmin = User.IsInRole("Admin");
                     if (!isAdmin && feedback.UserId != currentUserId)
                     {
@@ -197,7 +186,6 @@ namespace RentApp.API.Controllers
                             f.User.Fio,
                             f.User.Email
                         },
-                        // Включаем ответы администратора
                         Replies = f.Replies.OrderBy(r => r.CreatedAt).Select(r => new
                         {
                             r.Id,
@@ -262,12 +250,12 @@ namespace RentApp.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize] // Для всех авторизованных пользователей (и пользователей, и администраторов)
+        [Authorize] 
         public async Task<IActionResult> DeleteFeedback(int id)
         {
             try
             {
-                // Получаем ID пользователя из токена
+            
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
@@ -286,7 +274,6 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Получаем пользователя для проверки роли
                 var user = await _context.Users.FindAsync(userId);
                 if (user == null)
                 {
@@ -296,15 +283,12 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Проверяем, может ли пользователь удалить это обращение
                 bool canDelete = false;
                 
-                // 1. Пользователь может удалить свое собственное обращение
                 if (feedback.UserId == userId)
                 {
                     canDelete = true;
                 }
-                // 2. Администратор может удалить любое обращение
                 else if (User.IsInRole("Admin"))
                 {
                     canDelete = true;
@@ -312,7 +296,7 @@ namespace RentApp.API.Controllers
 
                 if (!canDelete)
                 {
-                    return Forbid(); // Возвращаем 403 Forbidden
+                    return Forbid(); 
                 }
 
                 _context.Feedback.Remove(feedback);
@@ -337,12 +321,11 @@ namespace RentApp.API.Controllers
         }
 
         [HttpDelete("my/{id}")]
-        [Authorize] // Только для удаления собственных обращений
+        [Authorize] 
         public async Task<IActionResult> DeleteMyFeedback(int id)
         {
             try
             {
-                // Получаем ID пользователя из токена
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
@@ -352,7 +335,6 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Находим обращение, принадлежащее текущему пользователю
                 var feedback = await _context.Feedback
                     .FirstOrDefaultAsync(f => f.Id == id && f.UserId == userId);
 

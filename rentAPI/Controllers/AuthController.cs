@@ -172,7 +172,6 @@ public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updat
             hasChanges = true;
         }
 
-        // Обновление телефона с проверкой уникальности (если требуется)
         if (!string.IsNullOrEmpty(updateDto.Phone_num) && updateDto.Phone_num != user.Phone_num)
         {
             var phoneExists = await _context.Users
@@ -185,7 +184,6 @@ public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updat
             hasChanges = true;
         }
 
-        // Обновление email с проверкой уникальности
         if (!string.IsNullOrEmpty(updateDto.Email) && updateDto.Email != user.Email)
         {
             var emailExists = await _context.Users

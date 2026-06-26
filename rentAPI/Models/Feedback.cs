@@ -29,7 +29,6 @@ namespace RentApp.API.Models
         [Column("created_at")]
         public DateOnly CreatedAt { get; set; }
 
-        // Навигационное свойство
         public User User { get; set; } = null!;
         public ICollection<SupportReply> Replies { get; set; } = new List<SupportReply>();
     }

@@ -1,4 +1,3 @@
-// frontend/src/pages/CreateAd.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -72,7 +71,6 @@ const CreateAd: React.FC = () => {
     photoUrls: [] as string[],
   });
 
-  // Новые состояния для кейтеринга
   const [cateringCompanies, setCateringCompanies] = useState<{ id: number; companyName: string; city: string; description: string; phone: string }[]>([]);
   const [selectedCaterings, setSelectedCaterings] = useState<number[]>([]);
   const [cateringCompaniesLoading, setCateringCompaniesLoading] = useState(false);
@@ -102,7 +100,6 @@ const CreateAd: React.FC = () => {
       setFormStep(parsedDraft.formStep);
     }
 
-    // Загрузка доступных кейтеринговых компаний
     const fetchCateringCompanies = async () => {
       try {
         setCateringCompaniesLoading(true);
@@ -366,7 +363,6 @@ const CreateAd: React.FC = () => {
       });
       const result = await response.json();
       if (response.ok && result.success && result.houseId) {
-          // Привязка кейтеринговых компаний
           if (selectedCaterings.length > 0) {
               await fetch(`http://localhost:5213/api/houses/${result.houseId}/caterings`, {
                   method: 'PUT',
@@ -430,7 +426,6 @@ const CreateAd: React.FC = () => {
             <form className="createad-property-form" onSubmit={handleSubmit}>
               {formStep === 1 && (
                 <div className="createad-form-step">
-                  {/* Шаг 1: тип дома, аренда, основные параметры (без изменений) */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-home"></i> Тип дома</h3>
                     <div className="createad-house-type-grid">
@@ -589,7 +584,6 @@ const CreateAd: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* НОВЫЙ БЛОК: Выбор кейтеринговых компаний */}
                   <div className="createad-form-section">
                     <h3 className="createad-section-title"><i className="createad-icon fas fa-utensils"></i> Кейтеринг</h3>
                     <p className="createad-section-description">Выберите компании, которые будут доступны для заказа еды при бронировании дома</p>

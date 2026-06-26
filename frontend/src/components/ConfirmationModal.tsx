@@ -9,7 +9,7 @@ interface ConfirmationModalProps {
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
-  type?: 'danger' | 'warning' | 'info'; // опционально, влияет только на цвет кнопки подтверждения
+  type?: 'danger' | 'warning' | 'info'; 
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({

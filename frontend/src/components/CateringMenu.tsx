@@ -35,7 +35,6 @@ const CateringMenu: React.FC = () => {
   const token = localStorage.getItem('token');
   const API_BASE = 'http://localhost:5213';
 
-  // Функция форматирования цены с иконкой
   const formatPriceWithIcon = (price: number | null | undefined): React.ReactNode => {
     if (price == null || isNaN(price)) return null;
     return (
@@ -246,7 +245,6 @@ const CateringMenu: React.FC = () => {
         </div>
       )}
 
-      {/* Информация о компании */}
       <div className="catering-menu-info" style={{ marginBottom: '30px' }}>
         <h3 className="catering-menu-section-title">Информация о компании</h3>
         <div className="catering-menu-info-stack">
@@ -282,7 +280,6 @@ const CateringMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* Список блюд */}
       <div className="catering-menu-info">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <h3 className="catering-menu-section-title" style={{ margin: 0 }}>Меню блюд</h3>
@@ -337,7 +334,6 @@ const CateringMenu: React.FC = () => {
         )}
       </div>
 
-      {/* Модальная форма добавления/редактирования блюда */}
       {showForm && (
         <div className="catering-menu-modal-overlay" onClick={cancelForm}>
           <div className="catering-menu-modal-content" onClick={e => e.stopPropagation()}>

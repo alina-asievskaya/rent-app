@@ -21,7 +21,6 @@ namespace RentApp.API.Controllers
             _logger = logger;
         }
 
-        // GET: api/favorites/my
         [HttpGet("my")]
         [Authorize]
         public async Task<IActionResult> GetMyFavorites()
@@ -91,7 +90,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/favorites/count
         [HttpGet("count")]
         [Authorize]
         public async Task<IActionResult> GetFavoritesCount()
@@ -129,7 +127,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // POST: api/favorites/add/{houseId}
         [HttpPost("add/{houseId}")]
         [Authorize]
         public async Task<IActionResult> AddToFavorites(int houseId)
@@ -146,7 +143,6 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Проверяем, существует ли дом
                 var house = await _context.Houses.FindAsync(houseId);
                 if (house == null)
                 {
@@ -157,7 +153,6 @@ namespace RentApp.API.Controllers
                     });
                 }
 
-                // Проверяем, не добавлен ли уже дом в избранное
                 var existingFavorite = await _context.Favorites
                     .FirstOrDefaultAsync(f => f.UserId == userId && f.HouseId == houseId);
 
@@ -200,7 +195,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // DELETE: api/favorites/remove/{houseId}
         [HttpDelete("remove/{houseId}")]
         [Authorize]
         public async Task<IActionResult> RemoveFromFavorites(int houseId)
@@ -251,7 +245,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/favorites/check/{houseId}
         [HttpGet("check/{houseId}")]
         [Authorize]
         public async Task<IActionResult> CheckIfFavorite(int houseId)
@@ -288,7 +281,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // DELETE: api/favorites/clear
         [HttpDelete("clear")]
         [Authorize]
         public async Task<IActionResult> ClearAllFavorites()
@@ -341,7 +333,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // ДОБАВЛЕНО: GET: api/favorites/my-favorites-ids
         [HttpGet("my-favorites-ids")]
         [Authorize]
         public async Task<IActionResult> GetMyFavoriteIds()

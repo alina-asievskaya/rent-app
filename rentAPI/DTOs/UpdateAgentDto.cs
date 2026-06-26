@@ -28,7 +28,6 @@ namespace RentApp.API.DTOs
 
         public List<string>? PortfolioPhotos { get; set; }
 
-        // НОВОЕ: цена услуг
         [Range(0, 999999)]
         public decimal? Price { get; set; }
     }

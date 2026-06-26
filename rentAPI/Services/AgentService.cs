@@ -159,7 +159,7 @@ namespace RentApp.API.Services
                 IsAgent = true,
                 DisplayName = agent.DisplayName,
                 PortfolioPhotos = portfolio,
-                Price = agent.Price   // добавлено
+                Price = agent.Price   
             };
         }
 
@@ -245,9 +245,9 @@ namespace RentApp.API.Services
                     UserId = user.Id,
                     Specialization = createDto.Specialization,
                     Experience = createDto.Experience,
-                    Photo = createDto.Photo ?? "",          // если фото не передано – пустая строка
+                    Photo = createDto.Photo ?? "",          
                     Rating = createDto.Rating,
-                    Price = createDto.Price ?? 0m           // если цена не указана – 0
+                    Price = createDto.Price ?? 0m          
                 };
 
                 if (string.IsNullOrWhiteSpace(createDto.DisplayName))
@@ -297,7 +297,6 @@ namespace RentApp.API.Services
                     agent.PortfolioPhotos = JsonSerializer.Serialize(updateDto.PortfolioPhotos);
                 }
 
-                // НОВОЕ: обновление цены (если передано)
                 if (updateDto.Price.HasValue)
                     agent.Price = updateDto.Price.Value;
 

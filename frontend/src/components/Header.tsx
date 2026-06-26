@@ -867,7 +867,6 @@ const Header: React.FC = () => {
             <li><Link to="/about" className={isActive("/about") ? "active" : ""}>О нас</Link></li>
           </ul>
           <div className="nav-auth">
-            {/* Notifications bell */}
             {isLoggedIn && !isAdmin && (
               <div className="nav-notifications">
                 <button
@@ -928,7 +927,6 @@ const Header: React.FC = () => {
               </div>
             )}
 
-            {/* Favorites */}
             {shouldShowFavorites && (
               <div className="nav-favorites">
                 <button 
@@ -1018,7 +1016,6 @@ const Header: React.FC = () => {
               </div>
             )}
 
-            {/* User menu */}
             {isLoggedIn ? (
               <div className="user-profile-menu" ref={userBtnRef}>
                 <button className="user-profile-link" onClick={toggleUserDropdown}>
@@ -1028,7 +1025,6 @@ const Header: React.FC = () => {
                   </div>
                 </button>
                 <div className="user-dropdown">
-                  {/* ИСПРАВЛЕНО: для админа ведет на /admin, иначе на /profile */}
                   <Link 
                     to={isAdmin ? "/admin" : "/profile"} 
                     className="dropdown-item" 
@@ -1056,7 +1052,6 @@ const Header: React.FC = () => {
         </nav>
       </header>
 
-      {/* Toast notifications */}
       <div className="toast-container">
         {toasts.map(toast => (
           <div key={toast.id} className={`toast toast-${toast.type}`} onClick={() => removeToast(toast.id)}>
@@ -1072,7 +1067,6 @@ const Header: React.FC = () => {
         ))}
       </div>
 
-      {/* Auth modal */}
       {showAuthModal && (
         <div className="auth-modal-overlay" onClick={closeAuthModal}>
           <div className="auth-modal-content" onClick={e => e.stopPropagation()}>

@@ -42,7 +42,6 @@ import {
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 import "./HouseInfo.css";
 
-// ========== КОМПОНЕНТ УВЕДОМЛЕНИЙ ==========
 const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
   message, 
   type, 
@@ -71,7 +70,6 @@ const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'war
     </div>
   );
 };
-// ==========================================
 
 interface ApiHouseInfo {
   id: number;
@@ -1087,7 +1085,6 @@ const HouseInfo: React.FC = () => {
     }
   };
 
-  // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ ДЛЯ ДАТЫ ОТЗЫВОВ ==========
   const parseReviewDate = (dateString: string): Date => {
     if (!dateString) return new Date();
     if (dateString.includes('T')) {
@@ -1118,7 +1115,6 @@ const HouseInfo: React.FC = () => {
       return 'Дата не указана';
     }
   };
-  // ============================================================
 
   const getFeatureIcon = (feature: string): IconType => {
     const iconMap: Record<string, IconType> = {
@@ -1515,7 +1511,6 @@ const HouseInfo: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Раздел отзывов */}
                 <div className="reviews-section-house">
                   <h3>Отзывы о доме</h3>
                   

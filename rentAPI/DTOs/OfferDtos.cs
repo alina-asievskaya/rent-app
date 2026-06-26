@@ -27,6 +27,6 @@ namespace RentApp.API.DTOs
 
     public class UpdateOfferStatusDto
     {
-        public string Status { get; set; } = string.Empty; // "approved" или "rejected"
+        public string Status { get; set; } = string.Empty; 
     }
 }

@@ -32,7 +32,6 @@ namespace RentApp.API.Models
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Навигационные свойства
         [ForeignKey("ChatId")]
         public Chat Chat { get; set; } = null!;
 

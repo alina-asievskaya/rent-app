@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import "./Catalog.css";
 
-// Импорт Font Awesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faFilter,
@@ -43,7 +42,6 @@ import {
 import { faHeart as faHeartOutline } from '@fortawesome/free-regular-svg-icons';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 
-// Типы для фильтров
 interface FilterOptions {
   city: string;
   propertyType: string;
@@ -167,11 +165,9 @@ const Catalog: React.FC = () => {
   const [deletingProperty, setDeletingProperty] = useState<number | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   
-  // Пагинация
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(6);
 
-  // Состояние фильтров
   const [filters, setFilters] = useState<FilterOptions>({
     city: '',
     propertyType: '',
@@ -184,10 +180,8 @@ const Catalog: React.FC = () => {
     rentType: ''
   });
 
-  // Получение информации о текущем пользователе
   const [currentUser, setCurrentUser] = useState<{ email: string; isAdmin: boolean } | null>(null);
 
-  // Данные для фильтров - города и типы из БД
   const cities = useMemo(() => {
     const uniqueCities = Array.from(new Set(
       properties
@@ -253,7 +247,6 @@ const Catalog: React.FC = () => {
     return priceStr;
   };
 
-  // Проверка прав администратора при загрузке
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -283,7 +276,6 @@ const Catalog: React.FC = () => {
     }
   }, []);
 
-  // Функция для получения информации о владельце дома
   const getHouseOwnerInfo = async (houseId: number): Promise<number | null> => {
     try {
       const response = await fetch(`http://localhost:5213/api/houses/${houseId}/owner-info`, {
@@ -314,7 +306,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Функция для проверки существующего чата
   const checkExistingChat = async (ownerId: number, houseId: number): Promise<number | null> => {
     try {
       const token = localStorage.getItem('token');
@@ -347,7 +338,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Функция для создания нового чата
   const createNewChat = async (ownerId: number, houseId: number): Promise<number | null> => {
     try {
       const token = localStorage.getItem('token');
@@ -382,7 +372,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Основная функция для открытия/создания чата
   const handleOpenChat = async (propertyId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -434,7 +423,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Функция для удаления объявления администратором
   const handleDeleteProperty = async (propertyId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -481,12 +469,10 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Функция для просмотра объявления (для админа)
   const handleViewProperty = (propertyId: number) => {
     navigate(`/house/${propertyId}`);
   };
 
-  // Функция для загрузки данных из API
   const fetchProperties = async () => {
     try {
       setLoading(true);
@@ -608,7 +594,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Загрузка при монтировании компонента
   useEffect(() => {
     fetchProperties();
     
@@ -633,7 +618,6 @@ const Catalog: React.FC = () => {
     loadUserFavorites();
   }, [location.search]);
 
-  // Синхронизация избранного с шапкой
   useEffect(() => {
     const handleFavoritesUpdate = () => {
       loadUserFavorites();
@@ -767,7 +751,6 @@ const Catalog: React.FC = () => {
     }
   };
 
-  // Фильтрация + сортировка через useMemo
   const filteredProperties = useMemo(() => {
     let result = [...properties];
 
@@ -958,7 +941,6 @@ const Catalog: React.FC = () => {
     <>
       <Header />
       
-      {/* Toast уведомления */}
       <div className="toast-container">
         {toasts.map(toast => (
           <div 

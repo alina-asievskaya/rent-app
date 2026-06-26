@@ -35,7 +35,6 @@ namespace RentApp.API.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Конфигурация Users
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("Users");
@@ -68,18 +67,15 @@ namespace RentApp.API.Data
                     .HasColumnName("id_agent")
                     .HasDefaultValue(false);
 
-                // Уникальные индексы
                 entity.HasIndex(u => u.Email).IsUnique();
                 entity.HasIndex(u => u.Phone_num).IsUnique();
 
-                // Связь с Agent
                 entity.HasOne(u => u.AgentInfo)
                     .WithOne(a => a.User)
                     .HasForeignKey<Agent>(a => a.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Конфигурация Favorites
             modelBuilder.Entity<Favorite>(entity =>
             {
                 entity.ToTable("Favorites");
@@ -101,25 +97,21 @@ namespace RentApp.API.Data
                     .HasColumnName("created_at")
                     .HasDefaultValueSql("GETUTCDATE()");
 
-                // Внешний ключ к Users
                 entity.HasOne(f => f.User)
                     .WithMany()
                     .HasForeignKey(f => f.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
                 
-                // Внешний ключ к Houses
                 entity.HasOne(f => f.House)
                     .WithMany()
                     .HasForeignKey(f => f.HouseId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Индексы
                 entity.HasIndex(f => f.UserId);
                 entity.HasIndex(f => f.HouseId);
                 entity.HasIndex(f => new { f.UserId, f.HouseId }).IsUnique();
             });
 
-            // Конфигурация Agents (ДОБАВЛЕНЫ поля DisplayName и PortfolioPhotos)
             modelBuilder.Entity<Agent>(entity =>
             {
                 entity.ToTable("Agents");
@@ -166,7 +158,6 @@ namespace RentApp.API.Data
                     .HasMaxLength(4000)
                     .HasDefaultValue("[]");
                 
-                // Исправлено: не используем HasDefaultValue, т.к. значение задаётся в свойстве модели
                 entity.Property(a => a.Price)
                     .HasColumnName("price")
                     .HasColumnType("decimal(18,2)");
@@ -179,7 +170,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(a => a.UserId);
             });
 
-            // Конфигурация AgentReviews
             modelBuilder.Entity<AgentReview>(entity =>
             {
                 entity.ToTable("AgentReviews");
@@ -211,25 +201,21 @@ namespace RentApp.API.Data
                     .HasColumnType("date")
                     .HasDefaultValueSql("GETUTCDATE()");
 
-                // Внешний ключ к Users
                 entity.HasOne(ar => ar.User)
                     .WithMany()
                     .HasForeignKey(ar => ar.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
                 
-                // Внешний ключ к Agents
                 entity.HasOne(ar => ar.Agent)
                     .WithMany(a => a.Reviews)
                     .HasForeignKey(ar => ar.AgentId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Индексы
                 entity.HasIndex(ar => ar.AgentId);
                 entity.HasIndex(ar => ar.UserId);
                 entity.HasIndex(ar => ar.DataReviews);
             });
 
-            // Конфигурация Feedback
             modelBuilder.Entity<Feedback>(entity =>
             {
                 entity.ToTable("Feedback");
@@ -257,18 +243,15 @@ namespace RentApp.API.Data
                     .HasColumnName("created_at")
                     .HasDefaultValueSql("GETUTCDATE()");
 
-                // Внешний ключ к Users
                 entity.HasOne(f => f.User)
                     .WithMany()
                     .HasForeignKey(f => f.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Индексы
                 entity.HasIndex(f => f.UserId);
                 entity.HasIndex(f => f.CreatedAt);
             });
 
-            // Конфигурация Houses
             modelBuilder.Entity<House>(entity =>
             {
                 entity.ToTable("Houses");
@@ -601,7 +584,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(c => new { c.User1Id, c.User2Id, c.HouseId });
             });
             
-            // Bookings
             modelBuilder.Entity<Booking>(entity =>
             {
                 entity.ToTable("Bookings");
@@ -619,8 +601,7 @@ namespace RentApp.API.Data
                 entity.HasIndex(b => b.HouseId);
                 entity.HasIndex(b => b.UserId);
                 entity.HasIndex(b => b.BookingDate);
-                // Вместо уникального индекса создайте обычный (не уникальный) для ускорения запросов
-                entity.HasIndex(b => new { b.HouseId, b.BookingDate }); // одна дата - одно бронирование на дом
+                entity.HasIndex(b => new { b.HouseId, b.BookingDate }); 
             });
 
             modelBuilder.Entity<Message>(entity =>
@@ -672,7 +653,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(m => new { m.ChatId, m.IsRead, m.CreatedAt });
             });
 
-            // Конфигурация MenuItem
             modelBuilder.Entity<MenuItem>(entity =>
             {
                 entity.ToTable("MenuItems");
@@ -736,7 +716,6 @@ namespace RentApp.API.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // НОВАЯ КОНФИГУРАЦИЯ ДЛЯ Notification
             modelBuilder.Entity<Notification>(entity =>
             {
                 entity.ToTable("Notifications");
@@ -759,7 +738,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(n => n.CreatedAt);
                 entity.HasIndex(n => n.IsRead);
             });
-            // Конфигурация CateringOwner
             modelBuilder.Entity<CateringOwner>(entity =>
             {
                 entity.ToTable("CateringOwners");
@@ -781,7 +759,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(co => co.UserId);
             });
 
-            // Конфигурация Notification
             modelBuilder.Entity<Notification>(entity =>
             {
                 entity.ToTable("Notifications");
@@ -802,7 +779,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(n => n.UserId);
             });
 
-            // Конфигурация MenuItem
             modelBuilder.Entity<MenuItem>(entity =>
             {
                 entity.ToTable("MenuItems");
@@ -824,7 +800,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(m => m.CateringOwnerId);
             });
 
-            // Конфигурация HouseCatering
             modelBuilder.Entity<HouseCatering>(entity =>
             {
                 entity.ToTable("HouseCaterings");
@@ -846,7 +821,6 @@ namespace RentApp.API.Data
                 entity.HasIndex(hc => new { hc.HouseId, hc.CateringOwnerId }).IsUnique();
             });
 
-                // Конфигурация CateringOrder
                 modelBuilder.Entity<CateringOrder>(entity =>
                 {
                     entity.ToTable("CateringOrders");

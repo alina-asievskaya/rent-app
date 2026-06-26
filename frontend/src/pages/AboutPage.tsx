@@ -7,7 +7,6 @@ const AboutPage: React.FC = () => {
     <>
       <Header />
       <main className="about-page">
-        {/* Hero — без цифр и статистики */}
         <section className="hero">
           <div className="hero__inner">
             <div className="hero__overline">PrimeHouse</div>
@@ -32,7 +31,6 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Принципы работы (оставлены из старого кода) */}
         <section className="principles">
           <div className="principles__grid">
             <div className="principle principle--border-left">
@@ -54,7 +52,6 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Почему выбирают PrimeHouse */}
         <section className="why">
           <h2 className="why__heading">Почему выбирают PrimeHouse</h2>
           <div className="why__grid">
@@ -79,7 +76,6 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Мероприятия + Кейтеринг */}
         <section className="two-col">
           <div className="two-col__block">
             <span className="two-col__label">Мероприятия под ключ</span>
@@ -124,7 +120,6 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Для владельцев домов */}
         <section className="owners">
           <div className="owners__label">Для владельцев домов</div>
           <div className="owners__grid">
@@ -151,7 +146,6 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Контакты (из старого кода) */}
         <section className="contacts">
           <div className="contacts__item">
             <h4>Офис</h4>

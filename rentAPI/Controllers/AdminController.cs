@@ -1,4 +1,3 @@
-// RentApp.API/Controllers/AdminController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +24,6 @@ namespace RentApp.API.Controllers
             _logger = logger;
         }
 
-        // ========== Существующие методы (без изменений) ==========
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -50,19 +48,97 @@ namespace RentApp.API.Controllers
         {
             try
             {
-                var user = await _context.Users.FindAsync(id);
-                if (user == null) return NotFound(new { success = false, message = "Пользователь не найден" });
-                if (user.Email.ToLower() == "admin@gmail.com") return BadRequest(new { success = false, message = "Нельзя удалить администратора" });
+                var user = await _context.Users
+                    .Include(u => u.AgentInfo)
+                    .FirstOrDefaultAsync(u => u.Id == id);
 
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Пользователь удален: UserID={UserId}", id);
-                return Ok(new { success = true, message = "Пользователь успешно удален" });
+                if (user == null)
+                    return NotFound(new { success = false, message = "Пользователь не найден" });
+
+                if (user.Email.ToLower() == "admin@gmail.com")
+                    return BadRequest(new { success = false, message = "Нельзя удалить администратора" });
+
+                var houses = await _context.Houses.Where(h => h.IdOwner == id).ToListAsync();
+                if (houses.Any())
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"Пользователь является владельцем {houses.Count} домов. Сначала удалите или передайте дома другому владельцу."
+                    });
+                }
+
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    if (user.AgentInfo != null)
+                    {
+                        _context.Agents.Remove(user.AgentInfo);
+                    }
+
+                    var feedbacks = await _context.Feedback.Where(f => f.UserId == id).ToListAsync();
+                    if (feedbacks.Any()) _context.Feedback.RemoveRange(feedbacks);
+
+                    var favorites = await _context.Favorites.Where(f => f.UserId == id).ToListAsync();
+                    if (favorites.Any()) _context.Favorites.RemoveRange(favorites);
+
+                    var bookings = await _context.Bookings.Where(b => b.UserId == id).ToListAsync();
+                    if (bookings.Any()) _context.Bookings.RemoveRange(bookings);
+
+                    var serviceRequests = await _context.ServiceRequests.Where(s => s.UserId == id).ToListAsync();
+                    if (serviceRequests.Any()) _context.ServiceRequests.RemoveRange(serviceRequests);
+
+                    var notifications = await _context.Notifications.Where(n => n.UserId == id).ToListAsync();
+                    if (notifications.Any()) _context.Notifications.RemoveRange(notifications);
+
+                    var cateringOwners = await _context.CateringOwners.Where(c => c.UserId == id).ToListAsync();
+                    if (cateringOwners.Any()) _context.CateringOwners.RemoveRange(cateringOwners);
+
+                    var agentReviews = await _context.AgentReviews.Where(ar => ar.UserId == id).ToListAsync();
+                    if (agentReviews.Any()) _context.AgentReviews.RemoveRange(agentReviews);
+
+                    var reviewHouses = await _context.ReviewHouses.Where(rh => rh.IdUser == id).ToListAsync();
+                    if (reviewHouses.Any()) _context.ReviewHouses.RemoveRange(reviewHouses);
+
+                    var chats = await _context.Chats
+                        .Include(c => c.Messages)
+                        .Where(c => c.User1Id == id || c.User2Id == id)
+                        .ToListAsync();
+                    foreach (var chat in chats)
+                    {
+                        if (chat.Messages.Any()) _context.Messages.RemoveRange(chat.Messages);
+                        _context.Chats.Remove(chat);
+                    }
+
+                    var messages = await _context.Messages.Where(m => m.SenderId == id).ToListAsync();
+                    if (messages.Any()) _context.Messages.RemoveRange(messages);
+
+                    var cateringOrders = await _context.CateringOrders.Where(o => o.UserId == id).ToListAsync();
+                    if (cateringOrders.Any()) _context.CateringOrders.RemoveRange(cateringOrders);
+
+                    _context.Users.Remove(user);
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("Пользователь удален: UserID={UserId}", id);
+                    return Ok(new { success = true, message = "Пользователь успешно удален" });
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при удалении пользователя");
-                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+                _logger.LogError(ex, "Ошибка при удалении пользователя ID={UserId}", id);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Внутренняя ошибка сервера при удалении пользователя",
+                    details = ex.Message 
+                });
             }
         }
 
@@ -167,7 +243,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // ========== ИЗМЕНЕННЫЙ МЕТОД: теперь включает ответы администратора ==========
         [HttpGet("feedback")]
         public async Task<IActionResult> GetAllFeedback()
         {
@@ -175,8 +250,8 @@ namespace RentApp.API.Controllers
             {
                 var feedback = await _context.Feedback
                     .Include(f => f.User)
-                    .Include(f => f.Replies)           // ← добавляем ответы
-                        .ThenInclude(r => r.Admin)     // ← и данные администратора
+                    .Include(f => f.Replies)
+                        .ThenInclude(r => r.Admin)
                     .OrderByDescending(f => f.CreatedAt)
                     .Select(f => new
                     {
@@ -185,7 +260,6 @@ namespace RentApp.API.Controllers
                         f.Text,
                         f.CreatedAt,
                         User = new { f.User.Id, f.User.Fio, f.User.Email, f.User.Phone_num },
-                        // Добавляем Replies
                         Replies = f.Replies.OrderBy(r => r.CreatedAt).Select(r => new
                         {
                             r.Id,
@@ -242,7 +316,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // ========== Методы для управления заявками на услуги (без изменений) ==========
         [HttpGet("service-requests")]
         public async Task<IActionResult> GetOffers()
         {

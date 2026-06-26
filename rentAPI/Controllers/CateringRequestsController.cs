@@ -19,7 +19,6 @@ namespace RentApp.API.Controllers
             _context = context;
         }
 
-       // GET: api/cateringrequests/incoming
         [HttpGet("incoming")]
         public async Task<IActionResult> GetIncomingRequests()
         {
@@ -30,7 +29,7 @@ namespace RentApp.API.Controllers
                 .Include(r => r.House)
                     .ThenInclude(h => h.HouseInfo)
                 .Include(r => r.House)
-                    .ThenInclude(h => h.Photos)   // подгружаем фото
+                    .ThenInclude(h => h.Photos)   
                 .Where(r => r.CateringOwnerId == ownerId && r.Status == "pending")
                 .OrderByDescending(r => r.CreatedAt)
                 .Select(r => new
@@ -44,14 +43,13 @@ namespace RentApp.API.Controllers
                     HouseTitle = r.House.Description,
                     MainPhoto = r.House.Photos.FirstOrDefault() != null
                         ? r.House.Photos.FirstOrDefault().Photo
-                        : null   // если фото нет – вернём null
+                        : null   
                 })
                 .ToListAsync();
 
             return Ok(new { success = true, data = requests });
         }
 
-        // POST: api/cateringrequests/{id}/approve
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> ApproveRequest(int id)
         {
@@ -65,7 +63,6 @@ namespace RentApp.API.Controllers
             request.Status = "approved";
             request.RespondedAt = DateTime.UtcNow;
 
-            // Создаём активную связь
             var houseCatering = new HouseCatering
             {
                 HouseId = request.HouseId,
@@ -73,7 +70,6 @@ namespace RentApp.API.Controllers
             };
             _context.HouseCaterings.Add(houseCatering);
 
-            // Уведомление владельцу дома
             var house = await _context.Houses.FindAsync(request.HouseId);
             if (house != null)
             {
@@ -93,7 +89,6 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true });
         }
 
-        // POST: api/cateringrequests/{id}/reject
         [HttpPost("{id}/reject")]
         public async Task<IActionResult> RejectRequest(int id)
         {
@@ -107,7 +102,6 @@ namespace RentApp.API.Controllers
             request.Status = "rejected";
             request.RespondedAt = DateTime.UtcNow;
 
-            // Уведомление владельцу дома
             var house = await _context.Houses.FindAsync(request.HouseId);
             if (house != null)
             {

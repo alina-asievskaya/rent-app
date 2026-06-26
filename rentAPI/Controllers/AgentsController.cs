@@ -5,7 +5,7 @@ using RentApp.API.Services;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using RentApp.API.Data;
-using System.Text.Json;   // NEW
+using System.Text.Json;   
 
 namespace RentApp.API.Controllers
 {
@@ -16,14 +16,14 @@ namespace RentApp.API.Controllers
         private readonly IAgentService _agentService;
         private readonly AppDbContext _context;
         private readonly ILogger<AgentsController> _logger;
-        private readonly ICloudinaryService _cloudinaryService;   // NEW
+        private readonly ICloudinaryService _cloudinaryService;   
 
         public AgentsController(IAgentService agentService, AppDbContext context, ILogger<AgentsController> logger, ICloudinaryService cloudinaryService)
         {
             _agentService = agentService;
             _context = context;
             _logger = logger;
-            _cloudinaryService = cloudinaryService;   // NEW
+            _cloudinaryService = cloudinaryService;   
         }
 
         [HttpGet("catalog")]
@@ -329,12 +329,10 @@ namespace RentApp.API.Controllers
             if (agent == null)
                 return NotFound(new { success = false, message = "Вы не являетесь агентом" });
 
-            // Используем GetAgentByIdAsync, который возвращает AgentDto (включает PortfolioPhotos)
             var dto = await _agentService.GetAgentByIdAsync(agent.Id);
             return Ok(new { success = true, data = dto });
         }
 
-        // NEW: загрузка фото в портфолио агента
         [HttpPost("{id}/upload-portfolio")]
         [Authorize]
         public async Task<IActionResult> UploadPortfolioPhoto(int id, IFormFile file)

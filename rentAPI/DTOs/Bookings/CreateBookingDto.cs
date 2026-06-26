@@ -12,7 +12,6 @@ namespace RentApp.API.DTOs.Bookings
         [Required]
         public DateTime BookingDate { get; set; }
 
-        // Кейтеринг (опционально)
         public int? CateringOwnerId { get; set; }
         public List<CateringOrderItemDto>? CateringItems { get; set; }
     }

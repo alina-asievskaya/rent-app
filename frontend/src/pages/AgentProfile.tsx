@@ -135,17 +135,14 @@ const AgentProfile: React.FC = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   
-  // Состояния для карусели (прокрутка по одному фото)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Адаптив: на узких экранах показываем 2 фото
   useEffect(() => {
     const updateItemsPerPage = () => {
       const newItemsPerPage = window.innerWidth < 650 ? 2 : 3;
       setItemsPerPage(newItemsPerPage);
-      // Корректируем индекс при изменении количества видимых элементов
       setCurrentIndex(prev => Math.min(prev, totalItems - newItemsPerPage));
     };
     updateItemsPerPage();
@@ -153,7 +150,6 @@ const AgentProfile: React.FC = () => {
     return () => window.removeEventListener('resize', updateItemsPerPage);
   }, [totalItems]);
 
-  // Сбрасываем индекс при изменении списка фото
   useEffect(() => {
     setTotalItems(portfolioPhotos.length);
     setCurrentIndex(0);
@@ -576,7 +572,6 @@ const AgentProfile: React.FC = () => {
 
         <div className="container-agent">
           <div className="agent-profile-layout">
-            {/* Левая колонка */}
             <div className="agent-profile-sidebar">
               <div className="agent-profile-card">
                 <div className="agent-avatar-container">
@@ -644,7 +639,6 @@ const AgentProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* Правая колонка */}
             <div className="agent-profile-content">
               <div className="about-section">
                 <h2>Обо мне</h2>
@@ -674,7 +668,6 @@ const AgentProfile: React.FC = () => {
                 </div>
               </div>
 
-              {/* ===== ИСПРАВЛЕННАЯ КАРУСЕЛЬ – СДВИГ НА ОДНО ФОТО ===== */}
               <div className="portfolio-section">
                 <h2>Портфолио работ</h2>
                 {portfolioPhotos.length === 0 ? (
@@ -727,7 +720,6 @@ const AgentProfile: React.FC = () => {
                 )}
               </div>
 
-              {/* Лайтбокс */}
               {lightboxOpen && (
                 <div className="lightbox-overlay" onClick={closeLightbox}>
                   <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>

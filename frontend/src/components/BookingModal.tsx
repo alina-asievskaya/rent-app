@@ -103,7 +103,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
         }
     };
 
-    // Вспомогательные функции для отображения дат заезда/выезда
     const getCheckInDate = (): Date | null => {
         if (!selectedDate) return null;
         const date = new Date(selectedDate);
@@ -114,19 +113,17 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
     const getCheckOutDate = (): Date | null => {
         if (!selectedDate) return null;
         if (rentType === 'day') {
-            // посуточно: выезд на следующий день в 12:00
-            const out = new Date(selectedDate);
+            const lastDate = selectedEndDate || selectedDate;
+            const out = new Date(lastDate);
             out.setDate(out.getDate() + 1);
             out.setHours(12, 0, 0, 0);
             return out;
         } else {
-            // помесячно: выезд через 30 дней в 12:00
             if (selectedEndDate) {
                 const out = new Date(selectedEndDate);
                 out.setHours(12, 0, 0, 0);
                 return out;
             }
-            // если ещё не выбрана конечная дата (но в месячном режиме endDate устанавливается автоматом)
             const out = new Date(selectedDate);
             out.setDate(out.getDate() + 30);
             out.setHours(12, 0, 0, 0);
@@ -153,54 +150,33 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
         }
 
         try {
-            if (rentType === 'month' && selectedEndDate) {
-                // помесячная аренда: бронируем все 30 дней
-                const bookingRequests = [];
-                const startDate = new Date(selectedDate);
-                const endDate = new Date(selectedEndDate);
-                const datesToBook = [];
-                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                    datesToBook.push(new Date(d));
-                }
-                for (const date of datesToBook) {
-                    const bookingDateUTC = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-                    const bookingData: BookingRequestData = {
-                        houseId,
-                        bookingDate: bookingDateUTC.toISOString().split('T')[0]
-                    };
-                    if (catering && catering.items.length > 0) {
-                        bookingData.cateringOwnerId = catering.cateringOwnerId;
-                        bookingData.cateringItems = catering.items.map(item => ({
-                            menuItemId: item.id,
-                            name: item.name,
-                            price: item.price,
-                            quantity: item.quantity
-                        }));
-                    }
-                    bookingRequests.push(
-                        fetch('http://localhost:5213/api/bookings', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify(bookingData),
-                        })
-                    );
-                }
-                const responses = await Promise.all(bookingRequests);
-                const results = await Promise.all(responses.map(r => r.json()));
-                const allSuccess = results.every(r => r.success === true || r.success === undefined);
-                if (allSuccess) {
-                    showNotification(`Заявка на бронирование на месяц (${datesToBook.length} дней) отправлена`, 'success');
-                    onBookingSuccess();
-                    setTimeout(handleClose, 1500);
-                } else {
-                    const errorMessages = results.filter(r => !r.success && r.message).map(r => r.message);
-                    showNotification(errorMessages[0] || 'Ошибка при бронировании некоторых дат', 'error');
-                }
+            const startDate = new Date(selectedDate);
+            let endDate: Date;
+            if (rentType === 'day') {
+                endDate = selectedEndDate ? new Date(selectedEndDate) : new Date(selectedDate);
             } else {
-                // посуточная аренда
-                const bookingDateUTC = new Date(Date.UTC(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()));
-                const bookingDateString = bookingDateUTC.toISOString().split('T')[0];
-                const bookingData: BookingRequestData = { houseId, bookingDate: bookingDateString };
+                endDate = selectedEndDate ? new Date(selectedEndDate) : new Date(selectedDate);
+                endDate.setDate(endDate.getDate() + 29);
+            }
+
+            const datesToBook = [];
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                datesToBook.push(new Date(d));
+            }
+
+            if (datesToBook.length > 30) {
+                showNotification('Нельзя бронировать более 30 дней подряд', 'error');
+                setIsSubmitting(false);
+                return;
+            }
+
+            const bookingRequests = [];
+            for (const date of datesToBook) {
+                const bookingDateUTC = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                const bookingData: BookingRequestData = {
+                    houseId,
+                    bookingDate: bookingDateUTC.toISOString().split('T')[0]
+                };
                 if (catering && catering.items.length > 0) {
                     bookingData.cateringOwnerId = catering.cateringOwnerId;
                     bookingData.cateringItems = catering.items.map(item => ({
@@ -210,20 +186,30 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
                         quantity: item.quantity
                     }));
                 }
-                const response = await fetch('http://localhost:5213/api/bookings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify(bookingData),
-                });
-                const result = await response.json();
-                if (!response.ok || !result.success) {
-                    showNotification(result.message || 'Ошибка при создании бронирования', 'error');
-                    setIsSubmitting(false);
-                    return;
-                }
-                showNotification('Заявка на бронирование отправлена', 'success');
+                bookingRequests.push(
+                    fetch('http://localhost:5213/api/bookings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(bookingData),
+                    })
+                );
+            }
+
+            const responses = await Promise.all(bookingRequests);
+            const results = await Promise.all(responses.map(r => r.json()));
+            const allSuccess = results.every(r => r.success === true || r.success === undefined);
+
+            if (allSuccess) {
+                const daysCount = datesToBook.length;
+                const message = rentType === 'month' 
+                    ? `Заявка на бронирование на месяц (${daysCount} дней) отправлена` 
+                    : `Заявка на бронирование на ${daysCount} суток отправлена`;
+                showNotification(message, 'success');
                 onBookingSuccess();
                 setTimeout(handleClose, 1500);
+            } else {
+                const errorMessages = results.filter(r => !r.success && r.message).map(r => r.message);
+                showNotification(errorMessages[0] || 'Ошибка при бронировании некоторых дат', 'error');
             }
         } catch (error) {
             console.error(error);
@@ -238,6 +224,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
 
     const checkIn = getCheckInDate();
     const checkOut = getCheckOutDate();
+    const daysCount = selectedDate && selectedEndDate 
+        ? Math.ceil((selectedEndDate.getTime() - selectedDate.getTime()) / (1000*60*60*24)) + 1
+        : (selectedDate ? 1 : 0);
 
     return (
         <Modal isOpen={isOpen} onRequestClose={handleClose} className="booking-modal" overlayClassName="booking-modal-overlay">
@@ -252,11 +241,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
                         <BookingCalendar
                             houseId={houseId}
                             selectedDate={selectedDate}
+                            selectedEndDate={selectedEndDate}
                             onSelectDate={handleDateSelect}
                             bookedDates={[]}
                             rentType={rentType}
                         />
-                        {/* Блок с информацией о заезде/выезде */}
                         {selectedDate && checkIn && checkOut && (
                             <div className="booking-dates-info">
                                 <div className="info-row">
@@ -269,18 +258,15 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
                                     <span className="info-label">Выезд:</span>
                                     <span className="info-value">{formatDateForDisplay(checkOut)}</span>
                                 </div>
-                                {rentType === 'month' && selectedEndDate && (
-                                    <div className="info-note">
-                                        <i className="fas fa-info-circle"></i>
-                                        <span>Бронирование на 30 дней</span>
-                                    </div>
-                                )}
-                                {rentType === 'day' && (
-                                    <div className="info-note">
-                                        <i className="fas fa-info-circle"></i>
-                                        <span>Сутки: заезд в 12:00, выезд на следующий день в 12:00</span>
-                                    </div>
-                                )}
+                                <div className="info-note">
+                                    <i className="fas fa-info-circle"></i>
+                                    <span>
+                                        {rentType === 'month' 
+                                            ? 'Бронирование на 30 дней' 
+                                            : `Количество суток: ${daysCount}`
+                                        }
+                                    </span>
+                                </div>
                             </div>
                         )}
                         <div className="step-actions">

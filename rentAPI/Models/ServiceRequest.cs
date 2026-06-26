@@ -19,7 +19,7 @@ namespace RentApp.API.Models
         [Required]
         [MaxLength(50)]
         [Column("service_type")]
-        public string ServiceType { get; set; } = string.Empty; // catering, photography, flowers
+        public string ServiceType { get; set; } = string.Empty; 
 
         [Required]
         [MaxLength(200)]
@@ -43,8 +43,7 @@ namespace RentApp.API.Models
 
         [MaxLength(20)]
         [Column("status")]
-        public string Status { get; set; } = "pending"; // pending, approved, rejected
-
+        public string Status { get; set; } = "pending"; 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

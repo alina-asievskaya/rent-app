@@ -19,7 +19,6 @@ import {
 import "./Agents.css";
 import { useNavigate } from "react-router-dom";
 
-// Типы для API ответов
 interface AgentApiResponse {
   id: number;
   fio: string;
@@ -60,7 +59,6 @@ interface ApiErrorDetails {
   stackTrace?: string;
 }
 
-// Интерфейсы для чата
 interface ChatItem {
   id: number;
   user_id: number;
@@ -110,14 +108,12 @@ const Agents: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
-  // Фильтры
   const [filters, setFilters] = useState({
     specialty: '',
     experience: '',
     rating: ''
   });
 
-  // Данные для фильтров – ОБНОВЛЕННЫЕ СПЕЦИАЛИЗАЦИИ
   const [specialties, setSpecialties] = useState([
     "Все",
     "Организация корпоративных мероприятий",
@@ -137,7 +133,6 @@ const Agents: React.FC = () => {
     { id: 'name-asc', label: 'По имени (А-Я)' }
   ];
 
-  // Декодирование токена
   const decodeToken = (token: string) => {
     try {
       const base64Url = token.split('.')[1];
@@ -153,7 +148,6 @@ const Agents: React.FC = () => {
     }
   };
 
-  // Проверка авторизации
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -196,7 +190,6 @@ const Agents: React.FC = () => {
     checkAuth();
   }, []);
 
-  // Функция для получения UserId агента
   const getAgentUserId = async (agentId: number): Promise<number> => {
     try {
       const API_URL = 'http://localhost:5213/api';
@@ -222,7 +215,6 @@ const Agents: React.FC = () => {
     }
   };
 
-  // Проверка существующего чата
   const checkExistingChat = async (agentUserId: number): Promise<number | null> => {
     try {
       const token = localStorage.getItem('token');
@@ -256,7 +248,6 @@ const Agents: React.FC = () => {
     }
   };
 
-  // Создание нового чата с агентом
   const createNewChatWithAgent = async (agentUserId: number): Promise<number | null> => {
     try {
       const token = localStorage.getItem('token');
@@ -307,7 +298,6 @@ const Agents: React.FC = () => {
     }
   };
 
-  // Основная функция для открытия/создания чата с агентом
   const handleOpenChatWithAgent = async (agentId: number, agentUserId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -374,7 +364,6 @@ const Agents: React.FC = () => {
     }
   };
 
-  // Загрузка данных агентов из API
   const fetchAgents = useCallback(async (search: string = activeSearchQuery) => {
     try {
       setLoading(true);
@@ -773,7 +762,6 @@ const Agents: React.FC = () => {
                 </button>
               </div>
 
-              {/* Специализация – ОБНОВЛЕНО */}
               <div className="filter-group-agent">
                 <label className="filter-label-agent">
                   <FontAwesomeIcon icon={faBriefcase}/> Специализация
@@ -792,7 +780,6 @@ const Agents: React.FC = () => {
                 </div>
               </div>
 
-              {/* Опыт */}
               <div className="filter-group-agent">
                 <label className="filter-label-agent">
                   <FontAwesomeIcon icon={faClock}/> Опыт
@@ -811,7 +798,6 @@ const Agents: React.FC = () => {
                 </div>
               </div>
 
-              {/* Рейтинг */}
               <div className="filter-group-agent">
                 <label className="filter-label-agent">
                   <FontAwesomeIcon icon={faStar}/> Рейтинг

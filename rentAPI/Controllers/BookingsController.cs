@@ -24,7 +24,6 @@ namespace RentApp.API.Controllers
             _logger = logger;
         }
 
-        // POST: api/bookings
         [HttpPost]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
         {
@@ -40,8 +39,7 @@ namespace RentApp.API.Controllers
 
                 var bookingDate = DateOnly.FromDateTime(dto.BookingDate);
 
-                // Разрешаем подавать любые заявки, даже если на эту дату есть одобренные.
-                // Автоматическое отклонение лишних заявок происходит при одобрении одной из них.
+     
 
                 var booking = new Booking
                 {
@@ -60,7 +58,6 @@ namespace RentApp.API.Controllers
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
 
-                // Короткое уведомление владельцу дома
                 var ownerNotification = new Notification
                 {
                     UserId = house.IdOwner,
@@ -85,7 +82,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/bookings/check-availability
         [HttpGet("check-availability")]
         [AllowAnonymous]
         public async Task<IActionResult> CheckAvailability([FromQuery] int houseId, [FromQuery] DateTime date)
@@ -104,7 +100,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/bookings/house/{houseId}/booked-dates
         [HttpGet("house/{houseId}/booked-dates")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBookedDates(int houseId)
@@ -124,7 +119,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/bookings/incoming-requests
         [HttpGet("incoming-requests")]
         public async Task<IActionResult> GetIncomingRequests()
         {
@@ -159,7 +153,6 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true, data = requests });
         }
 
-        // POST: api/bookings/{id}/approve
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> ApproveBooking(int id)
         {
@@ -178,7 +171,6 @@ namespace RentApp.API.Controllers
             booking.RejectedAt = null;
             await _context.SaveChangesAsync();
 
-            // Отклоняем все остальные заявки на этот дом и дату
             var otherRequests = await _context.Bookings
                 .Where(b => b.HouseId == booking.HouseId
                          && b.BookingDate == booking.BookingDate
@@ -203,7 +195,6 @@ namespace RentApp.API.Controllers
             }
             await _context.SaveChangesAsync();
 
-            // Создание заказа кейтеринга, если есть данные
             if (booking.CateringOwnerId.HasValue && !string.IsNullOrEmpty(booking.CateringItemsJson))
             {
                 var items = JsonSerializer.Deserialize<List<CateringOrderItemDto>>(booking.CateringItemsJson);
@@ -222,7 +213,6 @@ namespace RentApp.API.Controllers
                     _context.CateringOrders.Add(order);
                     await _context.SaveChangesAsync();
 
-                    // Уведомление владельцу кейтеринга
                     var cateringOwner = await _context.CateringOwners
                         .Include(co => co.User)
                         .FirstOrDefaultAsync(co => co.Id == booking.CateringOwnerId);
@@ -243,7 +233,6 @@ namespace RentApp.API.Controllers
                 }
             }
 
-            // Уведомление пользователю, чья заявка одобрена
             var userNotification = new Notification
             {
                 UserId = booking.UserId,
@@ -259,7 +248,6 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true });
         }
 
-        // POST: api/bookings/{id}/reject
         [HttpPost("{id}/reject")]
         public async Task<IActionResult> RejectBooking(int id)
         {
@@ -275,7 +263,6 @@ namespace RentApp.API.Controllers
             booking.RejectedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            // Уведомление пользователю об отказе
             var userNotification = new Notification
             {
                 UserId = booking.UserId,
@@ -291,7 +278,6 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true });
         }
 
-        // GET: api/bookings/user-bookings
         [HttpGet("user-bookings")]
         public async Task<IActionResult> GetUserBookings()
         {
@@ -398,7 +384,6 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true, data = result });
         }
 
-        // GET: api/bookings/history
         [HttpGet("history")]
         public async Task<IActionResult> GetBookingHistory()
         {
@@ -508,7 +493,6 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true, data = result });
         }
 
-        // GET: api/bookings/upcoming
         [HttpGet("upcoming")]
         public async Task<IActionResult> GetUpcomingBookings()
         {

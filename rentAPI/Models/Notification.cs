@@ -18,7 +18,7 @@ namespace RentApp.API.Models
         [Required]
         [MaxLength(50)]
         [Column("type")]
-        public string Type { get; set; } = string.Empty; // cateringRequest, message, booking, bookingStatus
+        public string Type { get; set; } = string.Empty; 
 
         [Column("reference_id")]
         public int ReferenceId { get; set; }

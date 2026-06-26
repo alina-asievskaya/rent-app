@@ -36,7 +36,6 @@ namespace RentApp.API.Models
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Поля для временного хранения кейтеринга
         [Column("catering_owner_id")]
         public int? CateringOwnerId { get; set; }
 

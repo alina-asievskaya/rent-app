@@ -29,7 +29,6 @@ namespace RentApp.API.Controllers
             return owner?.Id;
         }
 
-        // GET: api/cateringmenu
         [HttpGet]
         public async Task<IActionResult> GetMyMenu()
         {
@@ -55,9 +54,8 @@ namespace RentApp.API.Controllers
             return Ok(new { success = true, data = items });
         }
 
-        // НОВЫЙ МЕТОД: GET api/cateringmenu/by-owner/{ownerId}
         [HttpGet("by-owner/{ownerId}")]
-        [AllowAnonymous] // можно оставить AllowAnonymous, либо [Authorize] – всё равно будет работать
+        [AllowAnonymous] 
         public async Task<IActionResult> GetMenuByOwnerId(int ownerId)
         {
             var items = await _context.MenuItems

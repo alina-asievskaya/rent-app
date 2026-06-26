@@ -14,7 +14,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  category: string; // catering, photography, flowers
+  category: string; 
   initialData?: {
     id: number;
     title: string;

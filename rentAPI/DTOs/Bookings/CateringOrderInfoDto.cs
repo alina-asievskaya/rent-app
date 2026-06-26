@@ -1,4 +1,3 @@
-// RentApp.API/DTOs/Bookings/CateringOrderInfoDto.cs
 using System.Collections.Generic;
 
 namespace RentApp.API.DTOs.Bookings

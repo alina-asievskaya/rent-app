@@ -18,9 +18,8 @@ namespace RentApp.API.Models
         [Required]
         [Column("photo")]
         [MaxLength(500)]
-        public string Photo { get; set; } = string.Empty; // URL или base64
+        public string Photo { get; set; } = string.Empty; 
 
-        // Навигационное свойство
         public House House { get; set; } = null!;
     }
 }

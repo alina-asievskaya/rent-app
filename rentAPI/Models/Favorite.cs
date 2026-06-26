@@ -22,7 +22,6 @@ namespace RentApp.API.Models
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Навигационные свойства
         [ForeignKey("UserId")]
         public virtual User User { get; set; }
 

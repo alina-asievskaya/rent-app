@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import './CreateAd.css';
 
-// Компонент уведомлений
 const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
   message, 
   type, 
@@ -70,7 +69,6 @@ interface HouseData {
   };
 }
 
-// Тип для кейтеринговой компании
 interface CateringCompany {
   id: number;
   companyName: string;
@@ -88,7 +86,6 @@ const EditHousePage: React.FC = () => {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [houseData, setHouseData] = useState<HouseData | null>(null);
 
-  // ----- Состояния для кейтеринга -----
   const [cateringCompanies, setCateringCompanies] = useState<CateringCompany[]>([]);
   const [selectedCaterings, setSelectedCaterings] = useState<number[]>([]);
   const [cateringCompaniesLoading, setCateringCompaniesLoading] = useState(false);
@@ -124,7 +121,6 @@ const EditHousePage: React.FC = () => {
     newPhotos: [] as File[],
   });
 
-  // Справочник городов по областям (для валидации)
   const citiesByRegion: Record<string, string[]> = {
     'Минская область': ['Минск', 'Борисов', 'Солигорск', 'Молодечно', 'Жодино', 'Слуцк', 'Вилейка', 'Дзержинск', 'Марьина Горка', 'Столбцы', 'Несвиж', 'Клецк', 'Любань', 'Старые Дороги', 'Узда', 'Червень', 'Березино', 'Крупки', 'Смолевичи', 'Логойск', 'Воложин', 'Мядель'],
     'Гомельская область': ['Гомель', 'Мозырь', 'Жлобин', 'Светлогорск', 'Речица', 'Калинковичи', 'Рогачёв', 'Добруш', 'Петриков', 'Ельск', 'Наровля', 'Хойники', 'Брагин', 'Лельчицы', 'Октябрьский', 'Ветка', 'Чечерск', 'Буда-Кошелёво', 'Корма'],
@@ -134,7 +130,6 @@ const EditHousePage: React.FC = () => {
     'Витебская область': ['Витебск', 'Орша', 'Новополоцк', 'Полоцк', 'Глубокое', 'Лепель', 'Поставы', 'Миоры', 'Верхнедвинск', 'Браслав', 'Докшицы', 'Дубровно', 'Сенно', 'Толочин', 'Шарковщина', 'Ушачи', 'Россоны', 'Бешенковичи', 'Лиозно']
   };
 
-  // Обратный словарь: город -> область
   const cityToRegion: Record<string, string> = {};
   for (const [region, cities] of Object.entries(citiesByRegion)) {
     for (const city of cities) {
@@ -282,7 +277,6 @@ const EditHousePage: React.FC = () => {
     };
   }, []);
 
-  // ----- Загрузка доступных кейтеринговых компаний -----
   const fetchAvailableCaterings = async (token: string) => {
     try {
       setCateringCompaniesLoading(true);
@@ -300,7 +294,6 @@ const EditHousePage: React.FC = () => {
     }
   };
 
-  // ----- Загрузка текущих привязанных компаний для дома -----
   const fetchCurrentCaterings = async (token: string, houseId: number) => {
     try {
       const res = await fetch(`http://localhost:5213/api/houses/${houseId}/caterings`, {
@@ -357,7 +350,6 @@ const EditHousePage: React.FC = () => {
           existingPhotos: houseData.photos || [],
           newPhotos: [],
         });
-        // Загружаем привязанные кейтеринговые компании
         await fetchCurrentCaterings(token, houseData.id);
       } else {
         showNotification(result.message || 'Ошибка загрузки данных', 'error');
@@ -518,7 +510,6 @@ const EditHousePage: React.FC = () => {
     }
   };
 
-  // ----- Обновление привязки кейтеринга (отправка заявок) -----
   const updateCaterings = async (token: string, houseId: number, cateringIds: number[]) => {
     try {
       const res = await fetch(`http://localhost:5213/api/houses/${houseId}/caterings`, {
@@ -606,7 +597,7 @@ const EditHousePage: React.FC = () => {
     if (response.ok && result.success) {
       await updateCaterings(token, parseInt(id!), selectedCaterings);
       showNotification('Объявление успешно обновлено', 'success');
-      navigate('/profile'); // ✅ Переход в профиль после сохранения
+      navigate('/profile'); 
     } else {
       showNotification(result.message || 'Ошибка при обновлении', 'error');
     }
@@ -662,7 +653,6 @@ const EditHousePage: React.FC = () => {
             </div>
 
             <form className="createad-property-form" onSubmit={handleSubmit}>
-              {/* Тип дома */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-home"></i> Тип дома</h3>
                 <p className="createad-section-description">Выберите тип вашего дома</p>
@@ -680,7 +670,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Тип аренды */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-calendar-alt"></i> Тип аренды</h3>
                 <p className="createad-section-description">Укажите, как вы сдаёте дом</p>
@@ -698,7 +687,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Основная информация */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-info-circle"></i> Основная информация</h3>
                 <div className="createad-form-grid">
@@ -744,7 +732,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Местоположение */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-map-marker-alt"></i> Местоположение</h3>
                 <div className="createad-form-grid">
@@ -772,7 +759,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Описание */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-pencil-alt"></i> Описание дома</h3>
                 <p className="createad-section-description">Расскажите подробнее о вашем доме</p>
@@ -785,7 +771,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Удобства и особенности */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-star"></i> Удобства и особенности</h3>
                 <p className="createad-section-description">Выберите доступные удобства</p>
@@ -827,7 +812,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* НОВЫЙ БЛОК: Кейтеринг */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-utensils"></i> Кейтеринг</h3>
                 <p className="createad-section-description">Выберите компании, которые будут доступны для заказа еды при бронировании дома</p>
@@ -862,7 +846,6 @@ const EditHousePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Фотографии */}
               <div className="createad-form-section">
                 <h3 className="createad-section-title"><i className="createad-icon fas fa-camera"></i> Фотографии дома</h3>
                 <p className="createad-section-description">Обновите фотографии вашего дома</p>
@@ -886,7 +869,6 @@ const EditHousePage: React.FC = () => {
                   <ul><li>Добавьте 5-20 качественных фотографий</li><li>Первая фотография будет главной в объявлении</li><li>Формат: JPG, PNG, до 10 МБ каждая</li><li>Сделайте фотографии с разных ракурсов</li></ul>
                 </div>
 
-                {/* Существующие фото */}
                 {formData.existingPhotos.length > 0 && (
                   <div className="createad-photos-preview">
                     <h4>Текущие фотографии ({formData.existingPhotos.length})</h4>
@@ -905,7 +887,6 @@ const EditHousePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Новые фото */}
                 {formData.newPhotos.length > 0 && (
                   <div className="createad-photos-preview">
                     <h4>Новые фотографии ({formData.newPhotos.length})</h4>
@@ -931,7 +912,6 @@ const EditHousePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Навигация */}
               <div className="createad-form-navigation">
                 <div className="createad-navigation-left">
                   <button type="button" onClick={() => navigate('/profile')} className="createad-btn createad-btn-secondary"><i className="fas fa-arrow-left"></i> Вернуться в профиль</button>

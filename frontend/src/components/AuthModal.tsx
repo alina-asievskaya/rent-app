@@ -108,10 +108,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
         </div>
         
         {isLoginForm ? (
-          <form className="auth-form" onSubmit={handleLoginSubmit}>
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
+          <form className="auth-modal-form" onSubmit={handleLoginSubmit}>
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faEnvelope} className="auth-modal-input-icon" />
                 <input
                   type="email"
                   name="email"
@@ -119,15 +119,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="example@mail.ru"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faLock} className="input-icon" />
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faLock} className="auth-modal-input-icon" />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -135,12 +135,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="Введите пароль"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
-                  className="password-toggle-right"
+                  className="auth-modal-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   title={showPassword ? "Скрыть пароль" : "Показать пароль"}
                   disabled={isLoading}
@@ -150,16 +150,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             
-           <button type="submit" className="auth-submit-btn" disabled={isLoading}>
+            <button type="submit" className="auth-modal-submit-btn" disabled={isLoading}>
               {isLoading ? "Загрузка..." : "Войти"}
             </button>
             
-            <div className="auth-form-footer">
-              <p className="auth-switch-text">
+            <div className="auth-modal-form-footer">
+              <p className="auth-modal-switch-text">
                 Нет аккаунта?{" "}
                 <button
                   type="button"
-                  className="auth-switch-btn"
+                  className="auth-modal-switch-btn"
                   onClick={onSwitchToRegister}
                   disabled={isLoading}
                 >
@@ -169,10 +169,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           </form>
         ) : (
-          <form className="auth-form" onSubmit={handleRegisterSubmit}>
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
+          <form className="auth-modal-form" onSubmit={handleRegisterSubmit}>
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faEnvelope} className="auth-modal-input-icon" />
                 <input
                   type="email"
                   name="email"
@@ -180,15 +180,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="example@mail.ru"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faUserIcon} className="input-icon" />
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faUserIcon} className="auth-modal-input-icon" />
                 <input
                   type="text"
                   name="fio"
@@ -196,16 +196,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="Иванов Иван"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
               </div>
-              <small className="input-hint">Введите имя и фамилию</small>
+              <small className="auth-modal-input-hint">Введите имя и фамилию</small>
             </div>
             
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faPhone} className="input-icon" />
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faPhone} className="auth-modal-input-icon" />
                 <input
                   type="tel"
                   name="phone_num"
@@ -213,15 +213,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="+375 (29) 123-45-67"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faLock} className="input-icon" />
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faLock} className="auth-modal-input-icon" />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -229,12 +229,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="Придумайте пароль"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
-                  className="password-toggle-right"
+                  className="auth-modal-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   title={showPassword ? "Скрыть пароль" : "Показать пароль"}
                   disabled={isLoading}
@@ -244,9 +244,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             
-            <div className="form-group">
-              <div className="input-with-icon">
-                <FontAwesomeIcon icon={faLock} className="input-icon" />
+            <div className="auth-modal-form-group">
+              <div className="auth-modal-input-with-icon">
+                <FontAwesomeIcon icon={faLock} className="auth-modal-input-icon" />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
@@ -254,12 +254,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={handleInputChange}
                   placeholder="Повторите пароль"
                   required
-                  className="auth-input"
+                  className="auth-modal-input"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
-                  className="password-toggle-right"
+                  className="auth-modal-password-toggle"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   title={showConfirmPassword ? "Скрыть пароль" : "Показать пароль"}
                   disabled={isLoading}
@@ -269,17 +269,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             
-            {/* Исправлено: удалён класс btn-primary, оставлен только auth-submit-btn */}
-            <button type="submit" className="auth-submit-btn" disabled={isLoading}>
+            <button type="submit" className="auth-modal-submit-btn" disabled={isLoading}>
               {isLoading ? "Загрузка..." : "Зарегистрироваться"}
             </button>
             
-            <div className="auth-form-footer">
-              <p className="auth-switch-text">
+            <div className="auth-modal-form-footer">
+              <p className="auth-modal-switch-text">
                 Уже есть аккаунт?{" "}
                 <button
                   type="button"
-                  className="auth-switch-btn"
+                  className="auth-modal-switch-btn"
                   onClick={onSwitchToLogin}
                   disabled={isLoading}
                 >

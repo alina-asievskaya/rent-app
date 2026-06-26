@@ -18,7 +18,7 @@ namespace RentApp.API.Models
         [Required]
         [MaxLength(50)]
         [Column("category")]
-        public string Category { get; set; } = string.Empty; // catering, photography, flowers
+        public string Category { get; set; } = string.Empty; 
 
         [Required]
         [MaxLength(200)]
@@ -32,7 +32,6 @@ namespace RentApp.API.Models
         [Column("price")]
         public decimal Price { get; set; }
 
-        // Для кейтеринга (граммовка), для остальных категорий null
         [Column("grams")]
         public int? Grams { get; set; }
 

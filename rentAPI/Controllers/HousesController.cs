@@ -45,7 +45,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // GET: api/houses
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllHouses()
@@ -66,7 +65,7 @@ namespace RentApp.API.Controllers
                         h.Description,
                         h.AnnouncementData,
                         h.HouseType,
-                        h.RentType, // <-- ДОБАВЛЕНО RentType
+                        h.RentType, 
                         Photos = h.Photos.Select(p => p.Photo).ToList(),
                         HouseInfo = new
                         {
@@ -102,7 +101,6 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // POST: api/houses/create
         [HttpPost("create")]
         [Authorize]
         public async Task<IActionResult> CreateHouse([FromBody] CreateHouseDto houseDto)
@@ -127,7 +125,7 @@ namespace RentApp.API.Controllers
                     Description = houseDto.Description,
                     AnnouncementData = DateOnly.FromDateTime(DateTime.Now),
                     HouseType = houseDto.HouseType,
-                    RentType = houseDto.RentType, // <-- ДОБАВЛЕНО RentType
+                    RentType = houseDto.RentType, 
                     Active = true
                 };
 
@@ -233,7 +231,7 @@ namespace RentApp.API.Controllers
                     Region = h.HouseInfo?.Region ?? string.Empty,
                     City = h.HouseInfo?.City ?? string.Empty,
                     Street = h.HouseInfo?.Street ?? string.Empty,
-                    HouseNumber = h.HouseInfo?.HouseNumber ?? string.Empty, // <-- ДОБАВЛЕНО
+                    HouseNumber = h.HouseInfo?.HouseNumber ?? string.Empty, 
                     Rooms = h.HouseInfo?.Rooms ?? 1,
                     Bathrooms = h.HouseInfo?.Bathrooms ?? 1,
                     Floor = h.HouseInfo?.Floor ?? 1,
@@ -260,7 +258,6 @@ namespace RentApp.API.Controllers
                     h.RentType,
                     h.AnnouncementData,
                     h.Photos,
-                    // Адрес теперь включает номер дома
                     Address = $"{h.City}, {h.Street}{(string.IsNullOrEmpty(h.HouseNumber) ? "" : $", {h.HouseNumber}")}",
                     ShortAddress = $"{h.City}, {h.Street.Substring(0, Math.Min(30, h.Street.Length))}...",
                     Info = $"{h.Rooms}-комн. {h.HouseType?.ToLower()}, {h.Area} м²",
@@ -278,7 +275,6 @@ namespace RentApp.API.Controllers
                     h.ImageUrl,
                     h.Beds,
                     h.Baths,
-                    // Можно также передать отдельные компоненты адреса для гибкости на фронте
                     h.City,
                     h.Street,
                     HouseNumber = h.HouseNumber
@@ -306,7 +302,6 @@ namespace RentApp.API.Controllers
                 });
             }
         }
-        // GET: api/houses/my-houses
         [HttpGet("my-houses")]
         [Authorize]
         public async Task<IActionResult> GetMyHouses()
@@ -367,123 +362,112 @@ namespace RentApp.API.Controllers
             }
         }
 
-        // Добавить в HousesController следующие методы:
 
-[HttpGet("{id}/caterings")]
-public async Task<IActionResult> GetHouseCaterings(int id)
-{
-    var house = await _context.Houses.FindAsync(id);
-    if (house == null) return NotFound();
-
-    var caterings = await _context.HouseCaterings
-        .Include(hc => hc.CateringOwner)
-        .Where(hc => hc.HouseId == id)
-        .Select(hc => new HouseCateringDto
+        [HttpGet("{id}/caterings")]
+        public async Task<IActionResult> GetHouseCaterings(int id)
         {
-            Id = hc.Id,
-            CateringOwnerId = hc.CateringOwnerId,
-            CompanyName = hc.CateringOwner.CompanyName,
-            City = hc.CateringOwner.City,
-            Description = hc.CateringOwner.Description
-        })
-        .ToListAsync();
-    return Ok(new { success = true, data = caterings });
-}
+            var house = await _context.Houses.FindAsync(id);
+            if (house == null) return NotFound();
 
-// RentApp.API/Controllers/HousesController.cs – фрагмент
-
-[HttpPut("{id}/caterings")]
-public async Task<IActionResult> UpdateHouseCaterings(int id, [FromBody] UpdateHouseCateringsDto dto)
-{
-    var house = await _context.Houses.FindAsync(id);
-    if (house == null) return NotFound();
-
-    // Получаем текущие активные привязки (одобренные)
-    var currentActive = await _context.HouseCaterings
-        .Where(hc => hc.HouseId == id)
-        .Select(hc => hc.CateringOwnerId)
-        .ToListAsync();
-
-    // Получаем текущие незавершённые заявки для этого дома
-    var pendingRequests = await _context.HouseCateringRequests
-        .Where(r => r.HouseId == id && r.Status == "pending")
-        .ToListAsync();
-
-    // Новые выбранные ID
-    var newSelected = dto.CateringOwnerIds ?? new List<int>();
-
-    // Заявки, которые нужно создать (есть в newSelected, нет в currentActive и нет уже в pending)
-    var toCreate = newSelected.Except(currentActive)
-        .Where(id => !pendingRequests.Any(r => r.CateringOwnerId == id))
-        .ToList();
-
-    // Удаляем активные привязки, которые были убраны из выбора
-    var toRemove = currentActive.Except(newSelected).ToList();
-    if (toRemove.Any())
-    {
-        var toRemoveEntities = await _context.HouseCaterings
-            .Where(hc => hc.HouseId == id && toRemove.Contains(hc.CateringOwnerId))
-            .ToListAsync();
-        _context.HouseCaterings.RemoveRange(toRemoveEntities);
-    }
-
-    // Отклоняем заявки, которые были убраны из выбора (если ещё в статусе pending)
-    var toCancelRequests = pendingRequests
-        .Where(r => !newSelected.Contains(r.CateringOwnerId))
-        .ToList();
-    if (toCancelRequests.Any())
-    {
-        foreach (var req in toCancelRequests)
-        {
-            req.Status = "rejected";
-            req.RespondedAt = DateTime.UtcNow;
+            var caterings = await _context.HouseCaterings
+                .Include(hc => hc.CateringOwner)
+                .Where(hc => hc.HouseId == id)
+                .Select(hc => new HouseCateringDto
+                {
+                    Id = hc.Id,
+                    CateringOwnerId = hc.CateringOwnerId,
+                    CompanyName = hc.CateringOwner.CompanyName,
+                    City = hc.CateringOwner.City,
+                    Description = hc.CateringOwner.Description
+                })
+                .ToListAsync();
+            return Ok(new { success = true, data = caterings });
         }
-    }
 
-    // Создаём новые заявки
-    foreach (var ownerId in toCreate)
-    {
-        var request = new HouseCateringRequest
-        {
-            HouseId = id,
-            CateringOwnerId = ownerId,
-            Status = "pending",
-            CreatedAt = DateTime.UtcNow
-        };
-        _context.HouseCateringRequests.Add(request);
 
-        // Уведомление владельцу кейтеринга
-        var cateringOwner = await _context.CateringOwners.FindAsync(ownerId);
-        if (cateringOwner != null)
+        [HttpPut("{id}/caterings")]
+        public async Task<IActionResult> UpdateHouseCaterings(int id, [FromBody] UpdateHouseCateringsDto dto)
         {
-            var notification = new Notification
+            var house = await _context.Houses.FindAsync(id);
+            if (house == null) return NotFound();
+
+            var currentActive = await _context.HouseCaterings
+                .Where(hc => hc.HouseId == id)
+                .Select(hc => hc.CateringOwnerId)
+                .ToListAsync();
+
+            var pendingRequests = await _context.HouseCateringRequests
+                .Where(r => r.HouseId == id && r.Status == "pending")
+                .ToListAsync();
+
+            var newSelected = dto.CateringOwnerIds ?? new List<int>();
+
+            var toCreate = newSelected.Except(currentActive)
+                .Where(id => !pendingRequests.Any(r => r.CateringOwnerId == id))
+                .ToList();
+
+            var toRemove = currentActive.Except(newSelected).ToList();
+            if (toRemove.Any())
             {
-                UserId = cateringOwner.UserId,
-                Type = "cateringAddRequest",
-                ReferenceId = request.Id,
-                Text = $"Вас добавили в объявление \"{house.Description}\" (дом #{id})",
-                CreatedAt = DateTime.UtcNow,
-                IsRead = false
-            };
-            _context.Notifications.Add(notification);
+                var toRemoveEntities = await _context.HouseCaterings
+                    .Where(hc => hc.HouseId == id && toRemove.Contains(hc.CateringOwnerId))
+                    .ToListAsync();
+                _context.HouseCaterings.RemoveRange(toRemoveEntities);
+            }
+
+            var toCancelRequests = pendingRequests
+                .Where(r => !newSelected.Contains(r.CateringOwnerId))
+                .ToList();
+            if (toCancelRequests.Any())
+            {
+                foreach (var req in toCancelRequests)
+                {
+                    req.Status = "rejected";
+                    req.RespondedAt = DateTime.UtcNow;
+                }
+            }
+
+            foreach (var ownerId in toCreate)
+            {
+                var request = new HouseCateringRequest
+                {
+                    HouseId = id,
+                    CateringOwnerId = ownerId,
+                    Status = "pending",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.HouseCateringRequests.Add(request);
+
+                var cateringOwner = await _context.CateringOwners.FindAsync(ownerId);
+                if (cateringOwner != null)
+                {
+                    var notification = new Notification
+                    {
+                        UserId = cateringOwner.UserId,
+                        Type = "cateringAddRequest",
+                        ReferenceId = request.Id,
+                        Text = $"Вас добавили в объявление \"{house.Description}\" (дом #{id})",
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false
+                    };
+                    _context.Notifications.Add(notification);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true });
         }
-    }
 
-    await _context.SaveChangesAsync();
-    return Ok(new { success = true });
-}
+        [HttpGet("available-caterings")]
+        public async Task<IActionResult> GetAvailableCaterings()
+        {
+            var owners = await _context.CateringOwners
+                .Where(co => co.IsActive)
+                .Select(co => new { co.Id, co.CompanyName, co.City, co.Description, co.Phone })
+                .ToListAsync();
+            return Ok(new { success = true, data = owners });
+        }
 
-[HttpGet("available-caterings")]
-public async Task<IActionResult> GetAvailableCaterings()
-{
-    var owners = await _context.CateringOwners
-        .Where(co => co.IsActive)
-        .Select(co => new { co.Id, co.CompanyName, co.City, co.Description, co.Phone })
-        .ToListAsync();
-    return Ok(new { success = true, data = owners });
-}
-
-        // PATCH: api/houses/{id}/toggle-active
         [HttpPatch("{id}/toggle-active")]
         [Authorize]
         public async Task<IActionResult> ToggleActive(int id, [FromBody] ToggleActiveDto dto)
@@ -641,7 +625,6 @@ public async Task<IActionResult> GetAvailableCaterings()
             return Ok(new { success = true, data = user });
         }
 
-        // PUT: api/houses/{id}
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdateHouse(int id, [FromBody] UpdateHouseDto houseDto)
@@ -676,7 +659,7 @@ public async Task<IActionResult> GetAvailableCaterings()
                 house.Area = houseDto.Area;
                 house.Description = houseDto.Description;
                 house.HouseType = houseDto.HouseType;
-                house.RentType = houseDto.RentType; // <-- ДОБАВЛЕНО RentType
+                house.RentType = houseDto.RentType; 
 
                 if (house.HouseInfo != null)
                 {
@@ -880,7 +863,6 @@ public async Task<IActionResult> GetAvailableCaterings()
             }
         }
 
-        // DELETE: api/houses/{id}
         [HttpDelete("{id}")]
         [Authorize]
         public async Task<IActionResult> DeleteHouse(int id)
@@ -948,7 +930,6 @@ public async Task<IActionResult> GetAvailableCaterings()
             }
         }
 
-        // GET: api/houses/{id}
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetHouseById(int id)
@@ -994,7 +975,7 @@ public async Task<IActionResult> GetAvailableCaterings()
                     Area = house.Area,
                     Description = house.Description,
                     HouseType = house.HouseType,
-                    RentType = house.RentType, // <-- ДОБАВЛЕНО RentType
+                    RentType = house.RentType, 
                     AnnouncementData = house.AnnouncementData.ToString("yyyy-MM-dd"),
                     Rating = house.Rating,
                     Reviews = reviews,
@@ -1051,24 +1032,23 @@ public async Task<IActionResult> GetAvailableCaterings()
                 });
             }
         }
-[HttpGet("geocode")]
-[AllowAnonymous]
-public async Task<IActionResult> Geocode([FromQuery] string address)
-{
-    if (string.IsNullOrWhiteSpace(address))
-        return BadRequest(new { success = false, message = "Адрес не указан" });
+        [HttpGet("geocode")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Geocode([FromQuery] string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                return BadRequest(new { success = false, message = "Адрес не указан" });
 
-    var apiKey = "99ce5728-f41e-40c2-a29c-ac52aeaffa5c"; // ваш ключ геокодера
-    var encodedAddress = Uri.EscapeDataString(address + ", Беларусь");
-    var url = $"https://geocode-maps.yandex.ru/1.x/?apikey={apiKey}&geocode={encodedAddress}&format=json&results=1";
+            var apiKey = "99ce5728-f41e-40c2-a29c-ac52aeaffa5c"; 
+            var encodedAddress = Uri.EscapeDataString(address + ", Беларусь");
+            var url = $"https://geocode-maps.yandex.ru/1.x/?apikey={apiKey}&geocode={encodedAddress}&format=json&results=1";
 
-    using var http = new HttpClient();
-    var response = await http.GetAsync(url);
-    var content = await response.Content.ReadAsStringAsync();
+            using var http = new HttpClient();
+            var response = await http.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
 
-    return Content(content, "application/json");
-}
-        // АДМИН-МЕТОДЫ
+            return Content(content, "application/json");
+        }
 
         [Authorize(Roles = "Admin")]
         [HttpPut("admin/{id}")]
@@ -1094,7 +1074,7 @@ public async Task<IActionResult> Geocode([FromQuery] string address)
                 house.Area = houseDto.Area;
                 house.Description = houseDto.Description;
                 house.HouseType = houseDto.HouseType;
-                house.RentType = houseDto.RentType; // <-- ДОБАВЛЕНО RentType
+                house.RentType = houseDto.RentType; 
 
                 if (house.HouseInfo != null)
                 {

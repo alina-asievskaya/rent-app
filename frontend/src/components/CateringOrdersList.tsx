@@ -39,7 +39,6 @@ const CateringOrdersList: React.FC = () => {
     const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null);
     const navigate = useNavigate();
 
-    // Функция форматирования цены с иконкой
     const formatPriceWithIcon = (price: number): React.ReactNode => {
         if (price == null || isNaN(price)) return null;
         return (

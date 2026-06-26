@@ -30,7 +30,6 @@ interface CartItem {
     quantity: number;
 }
 
-// Тип для элемента ответа от API /houses/{houseId}/caterings
 interface ApiCateringItem {
     cateringOwnerId: number;
     companyName: string;
@@ -43,8 +42,8 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
     const [cart, setCart] = useState<Map<number, CartItem>>(new Map());
     const [loading, setLoading] = useState(true);
     const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null); // для модалки блюда
 
-    // Загрузка компаний (одобренные)
     useEffect(() => {
         const fetchCompanies = async () => {
             try {
@@ -70,7 +69,6 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
         fetchCompanies();
     }, [houseId]);
 
-    // Загрузка меню выбранной компании (публичный эндпоинт)
     useEffect(() => {
         if (!selectedCompanyId) return;
         const fetchMenu = async () => {
@@ -142,6 +140,16 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
         });
     };
 
+    // Открыть модалку с деталями блюда
+    const openItemModal = (item: MenuItem, e: React.MouseEvent) => {
+        e.stopPropagation(); // чтобы не сработал клик по карточке (если он есть)
+        setSelectedItem(item);
+    };
+
+    const closeItemModal = () => {
+        setSelectedItem(null);
+    };
+
     if (loading) {
         return (
             <div className="catering-loading">
@@ -163,7 +171,6 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
 
     return (
         <div className="catering-selector">
-            {/* Верхняя панель */}
             <div className="catering-header">
                 <h2>Выберите кейтеринг</h2>
                 {companies.length === 1 ? (
@@ -188,29 +195,36 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
                 </button>
             </div>
 
-            {/* Сетка меню */}
             {selectedCompanyId && menuItems.length > 0 && (
                 <div className="menu-grid">
                     {menuItems.map(item => {
                         const cartItem = cart.get(item.id);
                         const quantity = cartItem?.quantity || 0;
                         return (
-                            <div key={item.id} className="menu-card">
+                            <div key={item.id} className="menu-card" onClick={(e) => openItemModal(item, e)}>
                                 {item.photoUrl && <img src={item.photoUrl} alt={item.name} className="menu-card-image" />}
                                 <div className="menu-card-content">
                                     <div className="menu-card-title">{item.name}</div>
                                     <div className="menu-card-desc">{item.description}</div>
                                     <div className="menu-card-footer">
                                         <div className="price-weight">
-                                            <span className="price">{item.price} BYN</span>
-                                            {item.weightGrams && <span className="weight">{item.weightGrams} г</span>}
+                                            {item.weightGrams && <div className="weight">{item.weightGrams} г</div>}
+                                            <div className="price">
+                                                {item.price} <i className="nbrb-icon">&#xe901;</i>
+                                            </div>
                                         </div>
                                         {quantity === 0 ? (
-                                            <button onClick={() => addToCart(item)} className="add-to-cart-btn">
+                                            <button 
+                                                className="add-to-cart-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToCart(item);
+                                                }}
+                                            >
                                                 Добавить
                                             </button>
                                         ) : (
-                                            <div className="quantity-control">
+                                            <div className="quantity-control" onClick={(e) => e.stopPropagation()}>
                                                 <button onClick={() => updateQuantity(item.id, -1)}>
                                                     <FontAwesomeIcon icon={faMinus} />
                                                 </button>
@@ -234,7 +248,36 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
                 </div>
             )}
 
-            {/* Модальное окно корзины */}
+            {/* Модальное окно с деталями блюда */}
+            {selectedItem && (
+                <div className="item-modal-overlay" onClick={closeItemModal}>
+                    <div className="item-modal" onClick={(e) => e.stopPropagation()}>
+                        <button className="item-modal-close" onClick={closeItemModal}>
+                            <FontAwesomeIcon icon={faTimes} />
+                        </button>
+                        <div className="item-modal-image-container">
+                            <img 
+                                src={selectedItem.photoUrl || 'https://via.placeholder.com/600x400?text=Нет+фото'} 
+                                alt={selectedItem.name} 
+                            />
+                        </div>
+                        <div className="item-modal-info">
+                            <h3 className="item-modal-name">{selectedItem.name}</h3>
+                            <p className="item-modal-desc">{selectedItem.description}</p>
+                            <div className="item-modal-meta">
+                                {selectedItem.weightGrams && (
+                                    <span className="item-modal-weight">{selectedItem.weightGrams} г</span>
+                                )}
+                                <span className="item-modal-price">
+                                    {selectedItem.price} <i className="nbrb-icon">&#xe901;</i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Модальное окно корзины (остаётся без изменений) */}
             {isCartModalOpen && (
                 <div className="cart-modal-overlay" onClick={() => setIsCartModalOpen(false)}>
                     <div className="cart-modal" onClick={(e) => e.stopPropagation()}>
@@ -281,7 +324,6 @@ const CateringSelector: React.FC<CateringSelectorProps> = ({ houseId, onComplete
                 </div>
             )}
 
-            {/* Кнопки действий */}
             <div className="actions">
                 <button onClick={onSkip} className="skip-btn">Пропустить кейтеринг</button>
                 <button onClick={handleComplete} className="complete-btn" disabled={cart.size === 0}>

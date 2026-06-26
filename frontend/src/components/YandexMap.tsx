@@ -23,7 +23,6 @@ const YandexCityMap: React.FC<YandexCityMapProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Функция геокодирования с каскадным поиском
 const geocodeAddress = async (address: string) => {
     const encoded = encodeURIComponent(address);
     const response = await fetch(`http://localhost:5213/api/houses/geocode?address=${encoded}`);
@@ -54,10 +53,8 @@ const geocodeAddress = async (address: string) => {
           return;
         }
 
-        // 1. Пробуем полный адрес
         let result = await geocodeAddress(fullAddress);
         if (!result && fullAddress.includes(',')) {
-          // 2. Убираем номер дома (всё после последнего пробела или запятой)
           const parts = fullAddress.split(',');
           const withoutHouse = parts[0] + (parts[1] ? ',' + parts[1].replace(/\d+$/, '').trim() : '');
           if (withoutHouse !== fullAddress) {
@@ -65,7 +62,6 @@ const geocodeAddress = async (address: string) => {
           }
         }
         if (!result) {
-          // 3. Только город
           const cityMatch = fullAddress.match(/^([^,]+)/);
           const city = cityMatch ? cityMatch[1] : fullAddress;
           result = await geocodeAddress(city);

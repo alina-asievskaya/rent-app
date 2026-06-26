@@ -39,7 +39,7 @@ namespace RentApp.API.Controllers
                 BookingId = dto.BookingId,
                 CateringOwnerId = dto.CateringOwnerId,
                 HouseId = booking.HouseId,
-                UserId = userId.Value,      // <-- исправлено: явное преобразование int? в int
+                UserId = userId.Value,      
                 ItemsJson = itemsJson,
                 Status = "pending",
                 CreatedAt = DateTime.UtcNow
@@ -48,7 +48,6 @@ namespace RentApp.API.Controllers
             _context.CateringOrders.Add(order);
             await _context.SaveChangesAsync();
 
-            // Уведомление владельцу кейтеринга
             var notification = new Notification
             {
                 UserId = order.CateringOwnerId,
@@ -122,7 +121,6 @@ namespace RentApp.API.Controllers
             order.RespondedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            // Уведомление пользователю
             var notification = new Notification
             {
                 UserId = order.UserId,

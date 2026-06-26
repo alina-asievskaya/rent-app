@@ -1,4 +1,3 @@
-// frontend/src/pages/ProfilePage.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -16,7 +15,6 @@ import CateringMenu from '../components/CateringMenu';
 import CateringOrdersList from '../components/CateringOrdersList';
 import CateringAddRequestsList from '../components/CateringAddRequestsList';
 
-// ==================== Интерфейсы ====================
 interface UserData {
   id: number;
   email: string;
@@ -233,12 +231,10 @@ const isValidTab = (tab: string): tab is ProfileTab => {
   return ['profile', 'ads', 'chats', 'support', 'requests', 'bookings', 'history', 'menu', 'cateringAddRequests'].includes(tab);
 };
 
-// Компонент иконки BYN
 const BynIcon: React.FC = () => (
   <i className="nbrb-icon" aria-label="бел. руб.">&#xe901;</i>
 );
 
-// ==================== Компонент ====================
 const ProfilePage: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -276,7 +272,6 @@ const ProfilePage: React.FC = () => {
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [isCateringOwner, setIsCateringOwner] = useState(false);
   
-  // Ref для отслеживания предыдущего статуса кейтеринга, чтобы показывать сообщение только один раз
   const prevCateringStatusRef = useRef<boolean | null>(null);
 
   const navigate = useNavigate();
@@ -288,7 +283,6 @@ const ProfilePage: React.FC = () => {
     other: 'Другое',
   };
 
-  // ==================== API вызовы ====================
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -323,7 +317,6 @@ const ProfilePage: React.FC = () => {
         const data = await response.json();
         const newStatus = data.isOwner;
         
-        // Если статус изменился с false на true – показываем поздравление (только один раз)
         if (prevCateringStatusRef.current !== null && 
             prevCateringStatusRef.current === false && 
             newStatus === true) {
@@ -334,16 +327,14 @@ const ProfilePage: React.FC = () => {
           setTimeout(() => setMessage({ text: '', type: 'success' }), 5000);
         }
         
-        // Обновляем состояние и ref
         if (newStatus !== isCateringOwner) {
           setIsCateringOwner(newStatus);
         }
         prevCateringStatusRef.current = newStatus;
         
-        // Переключение вкладки при первом получении статуса true (опционально)
         if (newStatus === true && activeTab !== 'profile' && 
             activeTab !== 'requests' && activeTab !== 'menu' && 
-            activeTab !== 'support' && activeTab !== 'cateringAddRequests') {
+            activeTab !== 'support' && activeTab !== 'cateringAddRequests' && activeTab !== 'chats') {
           setActiveTab('profile');
         }
       }
@@ -534,7 +525,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Загрузка ответов для конкретного обращения
 const fetchRepliesForFeedback = async (feedbackId: number) => {
   try {
     const token = localStorage.getItem('token');
@@ -554,12 +544,10 @@ const fetchRepliesForFeedback = async (feedbackId: number) => {
   }
 };
 
-// Обработчик показа/скрытия ответов
 const handleToggleReplies = async (feedbackId: number) => {
   const feedback = userFeedback.find(f => f.id === feedbackId);
   if (!feedback) return;
   if (!feedback.showReplies) {
-    // Если ответы уже загружены – просто показываем, иначе загружаем
     if (!feedback.replies || feedback.replies.length === 0) {
       setUserFeedback(prev => prev.map(fb => 
         fb.id === feedbackId ? { ...fb, loadingReplies: true } : fb
@@ -701,7 +689,6 @@ const handleToggleReplies = async (feedbackId: number) => {
     );
   };
 
-  // ==================== Обработчики действий ====================
   const handleApproveRequest = async (requestId: number) => {
     try {
       const token = localStorage.getItem('token');
@@ -951,7 +938,6 @@ const handleToggleReplies = async (feedbackId: number) => {
     window.location.href = '/';
   };
 
-  // ==================== Эффекты ====================
   useEffect(() => { fetchUserData(); }, []);
 
   useEffect(() => {
@@ -1010,7 +996,6 @@ const handleToggleReplies = async (feedbackId: number) => {
     if (activeTab === 'history' && userData && !isCateringOwner) fetchHistoryBookings();
   }, [activeTab, userData, isCateringOwner]);
 
-  // ==================== Рендер ====================
   if (loading) {
     return (
       <div className="profilepage-loading">
@@ -1049,13 +1034,11 @@ const handleToggleReplies = async (feedbackId: number) => {
     }
   };
 
-  // Переиспользуемый блок карточки бронирования
   const renderBookingCard = (b: UserBooking, isPast = false) => {
     const status = renderBookingStatus(b);
     const cateringStatus = b.catering ? getCateringStatusLabel(b.catering.status) : null;
     return (
       <div key={b.id} className={`booking-card-v2 ${isPast ? 'past' : ''}`}>
-        {/* Верхняя полоса статуса */}
         <div className={`booking-card-v2__status-bar status-${status.class}`}>
           <FontAwesomeIcon icon={status.icon} />
           <span>{status.text}</span>
@@ -1063,7 +1046,6 @@ const handleToggleReplies = async (feedbackId: number) => {
         </div>
 
         <div className="booking-card-v2__body">
-          {/* Фото */}
           <div className="booking-card-v2__photo">
             <img
               src={b.mainPhoto || 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop'}
@@ -1072,7 +1054,6 @@ const handleToggleReplies = async (feedbackId: number) => {
             />
           </div>
 
-          {/* Основная информация */}
           <div className="booking-card-v2__main">
             <h4 className="booking-card-v2__address">
               <FontAwesomeIcon icon={faMapMarkerAlt} />
@@ -1083,7 +1064,6 @@ const handleToggleReplies = async (feedbackId: number) => {
               Забронировано: {safeFormatDate(b.createdAt)}
             </p>
 
-            {/* Кейтеринг */}
             {b.catering && (
               <div className="booking-card-v2__catering">
                 <div className="catering-v2__header">
@@ -1110,7 +1090,6 @@ const handleToggleReplies = async (feedbackId: number) => {
               </div>
             )}
 
-            {/* Контакты владельцев */}
             <div className="booking-card-v2__owners">
               <div className="owner-v2">
                 <div className="owner-v2__icon">
@@ -1251,7 +1230,6 @@ const handleToggleReplies = async (feedbackId: number) => {
           </div>
         )}
 
-        {/* ========== ПРОФИЛЬ ========== */}
         {activeTab === 'profile' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1455,7 +1433,6 @@ const handleToggleReplies = async (feedbackId: number) => {
           </div>
         )}
 
-        {/* ========== ОБЪЯВЛЕНИЯ ========== */}
         {activeTab === 'ads' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1544,7 +1521,6 @@ const handleToggleReplies = async (feedbackId: number) => {
           </div>
         )}
 
-        {/* ========== ЧАТЫ ========== */}
         {activeTab === 'chats' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1596,7 +1572,6 @@ const handleToggleReplies = async (feedbackId: number) => {
           </div>
         )}
 
-        {/* ========== ЗАЯВКИ ========== */}
         {activeTab === 'requests' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1609,7 +1584,6 @@ const handleToggleReplies = async (feedbackId: number) => {
               <CateringOrdersList />
             ) : (
               <>
-                {/* Предстоящие бронирования */}
                 <div className="profilepage-section">
                   <h3 className="profilepage-section-title">Подтверждённые бронирования</h3>
                   {upcomingLoading ? (
@@ -1646,7 +1620,6 @@ const handleToggleReplies = async (feedbackId: number) => {
                   )}
                 </div>
 
-                {/* Новые заявки */}
                 <div className="profilepage-section">
                   <h3 className="profilepage-section-title">Новые заявки</h3>
                   {requestsLoading ? (
@@ -1699,7 +1672,6 @@ const handleToggleReplies = async (feedbackId: number) => {
           <CateringAddRequestsList />
         )}
 
-        {/* ========== БРОНИРОВАНИЯ ========== */}
         {activeTab === 'bookings' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1723,7 +1695,6 @@ const handleToggleReplies = async (feedbackId: number) => {
           </div>
         )}
 
-        {/* ========== ИСТОРИЯ ========== */}
         {activeTab === 'history' && !isCateringOwner && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1747,12 +1718,10 @@ const handleToggleReplies = async (feedbackId: number) => {
           </div>
         )}
 
-        {/* ========== МЕНЮ КЕЙТЕРИНГА ========== */}
         {activeTab === 'menu' && isCateringOwner && (
           <CateringMenu />
         )}
 
-        {/* ========== ПОДДЕРЖКА ========== */}
         {activeTab === 'support' && (
           <div className="profilepage-tab">
             <div className="profilepage-header">
@@ -1808,7 +1777,6 @@ const handleToggleReplies = async (feedbackId: number) => {
                         </div>
                         <div className="profilepage-feedback-text">{feedback.text}</div>
                         
-                        {/* Кнопка показа ответов */}
                         <div className="profilepage-feedback-actions">
                           <button
                             className="profilepage-show-replies-btn"
@@ -1820,7 +1788,6 @@ const handleToggleReplies = async (feedbackId: number) => {
                           </button>
                         </div>
 
-                        {/* Блок с ответами */}
                         {feedback.showReplies && (
                           <div className="profilepage-replies-list">
                             {feedback.loadingReplies ? (

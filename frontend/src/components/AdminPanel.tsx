@@ -8,7 +8,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import './AdminPanel.css';
 
-// ==================== Интерфейсы ====================
 interface User {
   id: number;
   email: string;
@@ -77,7 +76,6 @@ interface AdminStats {
   totalFeedback: number;
 }
 
-// ==================== Форматирование даты ====================
 const formatDateOnly = (dateStr: string): string => {
   if (!dateStr) return '—';
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -148,7 +146,6 @@ const AdminPanel: React.FC = () => {
   const user = userStr ? JSON.parse(userStr) : null;
   const API_BASE_URL = 'http://localhost:5213';
 
-  // Вспомогательные функции
   const showToast = useCallback((text: string, type: 'success' | 'error' | 'info' | 'warning') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
@@ -229,7 +226,6 @@ const AdminPanel: React.FC = () => {
     }
   }, [token, API_BASE_URL, handleLogoutConfirmation, showToast]);
 
-  // Загрузка обращений (включая ответы) – с диагностикой
   const fetchFeedback = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/feedback`, {
@@ -239,7 +235,6 @@ const AdminPanel: React.FC = () => {
       const data = await response.json();
       if (data.success) {
         console.log('API /admin/feedback вернул данные:', data.data);
-        // Проверим, есть ли replies (типизация)
         (data.data as Feedback[]).forEach((fb: Feedback) => {
           console.log(`Обращение ${fb.id} имеет replies:`, fb.replies);
         });
@@ -256,7 +251,6 @@ const AdminPanel: React.FC = () => {
     }
   }, [token, API_BASE_URL, showToast]);
 
-  // Отправить ответ на обращение
   const handleReplySubmit = useCallback(async (feedbackId: number, message: string) => {
     if (!message.trim()) {
       showToast('Введите текст ответа', 'warning');
@@ -271,11 +265,9 @@ const AdminPanel: React.FC = () => {
       const data = await response.json();
       if (data.success) {
         showToast('Ответ отправлен', 'success');
-        // Закрываем форму
         setFeedback(prev => prev.map(fb =>
           fb.id === feedbackId ? { ...fb, showReplyForm: false, replyText: '' } : fb
         ));
-        // Принудительно перезагружаем список обращений, чтобы показать ответ
         await fetchFeedback();
       } else {
         showToast(data.message || 'Ошибка отправки', 'error');
@@ -344,7 +336,6 @@ const AdminPanel: React.FC = () => {
     if (token && user?.email === 'admin@gmail.com') fetchData();
   }, [activeTab, fetchData, token, user?.email]);
 
-  // Остальные обработчики (удаление, создание агента и т.д.) без изменений
   const handleDeleteUser = (userId: number, userEmail: string, userFio: string) => {
     showConfirmation(
       'Удаление пользователя',
@@ -584,7 +575,6 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  // ==================== Рендер вкладок ====================
   const renderStatsTab = () => (
     <div className="adminpage-tab">
       <div className="adminpage-header">
@@ -744,7 +734,6 @@ const AdminPanel: React.FC = () => {
                   <p>{item.text}</p>
                 </div>
 
-                {/* Отображение существующих ответов */}
                 {item.replies && item.replies.length > 0 && (
                   <div className="adminpage-replies-list">
                     <h4>Ответы администратора:</h4>
@@ -760,7 +749,6 @@ const AdminPanel: React.FC = () => {
                   </div>
                 )}
 
-                {/* Кнопка "Ответить" всегда видна для возможности многократных ответов */}
                 <div className="adminpage-feedback-actions">
                   <button
                     className="adminpage-reply-btn"
@@ -774,7 +762,6 @@ const AdminPanel: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Форма ответа */}
                 {item.showReplyForm && (
                   <div className="adminpage-reply-form">
                     <textarea
@@ -916,7 +903,6 @@ const AdminPanel: React.FC = () => {
 
   return (
     <div className="adminpage-wrapper">
-      {/* Всплывающие уведомления */}
       <div className="toast-container">
         {toasts.map(toast => (
           <div key={toast.id} className={`toast toast-${toast.type}`} onClick={() => removeToast(toast.id)}>
@@ -946,7 +932,6 @@ const AdminPanel: React.FC = () => {
       />
 
       <div className="adminpage-container">
-        {/* Сайдбар */}
         <div className="adminpage-sidebar">
           <div className="adminpage-avatar">
             <div className="adminpage-avatar-circle"><i className="fas fa-shield-alt"></i></div>
@@ -986,7 +971,6 @@ const AdminPanel: React.FC = () => {
           </nav>
         </div>
 
-        {/* Основной контент */}
         <div className="adminpage-content">
           {activeTab === 'stats' && renderStatsTab()}
           {activeTab === 'users' && renderUsersTab()}

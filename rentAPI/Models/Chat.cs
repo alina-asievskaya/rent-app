@@ -20,12 +20,11 @@ namespace RentApp.API.Models
         public int User2Id { get; set; }
 
         [Column("id_house")]
-        public int? HouseId { get; set; } // Делаем nullable для чатов с агентами
+        public int? HouseId { get; set; } 
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Навигационные свойства
         [ForeignKey("User1Id")]
         public User User1 { get; set; } = null!;
 
@@ -37,7 +36,6 @@ namespace RentApp.API.Models
 
         public ICollection<Message> Messages { get; set; } = new List<Message>();
 
-        // Вспомогательные свойства (не отображаются в БД)
         [NotMapped]
         public string LastMessage { get; set; } = string.Empty;
 

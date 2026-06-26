@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
-import './OfferServiceModal.css';  // ← новый изолированный CSS
+import './OfferServiceModal.css';  
 
 interface OfferServiceModalProps {
   isOpen: boolean;

@@ -31,7 +31,7 @@ export interface Agent {
     dealSuccessRate: number;
     avgDaysToRent: number;
   };
-  price?: number | null;   // цена услуги
+  price?: number | null;   
 }
 
 interface AgentCardProps {
@@ -69,13 +69,11 @@ const AgentCard: React.FC<AgentCardProps> = ({
     return 'отзывов';
   };
 
-  // Функция форматирования цены с "от" и белорусским значком
   const formatPrice = (price?: number | null) => {
     if (!price && price !== 0) return '—';
     return `от ${price.toLocaleString('ru-RU')}`;
   };
 
-  // Общий контент карточки (для grid)
   const renderContent = () => (
     <>
       <div className="agentcard-header">
@@ -112,7 +110,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
       </div>
 
       <div className="agentcard-stats">
-        {/* Опыт работы */}
         <div className="agentcard-stat-item">
           <div className="agentcard-stat-icon">
             <FontAwesomeIcon icon={faCalendarAlt} />
@@ -123,7 +120,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
           </div>
         </div>
 
-        {/* Цена услуги с "от" */}
         <div className="agentcard-stat-item">
           <div className="agentcard-stat-icon">
             <i className="nbrb-icon" style={{ fontSize: '1.2rem' }}>&#xe901;</i>
@@ -161,7 +157,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
     </>
   );
 
-  // list-режим
   if (viewMode === 'list') {
     return (
       <div className={`agentcard ${viewMode}`} onClick={handleCardClick}>
@@ -246,7 +241,6 @@ const AgentCard: React.FC<AgentCardProps> = ({
     );
   }
 
-  // grid-режим
   return (
     <div className={`agentcard ${viewMode}`} onClick={handleCardClick}>
       {renderContent()}

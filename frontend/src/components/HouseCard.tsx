@@ -139,7 +139,6 @@ const HouseCard: React.FC<HouseCardProps> = ({
                 className="btn-secondary"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Логика для "Написать владельцу"
                   console.log('Написать владельцу', house.id);
                 }}
               >

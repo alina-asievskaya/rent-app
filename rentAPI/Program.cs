@@ -9,19 +9,16 @@ using RentApp.API.DTOs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
-// Исправлено: регистрация интерфейса, а не конкретного класса
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAgentService, AgentService>();
 
 
-// Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -57,7 +54,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Configure Database
+//Db
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 Console.WriteLine($"Connection String: {connectionString}");
 
@@ -71,7 +68,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         .EnableDetailedErrors();
 });
 
-// Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
 
@@ -166,7 +162,6 @@ if (!app.Environment.IsDevelopment())
     app.MapFallbackToFile("index.html");
 }
 
-// Initialize database with better error handling
 try
 {
     using var scope = app.Services.CreateScope();

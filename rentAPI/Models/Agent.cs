@@ -43,7 +43,6 @@ namespace RentApp.API.Models
         [Column("portfolio_photos")]
         public string PortfolioPhotos { get; set; } = "[]";
 
-        // Исправлено: decimal (не nullable) со значением 0 по умолчанию
         [Column("price")]
         [Range(0, 999999)]
         public decimal Price { get; set; } = 0m;

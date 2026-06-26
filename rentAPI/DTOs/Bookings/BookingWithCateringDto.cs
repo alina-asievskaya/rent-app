@@ -1,4 +1,3 @@
-// RentApp.API/DTOs/Bookings/BookingWithCateringDto.cs
 using System;
 
 namespace RentApp.API.DTOs.Bookings
@@ -15,9 +14,8 @@ namespace RentApp.API.DTOs.Bookings
         public DateTime CreatedAt { get; set; }
         public CateringOrderInfoDto? Catering { get; set; }
         
-        // НОВЫЕ ПОЛЯ
         public OwnerInfoDto HouseOwner { get; set; } = new();
-        public OwnerInfoDto? CateringOwnerInfo { get; set; } // может быть null, если кейтеринг не заказан
+        public OwnerInfoDto? CateringOwnerInfo { get; set; } 
         
     }
 

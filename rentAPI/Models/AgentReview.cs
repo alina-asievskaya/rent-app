@@ -33,7 +33,6 @@ namespace RentApp.API.Models
         [DataType(DataType.Date)]
         public DateTime DataReviews { get; set; } = DateTime.UtcNow.Date;
 
-        // Навигационные свойства
         public User User { get; set; } = null!;
         public Agent Agent { get; set; } = null!;
     }

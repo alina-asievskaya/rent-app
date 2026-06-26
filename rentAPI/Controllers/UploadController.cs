@@ -29,7 +29,6 @@ namespace RentApp.API.Controllers
                     return BadRequest(new { success = false, message = "Файл не выбран" });
                 }
 
-                // Проверяем тип файла
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 
@@ -38,17 +37,14 @@ namespace RentApp.API.Controllers
                     return BadRequest(new { success = false, message = "Разрешены только файлы JPG, JPEG, PNG и GIF" });
                 }
 
-                // Проверяем размер файла (макс 5MB)
                 if (file.Length > 5 * 1024 * 1024)
                 {
                     return BadRequest(new { success = false, message = "Размер файла не должен превышать 5MB" });
                 }
 
-                // Создаем уникальное имя файла
                 var fileName = Guid.NewGuid().ToString() + extension;
                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "agents");
                 
-                // Создаем папку, если она не существует
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);
@@ -56,13 +52,11 @@ namespace RentApp.API.Controllers
 
                 var filePath = Path.Combine(uploadsFolder, fileName);
 
-                // Сохраняем файл
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);
                 }
 
-                // Формируем URL для доступа к файлу
                 var baseUrl = $"{Request.Scheme}://{Request.Host}";
                 var fileUrl = $"{baseUrl}/uploads/agents/{fileName}";
 

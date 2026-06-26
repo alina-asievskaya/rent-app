@@ -74,7 +74,6 @@ namespace RentApp.API.Controllers
                         }
                         else if (otherUser != null)
                         {
-                            // Проверяем кейтеринг
                             var cateringOwner = await _context.CateringOwners
                                 .FirstOrDefaultAsync(co => co.UserId == otherUser.Id && co.IsActive);
                             if (cateringOwner != null)
@@ -254,7 +253,6 @@ namespace RentApp.API.Controllers
                 if (chat == null)
                     return NotFound(new { success = false, message = "Чат не найден" });
 
-                // Помечаем непрочитанные сообщения как прочитанные
                 var unread = chat.Messages
                     .Where(m => !m.IsRead && m.SenderId != userId)
                     .ToList();
@@ -266,7 +264,6 @@ namespace RentApp.API.Controllers
 
                 var otherUser = chat.User1Id == userId ? chat.User2 : chat.User1;
 
-                // ── Определяем тип чата и получаем дополнительные данные ─────────────────
                 string chatType = "house";
                 decimal? agentPrice = null;
                 string? agentSpecialization = null;
@@ -275,7 +272,6 @@ namespace RentApp.API.Controllers
 
                 if (!chat.HouseId.HasValue && otherUser != null)
                 {
-                    // Проверяем, является ли собеседник владельцем кейтеринга
                     var cateringOwner = await _context.CateringOwners
                         .FirstOrDefaultAsync(co => co.UserId == otherUser.Id && co.IsActive);
 
@@ -298,7 +294,6 @@ namespace RentApp.API.Controllers
                     }
                 }
 
-                // ── Формируем объект дома (или пустой объект для чатов без дома) ──────
                 object houseInfoObj;
                 if (chat.HouseId.HasValue && chat.House != null)
                 {
@@ -324,7 +319,6 @@ namespace RentApp.API.Controllers
                     houseInfoObj = new { };
                 }
 
-                // ── Формируем объект other_user (с флагом is_catering_owner) ─────────────
                 var otherUserResponse = otherUser != null
                     ? new
                     {
@@ -337,7 +331,6 @@ namespace RentApp.API.Controllers
                     }
                     : null;
 
-                // ── Формируем итоговый ответ ──────────────────────────────────────────
                 var response = new
                 {
                     success = true,

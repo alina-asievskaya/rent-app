@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -19,9 +19,64 @@ import {
   faCheckCircle,
   faSpinner,
   faComment,
+  faExclamationCircle,
+  faExclamationTriangle,
 } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartOutlineRegular } from '@fortawesome/free-regular-svg-icons';
 import "./Favorites.css";
+
+const Notification: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
+  message, 
+  type, 
+  onClose 
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: faCheckCircle,
+    error: faExclamationCircle,
+    warning: faExclamationTriangle
+  };
+
+  return (
+    <div className={`favorites-notification favorites-${type}`}>
+      <div className="favorites-notification-content">
+        <FontAwesomeIcon icon={icons[type]} className="favorites-notification-icon" />
+        <span className="favorites-notification-text">{message}</span>
+      </div>
+      <button className="favorites-notification-close" onClick={onClose}>&times;</button>
+    </div>
+  );
+};
+
+const ConfirmationModal: React.FC<{ message: string; onConfirm: () => void; onCancel: () => void }> = ({ 
+  message, 
+  onConfirm, 
+  onCancel 
+}) => {
+  return (
+    <div className="favorites-modal-overlay" onClick={onCancel}>
+      <div className="favorites-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="favorites-modal-header">
+          <h3>Подтверждение</h3>
+          <button className="favorites-modal-close" onClick={onCancel}>&times;</button>
+        </div>
+        <div className="favorites-modal-body">
+          <p>{message}</p>
+        </div>
+        <div className="favorites-modal-footer">
+          <button className="favorites-modal-btn favorites-modal-btn-cancel" onClick={onCancel}>Отмена</button>
+          <button className="favorites-modal-btn favorites-modal-btn-confirm" onClick={onConfirm}>Удалить</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface FavoriteItem {
   id: number;
@@ -35,7 +90,7 @@ interface FavoriteItem {
   photos: string[];
   city: string;
   street: string;
-  houseNumber?: string;   // добавлено поле для номера дома
+  houseNumber?: string;
   rooms: number;
   bathrooms: number;
   floor: number;
@@ -109,6 +164,32 @@ const Favorites: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
+    setNotification({ message, type });
+  }, []);
+
+  const closeNotification = useCallback(() => {
+    setNotification(null);
+  }, []);
+
+  const showConfirmation = useCallback((message: string, onConfirm: () => void) => {
+    setConfirmation({ message, onConfirm });
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (confirmation) {
+      confirmation.onConfirm();
+      setConfirmation(null);
+    }
+  }, [confirmation]);
+
+  const handleCancelConfirmation = useCallback(() => {
+    setConfirmation(null);
+  }, []);
+
   const decodeToken = (token: string) => {
     try {
       const base64Url = token.split('.')[1];
@@ -152,7 +233,6 @@ const Favorites: React.FC = () => {
     fetchFavorites();
   }, []);
 
-  // Подписка на глобальное событие обновления избранного
   useEffect(() => {
     const handleFavoritesUpdate = () => {
       fetchFavorites();
@@ -171,7 +251,7 @@ const Favorites: React.FC = () => {
         const result: OwnerInfoResponse = await response.json();
         if (result.success && result.data) {
           if (result.data.email?.toLowerCase() === 'admin@gmail.com') {
-            console.warn('Вы не можете написать администратору');
+            showNotification('Вы не можете написать администратору', 'warning');
             return null;
           }
           return result.data.id;
@@ -183,6 +263,7 @@ const Favorites: React.FC = () => {
       return null;
     } catch (error) {
       console.error('Ошибка при получении информации о владельце:', error);
+      showNotification('Не удалось получить данные владельца', 'error');
       return null;
     }
   };
@@ -236,10 +317,12 @@ const Favorites: React.FC = () => {
       } else {
         const errorData = await response.json();
         console.error('Ошибка создания чата:', errorData);
+        showNotification('Не удалось создать чат', 'error');
       }
       return null;
     } catch (error) {
       console.error('Ошибка при создании чата:', error);
+      showNotification('Ошибка соединения с сервером', 'error');
       return null;
     }
   };
@@ -253,7 +336,7 @@ const Favorites: React.FC = () => {
     }
     if (isAdmin) {
       if (currentUserEmail?.toLowerCase() === 'admin@gmail.com') {
-        console.warn('Администратор может писать только в ответ на сообщения пользователей');
+        showNotification('Администратор может писать только в ответ на сообщения пользователей', 'warning');
         return;
       }
     }
@@ -261,7 +344,7 @@ const Favorites: React.FC = () => {
     try {
       const ownerId = await getHouseOwnerInfo(propertyId);
       if (!ownerId) {
-        console.warn('Не удалось определить владельца объявления');
+        showNotification('Не удалось определить владельца объявления', 'error');
         return;
       }
       const existingChatId = await checkExistingChat(ownerId, propertyId);
@@ -273,6 +356,7 @@ const Favorites: React.FC = () => {
       if (newChatId) navigate(`/chat/${newChatId}`);
     } catch (error) {
       console.error('Ошибка при открытии чата:', error);
+      showNotification('Ошибка при открытии чата', 'error');
     } finally {
       setCreatingChatForProperty(null);
     }
@@ -337,47 +421,53 @@ const Favorites: React.FC = () => {
             return newSet;
           });
           window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+          showNotification('Объявление удалено из избранного', 'success');
         }
       }
     } catch (error) {
       console.error('Ошибка при удалении из избранного:', error);
+      showNotification('Ошибка при удалении', 'error');
     } finally {
       setIsRemoving(false);
     }
   };
 
-  const clearAllFavorites = async () => {
-    if (!window.confirm('Вы уверены, что хотите очистить всё избранное?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      const response = await fetch('http://localhost:5213/api/favorites/clear', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+  const clearAllFavorites = () => {
+    showConfirmation('Вы уверены, что хотите очистить всё избранное?', async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await fetch('http://localhost:5213/api/favorites/clear', {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setFavorites([]);
+            setSelectedItems(new Set());
+            window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+            showNotification('Избранное очищено', 'success');
+          }
         }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setFavorites([]);
-          setSelectedItems(new Set());
-          window.dispatchEvent(new CustomEvent('favoritesUpdated'));
-        }
+      } catch (error) {
+        console.error('Ошибка при очистке избранного:', error);
+        showNotification('Ошибка при очистке', 'error');
       }
-    } catch (error) {
-      console.error('Ошибка при очистке избранного:', error);
-    }
+    });
   };
 
-  const removeSelected = async () => {
+  const removeSelected = () => {
     if (selectedItems.size === 0) return;
-    if (!window.confirm(`Вы уверены, что хотите удалить ${selectedItems.size} выбранных домов?`)) return;
-    const selectedIds = Array.from(selectedItems);
-    for (const id of selectedIds) {
-      await removeFromFavorites(id);
-    }
+    showConfirmation(`Вы уверены, что хотите удалить ${selectedItems.size} выбранных домов?`, async () => {
+      const selectedIds = Array.from(selectedItems);
+      for (const id of selectedIds) {
+        await removeFromFavorites(id);
+      }
+    });
   };
 
   const toggleSelectItem = (id: number) => {
@@ -520,6 +610,21 @@ const Favorites: React.FC = () => {
       <Header />
       <div className="favorites-page-favorit">
         <div className="container-favorit">
+          {notification && (
+            <Notification 
+              message={notification.message} 
+              type={notification.type} 
+              onClose={closeNotification} 
+            />
+          )}
+          {confirmation && (
+            <ConfirmationModal 
+              message={confirmation.message} 
+              onConfirm={handleConfirm} 
+              onCancel={handleCancelConfirmation} 
+            />
+          )}
+
           <div className="favorites-header-favorit">
             <div className="favorites-hero-favorit">
               <div className="hero-content-favorit">
@@ -554,16 +659,13 @@ const Favorites: React.FC = () => {
               <div className="controls-right-favorit">
                 <div className="action-buttons-favorit">
                   {selectedItems.size > 0 ? (
-                    <>
-                      <button className="btn-danger-favorit" onClick={removeSelected} disabled={isRemoving}>
-                        {isRemoving ? (
-                          <><FontAwesomeIcon icon={faSpinner} spin /> Удаление...</>
-                        ) : (
-                          <><FontAwesomeIcon icon={faTrash} /> Удалить выбранное</>
-                        )}
-                      </button>
-                      
-                    </>
+                    <button className="btn-danger-favorit" onClick={removeSelected} disabled={isRemoving}>
+                      {isRemoving ? (
+                        <><FontAwesomeIcon icon={faSpinner} spin /> Удаление...</>
+                      ) : (
+                        <><FontAwesomeIcon icon={faTrash} /> Удалить выбранное</>
+                      )}
+                    </button>
                   ) : (
                     <button className="btn-secondary-favorit" onClick={clearAllFavorites}>
                       <FontAwesomeIcon icon={faTrash} /> Очистить всё

@@ -34,7 +34,6 @@ namespace RentApp.API.Models
         [Column("data_reviews")]
         public DateOnly DataReviews { get; set; }
 
-        // Навигационные свойства
         public User User { get; set; } = null!;
         public House House { get; set; } = null!;
     }

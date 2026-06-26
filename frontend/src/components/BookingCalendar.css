@@ -223,3 +223,22 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
+/* Стили для диапазона – чтобы выделялись все дни между началом и концом */
+.booking-calendar .react-datepicker__day--in-range {
+  background-color: rgba(45, 106, 79, 0.2) !important;
+  border-radius: 0;
+}
+
+.booking-calendar .react-datepicker__day--range-start,
+.booking-calendar .react-datepicker__day--range-end {
+  background: #2D6A4F !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+/* Для удобства увеличим размер ячеек (опционально) */
+.booking-calendar .react-datepicker__day {
+  width: 2.8rem;
+  line-height: 2.8rem;
+  margin: 0.1rem;
+}

@@ -60,7 +60,6 @@ namespace RentApp.API.Models
         [MaxLength(500)]
         public string Shops { get; set; } = string.Empty;
 
-        // Навигационное свойство
         public House House { get; set; } = null!;
     }
 }

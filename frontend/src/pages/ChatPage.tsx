@@ -76,13 +76,10 @@ const ChatPage: React.FC = () => {
 
   const getToken = () => localStorage.getItem('token');
 
-  // ================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДАТ (FIXED) ==================
   const parseServerDate = (dateString: string): Date => {
-    // Если строка уже содержит временную зону (Z или +-hh:mm), оставляем как есть
     if (dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString)) {
       return new Date(dateString);
     }
-    // Иначе добавляем 'Z', чтобы интерпретировать строку как UTC
     return new Date(dateString + 'Z');
   };
 
@@ -98,7 +95,6 @@ const ChatPage: React.FC = () => {
     if (date.toDateString() === yesterday.toDateString()) return 'Вчера';
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   };
-  // =========================================================================
 
   const formatPriceWithIcon = (price: number): React.ReactNode => {
     if (price == null || isNaN(price)) return null;
@@ -351,7 +347,6 @@ const ChatPage: React.FC = () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); }
   };
 
-  // Группировка сообщений по датам (использует исправленный formatDate)
   const groupMessagesByDate = () => {
     if (!chat?.messages) return {};
     const groups: { [key: string]: ChatMessage[] } = {};
@@ -363,14 +358,13 @@ const ChatPage: React.FC = () => {
     return groups;
   };
 
-  // Функция для определения, является ли сообщение первым в группе (исправлена)
   const isFirstInGroup = (message: ChatMessage, prevMessage: ChatMessage | undefined): boolean => {
     if (!prevMessage) return true;
     if (prevMessage.sender_id !== message.sender_id) return true;
     const currentDate = parseServerDate(message.created_at);
     const prevDate = parseServerDate(prevMessage.created_at);
     const diffMinutes = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60);
-    return diffMinutes > 5; // больше 5 минут – новая группа
+    return diffMinutes > 5; 
   };
 
   useEffect(() => {
@@ -415,7 +409,6 @@ const ChatPage: React.FC = () => {
       <div className="chat-page">
         <div className="chat-container">
 
-          {/* Шапка чата */}
           <div className="chat-header">
             <div className="chat-header-left">
               <button className="chat-back-btn" onClick={() => navigate('/profile#chats')}>
@@ -458,7 +451,6 @@ const ChatPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Сообщения */}
           <div
             className="chat-messages"
             ref={messagesContainerRef}
@@ -485,7 +477,6 @@ const ChatPage: React.FC = () => {
                   {messages.map((message, idx) => {
                     const prevMessage = messages[idx - 1];
                     const isFirst = isFirstInGroup(message, prevMessage);
-                    // isLast – не используется для стилей, но оставим для возможных расширений
                     const isLast = idx === messages.length - 1 || messages[idx + 1]?.sender_id !== message.sender_id;
 
                     return (
@@ -543,7 +534,6 @@ const ChatPage: React.FC = () => {
             <div ref={bottomRef} />
           </div>
 
-          {/* Форма отправки */}
           <form className="chat-input-form" onSubmit={handleSendMessage}>
             <div className="input-tools">
               <button type="button" className="btn-tool" onClick={() => fileInputRef.current?.click()}>

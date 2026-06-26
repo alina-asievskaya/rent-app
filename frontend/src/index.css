@@ -1,18 +1,22 @@
-/* CSS Variables - Modern Blue Palette */
+/* CSS Variables - Modern Green & Gold Palette (без синего) */
 :root {
-    /* Primary Colors */
-    --primary-50: 239, 246, 255;
-    --primary-100: 219, 234, 254;
-    --primary-200: 191, 219, 254;
-    --primary-300: 147, 197, 253;
-    --primary-400: 96, 165, 250;
-    --primary-500: 59, 130, 246;
-    --primary-600: 37, 99, 235;
-    --primary-700: 29, 78, 216;
-    --primary-800: 30, 64, 175;
-    --primary-900: 30, 58, 138;
+    /* Primary Colors — теперь зелёные */
+    --primary-50: 240, 253, 244;
+    --primary-100: 220, 252, 231;
+    --primary-200: 187, 247, 208;
+    --primary-300: 134, 239, 172;
+    --primary-400: 74, 222, 128;
+    --primary-500: 34, 197, 94;
+    --primary-600: 22, 163, 74;
+    --primary-700: 21, 128, 61;
+    --primary-800: 22, 101, 52;
+    --primary-900: 20, 83, 45;
     
-    /* Neutral Colors */
+    /* Акцент — золотой (как в каталоге) */
+    --gold-500: 212, 175, 55;
+    --gold-600: 184, 152, 48;
+    
+    /* Neutral Colors (без изменений) */
     --neutral-50: 249, 250, 251;
     --neutral-100: 243, 244, 246;
     --neutral-200: 229, 231, 235;
@@ -24,28 +28,25 @@
     --neutral-800: 31, 41, 55;
     --neutral-900: 17, 24, 39;
     
-    /* Accent Colors */
+    /* Accent Colors (без синего) */
     --accent-green: 16, 185, 129;
-    --accent-green-light: 220, 252, 231;
     --accent-red: 239, 68, 68;
     --accent-amber: 245, 158, 11;
-    --accent-purple: 139, 92, 246;
+    --accent-purple: 139, 92, 246;  /* можно заменить на золотой */
     
-    /* Shadows */
+    /* Shadows, Radius, Transitions (без изменений) */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     
-    /* Border Radius */
     --radius-sm: 0.375rem;
     --radius: 0.5rem;
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
     
-    /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -102,7 +103,9 @@ p {
     margin-bottom: 1rem;
 }
 
-/* Buttons */
+/* ============================================================
+   КНОПКИ – УБРАН СИНИЙ, ТОЛЬКО ЗЕЛЁНЫЙ И ЗОЛОТОЙ
+   ============================================================ */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -120,26 +123,28 @@ p {
     white-space: nowrap;
 }
 
+/* Основная кнопка – зелёный градиент (как в каталоге) */
 .btn-primary {
-    background: rgb(var(--primary-600));
+    background: linear-gradient(135deg, rgb(45, 106, 79), rgb(64, 145, 108));
     color: white;
 }
 
 .btn-primary:hover {
-    background: rgb(var(--primary-700));
+    background: linear-gradient(135deg, rgb(27, 67, 50), rgb(45, 106, 79));
     transform: translateY(-1px);
     box-shadow: var(--shadow-lg);
 }
 
+/* Вторичная кнопка – обводка золотом */
 .btn-secondary {
     background: white;
     color: rgb(var(--neutral-700));
-    border: 1px solid rgb(var(--neutral-300));
+    border: 1px solid rgb(212, 175, 55);
 }
 
 .btn-secondary:hover {
-    border-color: rgb(var(--primary-600));
-    color: rgb(var(--primary-600));
+    border-color: rgb(45, 106, 79);
+    color: rgb(45, 106, 79);
     transform: translateY(-1px);
 }
 
@@ -152,18 +157,18 @@ p {
     width: 100%;
 }
 
-/* Links */
+/* Ссылки – зелёные, не синие */
 a {
-    color: rgb(var(--primary-600));
+    color: rgb(45, 106, 79);
     text-decoration: none;
     transition: color var(--transition);
 }
 
 a:hover {
-    color: rgb(var(--primary-700));
+    color: rgb(27, 67, 50);
 }
 
-/* Utility Classes */
+/* Утилиты (без изменений) */
 .text-center {
     text-align: center;
 }
@@ -214,7 +219,7 @@ a:hover {
     display: grid;
 }
 
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 768px) {
     .container {
         padding: 0 1rem;

@@ -10,7 +10,7 @@ interface AddRequest {
     houseAddress: string;
     createdAt: string;
     houseTitle: string;
-    mainPhoto?: string | null;   // новое поле
+    mainPhoto?: string | null;   
 }
 
 const CateringAddRequestsList: React.FC = () => {

@@ -5,7 +5,7 @@ using RentApp.API.DTOs;
 
 namespace RentApp.API.Services
 {
-    public class CloudinaryService : ICloudinaryService   // добавить ICloudinaryService
+    public class CloudinaryService : ICloudinaryService   
     {
         private readonly Cloudinary _cloudinary;
 
@@ -28,7 +28,7 @@ namespace RentApp.API.Services
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(file.FileName, stream),
-                Folder = "agent_portfolio"   // изменим папку для портфолио
+                Folder = "agent_portfolio"  
             };
 
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);

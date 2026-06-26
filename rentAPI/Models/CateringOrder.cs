@@ -28,11 +28,11 @@ namespace RentApp.API.Models
         public int UserId { get; set; }
 
         [Column("items_json")]
-        public string ItemsJson { get; set; } = "[]"; // JSON-строка со списком блюд
+        public string ItemsJson { get; set; } = "[]"; 
 
         [Column("status")]
         [MaxLength(20)]
-        public string Status { get; set; } = "pending"; // pending, approved, rejected
+        public string Status { get; set; } = "pending"; 
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

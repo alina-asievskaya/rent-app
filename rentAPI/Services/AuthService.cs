@@ -24,22 +24,18 @@ namespace RentApp.API.Services
         {
             try
             {
-                // Проверка существующего email
                 if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
                 {
                     return (false, "Пользователь с таким email уже существует", null);
                 }
 
-                // Проверка существующего телефона
                 if (await _context.Users.AnyAsync(u => u.Phone_num == registerDto.Phone_num))
                 {
                     return (false, "Пользователь с таким номером телефона уже существует", null);
                 }
 
-                // Хеширование пароля
                 string passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
-                // Создание пользователя
                 var user = new User
                 {
                     Email = registerDto.Email,
@@ -77,7 +73,6 @@ namespace RentApp.API.Services
                     return (false, "Неверный email или пароль", null);
                 }
 
-                // Проверяем, является ли пользователь администратором
                 bool isAdmin = loginDto.Email.ToLower() == "admin@gmail.com";
                 var token = GenerateJwtToken(user, isAdmin);
 
@@ -114,7 +109,6 @@ namespace RentApp.API.Services
                 new Claim("IsAgent", user.Id_agent.ToString())
             };
 
-            // Добавляем роль администратора
             if (isAdmin)
             {
                 claims.Add(new Claim(ClaimTypes.Role, "Admin"));

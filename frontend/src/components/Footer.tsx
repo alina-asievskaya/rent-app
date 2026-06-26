@@ -6,7 +6,6 @@ const Footer: React.FC = () => {
     <footer className="footer">
       <div className="container">
         <div className="footer-content">
-          {/* Логотип и описание */}
           <div className="footer-logo-section">
             <a href="/" className="footer-logo">
               <div className="footer-logo-icon">PH</div>
@@ -16,7 +15,6 @@ const Footer: React.FC = () => {
               Аренда загородных домов и коттеджей в Беларуси
             </p>
             
-            {/* Социальные сети */}
             <div className="social-links">
               <a href="https://vk.com" target="_blank" rel="noopener noreferrer" className="social-link" aria-label="ВКонтакте">
                 <i className="fab fa-vk"></i>
@@ -30,7 +28,6 @@ const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Навигация */}
           <div className="footer-section">
             <h4>Навигация</h4>
             <ul className="footer-links">
@@ -41,7 +38,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Контакты */}
           <div className="footer-section">
             <h4>Контакты</h4>
             <ul className="contact-info">
@@ -61,7 +57,6 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Нижняя часть */}
         <div className="footer-bottom">
           <div className="copyright">
             &copy; 2025 PrimeHouse.by — Аренда домов в Беларуси

@@ -47,7 +47,6 @@ namespace RentApp.API.Models
         [Column("floor")]
         public int Floor { get; set; }
 
-        // Навигационное свойство
         public House House { get; set; } = null!;
     }
 }

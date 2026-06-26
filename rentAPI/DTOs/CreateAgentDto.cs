@@ -36,7 +36,6 @@ namespace RentApp.API.DTOs
         [MaxLength(2000)]
         public string? DisplayName { get; set; }
 
-        // НОВОЕ: цена услуг (по умолчанию 0, если не указана)
         [Range(0, 999999)]
         public decimal? Price { get; set; }
     }

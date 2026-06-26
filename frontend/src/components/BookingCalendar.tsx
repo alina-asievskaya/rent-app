@@ -10,6 +10,7 @@ interface BookingCalendarProps {
   houseId: number;
   onSelectDate: (date: Date | null, endDate?: Date | null) => void;
   selectedDate: Date | null;
+  selectedEndDate?: Date | null; 
   bookedDates: Date[];
   rentType: 'day' | 'month';
 }
@@ -18,10 +19,12 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   houseId, 
   onSelectDate, 
   selectedDate, 
+  selectedEndDate,
   bookedDates: initialBooked,
   rentType 
 }) => {
   const [startDate, setStartDate] = useState<Date | null>(selectedDate);
+  const [endDate, setEndDate] = useState<Date | null>(selectedEndDate || null);
   const [excludedDates, setExcludedDates] = useState<Date[]>(initialBooked);
 
   useEffect(() => {
@@ -39,16 +42,21 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       .catch(console.error);
   }, [houseId]);
 
-  const handleChange = (date: Date | null) => {
+  const handleRangeChange = (update: [Date | null, Date | null]) => {
+    const [start, end] = update;
+    setStartDate(start);
+    setEndDate(end);
+    onSelectDate(start, end);
+  };
+
+  const handleSingleChange = (date: Date | null) => {
     setStartDate(date);
+    setEndDate(null);
     if (date) {
-      if (rentType === 'month') {
-        const endDate = new Date(date);
-        endDate.setDate(endDate.getDate() + 29);
-        onSelectDate(date, endDate);
-      } else {
-        onSelectDate(date, null);
-      }
+      const autoEnd = new Date(date);
+      autoEnd.setDate(autoEnd.getDate() + 29);
+      setEndDate(autoEnd);
+      onSelectDate(date, autoEnd);
     } else {
       onSelectDate(null, null);
     }
@@ -86,6 +94,14 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     if (excludedDates.some(d => d.toDateString() === date.toDateString())) {
       classes += 'booked-day';
     }
+    if (rentType === 'day' && startDate && endDate) {
+      const dateTime = date.getTime();
+      const startTime = startDate.getTime();
+      const endTime = endDate.getTime();
+      if (dateTime >= startTime && dateTime <= endTime) {
+        classes += ' selected-range';
+      }
+    }
     if (rentType === 'month' && startDate) {
       const dateTime = date.getTime();
       const startTime = startDate.getTime();
@@ -99,8 +115,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
   const getEndDateDisplay = () => {
     if (rentType === 'month' && startDate) {
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 29);
+      const end = new Date(startDate);
+      end.setDate(end.getDate() + 29);
+      return end;
+    }
+    if (rentType === 'day' && endDate) {
       return endDate;
     }
     return null;
@@ -112,34 +131,50 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         {rentType === 'month' ? (
           <div className="calendar-info">
             <i className="fas fa-calendar-week"></i>
-            <span>Дом сдается помесячно. Выберите начальную дату для бронирования на 30 дней</span>
+            <span>Дом сдается помесячно. Выберите начальную дату (бронируется 30 дней)</span>
           </div>
         ) : (
           <div className="calendar-info">
             <i className="fas fa-calendar-day"></i>
-            <span>Дом сдается посуточно. Выберите дату для бронирования</span>
+            <span>Дом сдается посуточно. Выберите даты заезда и выезда</span>
           </div>
         )}
       </div>
       
-      <DatePicker
-        selected={startDate}
-        onChange={handleChange}
-        inline
-        monthsShown={2}
-        locale="ru"
-        filterDate={filterDate}
-        minDate={new Date()}
-        dayClassName={getDayClassName}
-      />
+      {rentType === 'day' ? (
+        <DatePicker
+          selected={startDate}
+          onChange={handleRangeChange}
+          startDate={startDate}
+          endDate={endDate}
+          selectsRange={true}
+          inline
+          monthsShown={2}
+          locale="ru"
+          filterDate={filterDate}
+          minDate={new Date()}
+          dayClassName={getDayClassName}
+        />
+      ) : (
+        <DatePicker
+          selected={startDate}
+          onChange={handleSingleChange}
+          inline
+          monthsShown={2}
+          locale="ru"
+          filterDate={filterDate}
+          minDate={new Date()}
+          dayClassName={getDayClassName}
+        />
+      )}
       
-      {rentType === 'month' && startDate && (
+      {startDate && getEndDateDisplay() && (
         <div className="selected-period-info">
           <i className="fas fa-clock"></i>
           <span>
-            Период бронирования: {startDate.toLocaleDateString('ru-RU')} - {
-              getEndDateDisplay()?.toLocaleDateString('ru-RU')
-            } (30 дней)
+            Период: {startDate.toLocaleDateString('ru-RU')} – {getEndDateDisplay()?.toLocaleDateString('ru-RU')}
+            {rentType === 'month' && ' (30 дней)'}
+            {rentType === 'day' && endDate && ` (${Math.ceil((endDate.getTime() - startDate.getTime()) / (1000*60*60*24)) + 1} дней)`}
           </span>
         </div>
       )}

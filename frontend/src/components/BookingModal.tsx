@@ -73,6 +73,23 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
     const showNotification = (message: string, type: 'success' | 'error' | 'warning') => setNotification({ message, type });
     const closeNotification = () => setNotification(null);
 
+    // При открытии модалки устанавливаем завтрашнюю дату
+    useEffect(() => {
+        if (isOpen) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            setSelectedDate(tomorrow);
+            if (rentType === 'month') {
+                const end = new Date(tomorrow);
+                end.setDate(end.getDate() + 29);
+                setSelectedEndDate(end);
+            } else {
+                setSelectedEndDate(null);
+            }
+        }
+    }, [isOpen, rentType]);
+
     const resetState = () => {
         setStep('calendar');
         setSelectedDate(null);
@@ -164,8 +181,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, houseId, r
                 datesToBook.push(new Date(d));
             }
 
-            if (datesToBook.length > 30) {
-                showNotification('Нельзя бронировать более 30 дней подряд', 'error');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            for (const date of datesToBook) {
+                const d = new Date(date);
+                d.setHours(0, 0, 0, 0);
+                if (d <= today) {
+                    showNotification('Нельзя забронировать сегодняшний или прошедший день', 'error');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
+            if (rentType === 'day' && datesToBook.length > 30) {
+                showNotification('Для посуточной аренды нельзя бронировать более 30 дней подряд', 'error');
                 setIsSubmitting(false);
                 return;
             }

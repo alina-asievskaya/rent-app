@@ -27,6 +27,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [endDate, setEndDate] = useState<Date | null>(selectedEndDate || null);
   const [excludedDates, setExcludedDates] = useState<Date[]>(initialBooked);
 
+  // Вычисляем завтрашнюю дату (с 00:00:00)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
   useEffect(() => {
     fetch(`http://localhost:5213/api/bookings/house/${houseId}/booked-dates`)
       .then(res => res.json())
@@ -65,7 +70,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const filterDate = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (date < today) return false;
+    if (date <= today) return false;
 
     const dateUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
     const isBooked = excludedDates.some(d => {
@@ -152,7 +157,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           monthsShown={2}
           locale="ru"
           filterDate={filterDate}
-          minDate={new Date()}
+          minDate={tomorrow}  // изменено: минимальная дата - завтра
           dayClassName={getDayClassName}
         />
       ) : (
@@ -163,7 +168,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           monthsShown={2}
           locale="ru"
           filterDate={filterDate}
-          minDate={new Date()}
+          minDate={tomorrow}  // изменено: минимальная дата - завтра
           dayClassName={getDayClassName}
         />
       )}

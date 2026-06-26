@@ -24,63 +24,76 @@ namespace RentApp.API.Controllers
             _logger = logger;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
+       [HttpPost]
+public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
+{
+    try
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            return Unauthorized(new { success = false, message = "Неверный токен" });
+
+        var house = await _context.Houses.FindAsync(dto.HouseId);
+        if (house == null)
+            return NotFound(new { success = false, message = "Дом не найден" });
+
+        // ============ НОВЫЕ ПРОВЕРКИ ============
+        // 1. Запрет бронирования для владельца
+        if (house.IdOwner == userId)
+            return BadRequest(new { success = false, message = "Вы не можете забронировать собственный дом" });
+
+        var bookingDate = DateOnly.FromDateTime(dto.BookingDate);
+
+        // 2. Для посуточной аренды – не более 30 дней вперёд
+        // Предполагается, что в модели House есть поле RentType (string) со значениями "day" или "month"
+        if (house.RentType == "day")
         {
-            try
-            {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                    return Unauthorized(new { success = false, message = "Неверный токен" });
-
-                var house = await _context.Houses.FindAsync(dto.HouseId);
-                if (house == null)
-                    return NotFound(new { success = false, message = "Дом не найден" });
-
-                var bookingDate = DateOnly.FromDateTime(dto.BookingDate);
-
-     
-
-                var booking = new Booking
-                {
-                    HouseId = dto.HouseId,
-                    UserId = userId,
-                    BookingDate = bookingDate,
-                    Approved = false,
-                    RejectedAt = null,
-                    CreatedAt = DateTime.UtcNow,
-                    CateringOwnerId = dto.CateringOwnerId,
-                    CateringItemsJson = dto.CateringItems != null && dto.CateringItems.Any()
-                        ? JsonSerializer.Serialize(dto.CateringItems)
-                        : null
-                };
-
-                _context.Bookings.Add(booking);
-                await _context.SaveChangesAsync();
-
-                var ownerNotification = new Notification
-                {
-                    UserId = house.IdOwner,
-                    Type = "booking",
-                    ReferenceId = booking.Id,
-                    Text = $"Новая заявка на бронирование дома #{house.Id} на {bookingDate:yyyy-MM-dd}",
-                    CreatedAt = DateTime.UtcNow,
-                    IsRead = false
-                };
-                _context.Notifications.Add(ownerNotification);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Создано бронирование (ожидает): {BookingId} для дома {HouseId} пользователем {UserId}",
-                    booking.Id, dto.HouseId, userId);
-
-                return Ok(new { success = true, message = "Заявка на бронирование отправлена владельцу", bookingId = booking.Id });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ошибка при создании бронирования");
-                return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
-            }
+            var maxDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
+            if (bookingDate > maxDate)
+                return BadRequest(new { success = false, message = "Для посуточной аренды нельзя бронировать более чем на 30 дней вперед" });
         }
+        // =======================================
+
+        var booking = new Booking
+        {
+            HouseId = dto.HouseId,
+            UserId = userId,
+            BookingDate = bookingDate,
+            Approved = false,
+            RejectedAt = null,
+            CreatedAt = DateTime.UtcNow,
+            CateringOwnerId = dto.CateringOwnerId,
+            CateringItemsJson = dto.CateringItems != null && dto.CateringItems.Any()
+                ? JsonSerializer.Serialize(dto.CateringItems)
+                : null
+        };
+
+        _context.Bookings.Add(booking);
+        await _context.SaveChangesAsync();
+
+        var ownerNotification = new Notification
+        {
+            UserId = house.IdOwner,
+            Type = "booking",
+            ReferenceId = booking.Id,
+            Text = $"Новая заявка на бронирование дома #{house.Id} на {bookingDate:yyyy-MM-dd}",
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
+        _context.Notifications.Add(ownerNotification);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Создано бронирование (ожидает): {BookingId} для дома {HouseId} пользователем {UserId}",
+            booking.Id, dto.HouseId, userId);
+
+        return Ok(new { success = true, message = "Заявка на бронирование отправлена владельцу", bookingId = booking.Id });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Ошибка при создании бронирования");
+        return StatusCode(500, new { success = false, message = "Внутренняя ошибка сервера" });
+    }
+}
 
         [HttpGet("check-availability")]
         [AllowAnonymous]
